@@ -30,7 +30,7 @@ class AddRagDollOperator(bpy.types.Operator):
         return True
 
     def execute(self, context):
-        main()
+        main(context.object.data.ragdoll_config)
         print("Info: added ragdoll")
         return {'FINISHED'}
 
@@ -61,6 +61,8 @@ class RagDollPanel(bpy.types.Panel):
             else:
 
                 row = layout.row()
+                row.prop(context.armature, "ragdoll_config")
+                #  col.prop(bpy.data.objects["Cube"], "scale")
                 row.operator("armature.ragdoll")
 
 

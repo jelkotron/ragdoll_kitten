@@ -1,4 +1,5 @@
 import bpy
+import json
 
 #-------- validate object type --------
 def validate_selection(selected_object, mode = 'ARMATURE'):
@@ -39,9 +40,17 @@ def get_visible_posebones():
 
 #-------- read config for rigid body constraint limits --------
 def config_load(filepath):
-    print("Info: config loaded.")
-    config =  {}
-    return config
+    data = None
+    filepath = bpy.path.abspath(filepath)
+    if filepath:
+        with open(filepath, 'r') as file:
+            data = json.load(file)
+            # file.close()
+        print("Info: config loaded.")
+    else:
+        data = {}
+
+    return data
 
 #-------- add or set rigid body constraint collection --------
 def rb_constraint_collection_set(collection_name = 'RigidBodyConstraints'):
@@ -83,5 +92,5 @@ def cube(width, name):
 #-------- remove armatures w/o users --------
 def garbage_collect_armatures():
     for arm in bpy.data.armatures:
-                if arm.users == 0:
-                    bpy.data.armatures.remove(arm, do_unlink=True)
+        if arm.users == 0:
+            bpy.data.armatures.remove(arm, do_unlink=True)

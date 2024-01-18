@@ -19,13 +19,14 @@ class RagDollBone():
 #---------------- data structure storing rigid body and armature data  ----------------
 class RagDoll():
     def __init__(self, config_file = None):
+        # TODO: validate config file
         self.config = ragdoll_aux.config_load(config_file)
         self.config["ctrl_rig_postfix"] = ".ctrl"
         self.config["rd_postfix"] = ".RB"
         self.config["const_postfix"] = ".CONST"
         self.config["connect_postfix"] = ".CONNECT"
         self.config["rb_bone_width"] = 0.1
-        self.config["strip"] = ["mixamorig:"]
+        # self.config["strip"] = ["mixamorig:"]
 
         self.deform_rig = ragdoll_aux.validate_selection(bpy.context.object)
         self.ctrl_rig = None
@@ -195,21 +196,24 @@ class RagDoll():
                 rb_const.limit_ang_z_upper = math.radians(22.5) 
                 
                 stripped_name = rd_bone.posebone.name
-                
+
                 if "strip" in self.config:
                     for i in range(len(self.config["strip"])):
                         stripped_name = stripped_name.replace(self.config["strip"][i],"")
 
-                if "limit_ang" in self.config:
-                    if stripped_name in self.config["limit_ang"]:
-                        
-                        rb_const.rigid_body_constraint.limit_ang_x_lower = math.radians(ang_limits[stripped_name][0][0])
-                        rb_const.rigid_body_constraint.limit_ang_x_upper = math.radians(ang_limits[stripped_name][0][1])
-                        rb_const.rigid_body_constraint.limit_ang_y_lower = math.radians(ang_limits[stripped_name][1][0])
-                        rb_const.rigid_body_constraint.limit_ang_y_upper = math.radians(ang_limits[stripped_name][1][1])
-                        rb_const.rigid_body_constraint.limit_ang_z_lower = math.radians(ang_limits[stripped_name][2][0])
-                        rb_const.rigid_body_constraint.limit_ang_z_upper = math.radians(ang_limits[stripped_name][2][1])
+                try:
+                    bn = self.config["bones"][stripped_name] 
+                    print(bn)
+                    rb_const.limit_ang_x_lower = math.radians(bn["limit_ang_x_lower"])
+                    rb_const.limit_ang_x_upper = math.radians(bn["limit_ang_x_upper"])
+                    rb_const.limit_ang_y_lower = math.radians(bn["limit_ang_y_lower"])
+                    rb_const.limit_ang_y_upper = math.radians(bn["limit_ang_y_upper"])
+                    rb_const.limit_ang_z_lower = math.radians(bn["limit_ang_z_lower"])
+                    rb_const.limit_ang_z_upper = math.radians(bn["limit_ang_z_upper"])
                 
+                except KeyError:
+                    pass
+
 
     #-------- additional hierarchy layer to copy transforms from, as rigid body meshes' pivots need to be centered --------
     def rb_connectors_add(self):

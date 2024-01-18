@@ -62,19 +62,15 @@ class RagDollPanel(bpy.types.Panel):
 
                 row = layout.row()
                 row.prop(context.armature, "ragdoll_config")
-                #  col.prop(bpy.data.objects["Cube"], "scale")
+                row = layout.row()
+                row.prop(context.armature, "ctrl_rig_postfix")
+                row = layout.row()
+                row.prop(context.armature, "rd_postfix")
+                row = layout.row()
+                row.prop(context.armature, "const_postfix")
+                row = layout.row()
+                row.prop(context.armature, "connect_postfix")
+                row = layout.row()
+                row.prop(context.armature, "rd_bone_width")
+                row = layout.row()
                 row.operator("armature.ragdoll")
-
-
-# def register():
-#     bpy.utils.register_class(RagDollPanel)
-#     bpy.utils.register_class(AddRigidBodyConstraintsOperator)
-#     bpy.utils.register_class(AddRagDollOperator)
-
-# def unregister():
-#     bpy.utils.unregister_class(RagDollPanel)
-#     bpy.utils.unregister_class(AddRigidBodyConstraintsOperator)
-#     bpy.utils.unregister_class(AddRagDollOperator)
-
-# if __name__ == "__main__":
-#     register()

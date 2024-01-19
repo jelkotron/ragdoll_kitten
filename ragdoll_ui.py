@@ -59,18 +59,63 @@ class RagDollPanel(bpy.types.Panel):
                 row = layout.row()
                 row.operator("scene.rbconstraints")
             else:
+                layout = self.layout
 
-                row = layout.row()
+                box = layout.box()
+                row = box.row()
+                row.label(text="Postfixes")
+                split = box.split(factor=0.25)
+                col_1 = split.column()
+                col_2 = split.column()
+                col_3 = split.column()
+                col_4 = split.column()
+                
+
+                col_1.label(text='Control Rig')
+                col_2.prop(context.armature, "ctrl_rig_postfix", text="")
+                
+                col_1.label(text='Geometry')
+                col_2.prop(context.armature, "rb_postfix",text="")
+
+                col_3.label(text='Constraints')
+                col_4.prop(context.armature, "const_postfix", text="")
+                
+                col_3.label(text='Connectors')
+                col_4.prop(context.armature, "connect_postfix", text="")
+
+                box = layout.box()
+                row = box.row()
+                row.label(text="Geometry")
+                split = box.split(factor=0.25)
+                col_1 = split.column()
+                col_2 = split.column()
+                col_1.label(text='Cube Width')
+                col_2.prop(context.armature, "rb_bone_width", text="")
+
+                box = layout.box()
+                row = box.row()
                 row.prop(context.armature, "ragdoll_config")
-                row = layout.row()
-                row.prop(context.armature, "ctrl_rig_postfix")
-                row = layout.row()
-                row.prop(context.armature, "rd_postfix")
-                row = layout.row()
-                row.prop(context.armature, "const_postfix")
-                row = layout.row()
-                row.prop(context.armature, "connect_postfix")
-                row = layout.row()
-                row.prop(context.armature, "rd_bone_width")
-                row = layout.row()
-                row.operator("armature.ragdoll")
+                if context.object.data.ragdoll_type == 'None':
+                    row = box.row()
+                    row.operator("armature.ragdoll", text="Create Ragdoll")
+                else:
+                    row = box.row()
+                    row.operator("armature.ragdoll", text="Update Ragdoll")
+                    row = box.row()
+                    row.operator("armature.ragdoll", text="Delete Ragdoll")
+                    
+
+                # row = layout.row()
+                # row.prop(context.armature, "ragdoll_config")
+                # row = layout.row()
+                # col = row.column()
+                # col.prop(context.armature, "ctrl_rig_postfix", text="")
+                # col = row.column()
+                # col.prop(context.armature, "rd_postfix",text="")
+                # row = layout.row()
+                # row.prop(context.armature, "const_postfix", text="")
+                # row.prop(context.armature, "connect_postfix", text="")
+                # row = layout.row()
+                # row.prop(context.armature, "rd_bone_width")
+                # row = layout.row()
+                # row.operator("armature.ragdoll")

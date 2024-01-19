@@ -4,7 +4,7 @@ import mathutils
 import ragdoll_aux
 
 #---------------- data structure storing rigid body and armature data per bone ----------------
-class RagDollBone():
+class RigidBodyBone():
     def __init__(self):
         self.deform_rig_name = None     
         self.ctrl_rig = None
@@ -15,32 +15,39 @@ class RagDollBone():
         self.rb_connect_obj = None
         self.copy_transforms_rd = None
         self.copy_transforms_ctrl = None
+        
    
 #---------------- data structure storing rigid body and armature data  ----------------
 class RagDoll():
     def __init__(self, config_file = None):
         # TODO: validate config file
         self.config = ragdoll_aux.config_load(config_file)
-        self.config["ctrl_rig_postfix"] = ".ctrl"
-        self.config["rd_postfix"] = ".RB"
-        self.config["const_postfix"] = ".CONST"
-        self.config["connect_postfix"] = ".CONNECT"
-        self.config["rb_bone_width"] = 0.1
-        # self.config["strip"] = ["mixamorig:"]
-
         self.deform_rig = ragdoll_aux.validate_selection(bpy.context.object)
+        if self.deform_rig.users_collection[0] == bpy.context.scene.collection:
+            self.collection = ragdoll_aux.collection_objects_add(self.deform_rig.name, [self.deform_rig])
+        else:
+            self.collection = self.deform_rig.users_collection[0] 
+        
+        self.deform_rig.data.ragdoll_type = 'DEFORM'
         self.ctrl_rig = None
-        self.rd_bones = None
+        self.rb_bones = None
+
+    def remove(self):
+        pass
+
+    def update(self):
+        pass
 
     #-------- duplicate selected armature to separate mesh deform from control --------
     def ctrl_rig_add(self):
         if self.deform_rig != None:
             ctrl_rig_obj = self.deform_rig.copy()
-            ctrl_rig_obj.name = self.deform_rig.name + self.config["ctrl_rig_postfix"]
+            ctrl_rig_obj.name = self.deform_rig.name + self.deform_rig.data.ctrl_rig_postfix
             ctrl_rig_obj.data = self.deform_rig.data.copy() # necessary?
             
             bpy.context.collection.objects.link(ctrl_rig_obj)
-                
+            ctrl_rig_obj.data.ragdoll_type = 'CONTROL'    
+            
             if ctrl_rig_obj.data.display_type == 'OCTAHEDRAL':
                 ctrl_rig_obj.data.display_type = 'STICK'
             else:
@@ -54,6 +61,8 @@ class RagDoll():
             ctrl_rig_obj.data["kinematic"] = False
             print("Info: ctrl rig added")
 
+            ragdoll_aux.collection_objects_add(self.collection.name, [ctrl_rig_obj])
+            
             self.ctrl_rig = ctrl_rig_obj
         
         else:
@@ -63,24 +72,24 @@ class RagDoll():
     #-------- add rigid body meshes for selected bones, transform & parent to ctrl rig bones --------
     def rb_cubes_add(self):
         pbones = ragdoll_aux.get_visible_posebones()
-        rd_bones = []
+        rb_bones = []
         # store current frame & tmp reset to 0
         f_init = bpy.context.scene.frame_current
         bpy.context.scene.frame_current = 0
 
         for pb in pbones:
-            geo_name = self.deform_rig.name + "." + pb.name + self.config["rd_postfix"]
+            geo_name = self.deform_rig.name + "." + pb.name + self.deform_rig.data.rb_postfix
             # add and scale box geometry per bone
             new_cube = ragdoll_aux.cube(1, geo_name)
-            rd_bone = RagDollBone()
+            rd_bone = RigidBodyBone()
             rd_bone.geo = new_cube
             rd_bone.ctrl_rig = self.ctrl_rig
 
             for vert in new_cube.data.vertices:
                 #TODO: consider armatures w/ scales other than 1
-                vert.co[0] *= 1 / new_cube.dimensions[1] * self.config["rb_bone_width"]
+                vert.co[0] *= 1 / new_cube.dimensions[1] * self.deform_rig.data.rb_bone_width
                 vert.co[1] *= 1 / new_cube.dimensions[1] * pb.length
-                vert.co[2] *= 1 / new_cube.dimensions[1] * self.config["rb_bone_width"]
+                vert.co[2] *= 1 / new_cube.dimensions[1] * self.deform_rig.data.rb_bone_width
 
             rd_bone.geo = new_cube
             rd_bone.posebone = pb
@@ -124,27 +133,38 @@ class RagDoll():
             target.id = self.ctrl_rig.data
             target.data_path = '["kinematic"]'
 
-            rd_bones.append(rd_bone)
+            rb_bones.append(rd_bone)
             
+        # add cubes to collection
+        collection_name = self.deform_rig.name + ".RigidBodies"
+        collection = ragdoll_aux.collection_objects_add(collection_name, [rbb.geo for rbb in rb_bones])
+        self.collection.children.link(collection)
+        bpy.context.scene.collection.children.unlink(collection)
+        self.deform_rig.data.rigid_body_collection = collection
+        self.ctrl_rig.data.rigid_body_constraint_collection = collection
+
+        self.rb_bones = rb_bones
+        
         # restore current frame
         bpy.context.scene.frame_current = f_init
-        self.rd_bones = rd_bones
+
 
     #-------- add constraints or 'joints' connecting rigid body meshes --------
     def rb_constraints_add(self):
         # store current frame & tmp reset to 0
         f_init = bpy.context.scene.frame_current
         bpy.context.scene.frame_current = 0
+        empties = []
 
-        for rdb in self.rd_bones:
-            if rdb.parent_geo:
+        for rbb in self.rb_bones:
+            if rbb.parent_geo:
                 empty_name = ""
-                empty_name = rdb.deform_rig_name + rdb.posebone.name + self.config["const_postfix"]
+                empty_name = rbb.deform_rig_name + rbb.posebone.name + self.deform_rig.data.const_postfix
                 empty = bpy.data.objects.new(empty_name, None)
                 bpy.context.collection.objects.link(empty)
                 
-                def_rig = bpy.data.objects[rdb.deform_rig_name]
-                posebone = def_rig.pose.bones[rdb.posebone.name]
+                def_rig = bpy.data.objects[rbb.deform_rig_name]
+                posebone = def_rig.pose.bones[rbb.posebone.name]
                 
                 vec = (posebone.head - posebone.tail)
                 trans = mathutils.Matrix.Translation(vec)
@@ -154,15 +174,26 @@ class RagDoll():
                 empty.matrix_local = posebone.matrix
                 empty.parent = def_rig
                 empty.parent_type = 'BONE'
-                empty.parent_bone = rdb.posebone.name
+                empty.parent_bone = rbb.posebone.name
                 empty.matrix_parent_inverse = posebone.matrix.inverted() @ trans
                 empty.empty_display_size = 0.15
                 empty.rigid_body_constraint.type = 'GENERIC'
-                empty.rigid_body_constraint.object1 = rdb.geo
-                empty.rigid_body_constraint.object2 = rdb.parent_geo
-                rdb.rb_constraint_obj = empty
-                self.rb_constraint_limits_set(rdb)
-                
+                empty.rigid_body_constraint.object1 = rbb.geo
+                empty.rigid_body_constraint.object2 = rbb.parent_geo
+                rbb.rb_constraint_obj = empty
+                empties.append(empty)
+                self.rb_constraint_limits_set(rbb)
+
+        # add empties to collection
+        collection_name = self.deform_rig.name + ".RigidBodyConstraints"
+        collection = ragdoll_aux.collection_objects_add(collection_name, empties)
+        self.collection.children.link(collection)
+        bpy.context.scene.collection.children.unlink(collection)
+
+        self.deform_rig.data.rigid_body_constraint_collection = collection
+        self.ctrl_rig.data.rigid_body_constraint_collection = collection
+
+
         bpy.context.scene.frame_current = f_init
         print("Info: rd constraints added")
         print("Info: rd constraint limits set")
@@ -220,21 +251,22 @@ class RagDoll():
         # store current frame & tmp reset to 0
         f_init = bpy.context.scene.frame_current
         bpy.context.scene.frame_current = 0
+        empties = []
 
-        for rdb in self.rd_bones:
+        for rbb in self.rb_bones:
             # add empty
             empty_name = ""
-            empty_name = rdb.deform_rig_name + "." + rdb.posebone.name + self.config["connect_postfix"]
+            empty_name = rbb.deform_rig_name + "." + rbb.posebone.name + self.deform_rig.data.connect_postfix
             empty = bpy.data.objects.new(empty_name, None)
             bpy.context.collection.objects.link(empty)
             
             # set & store position
-            empty.matrix_world = self.deform_rig.matrix_world @ rdb.posebone.matrix
+            empty.matrix_world = self.deform_rig.matrix_world @ rbb.posebone.matrix
             obj_matrix = empty.matrix_world.copy()
             
             # set parent
             empty.parent_type = 'OBJECT'
-            empty.parent = rdb. geo
+            empty.parent = rbb. geo
             
             # remove parent inverse transform
             empty.matrix_world.identity()
@@ -245,7 +277,17 @@ class RagDoll():
             empty.empty_display_type = 'SPHERE'
             empty.empty_display_size = 0.1
 
-            rdb.rb_connect_obj = empty
+            rbb.rb_connect_obj = empty
+            empties.append(empty)
+
+        # add empties to collection
+        collection_name = self.deform_rig.name + ".RigidBodyConnectors"
+        collection = ragdoll_aux.collection_objects_add(collection_name, empties)
+        self.collection.children.link(collection)
+        bpy.context.scene.collection.children.unlink(collection)
+        self.deform_rig.data.rigid_body_connector_collection = collection
+        self.ctrl_rig.data.rigid_body_connector_collection = collection
+
 
         # reset current frame to initial value
         bpy.context.scene.frame_current = f_init
@@ -254,17 +296,17 @@ class RagDoll():
 
     #-------- copy transforms to bone from either simulation or control rig --------
     def bone_constraints_add(self):
-        for rdb in self.rd_bones:
-            connector = rdb.rb_connect_obj
+        for rbb in self.rb_bones:
+            connector = rbb.rb_connect_obj
             # add copy transform constraint for simulation
-            rdb.copy_transforms_rd = rdb.posebone.constraints.new('COPY_TRANSFORMS')
-            rdb.copy_transforms_rd.name = "Copy Transforms RD"
-            rdb.copy_transforms_rd.target = connector
+            rbb.copy_transforms_rd = rbb.posebone.constraints.new('COPY_TRANSFORMS')
+            rbb.copy_transforms_rd.name = "Copy Transforms RD"
+            rbb.copy_transforms_rd.target = connector
             # add copy transform constraint for animation
-            rdb.copy_transforms_ctrl = rdb.posebone.constraints.new('COPY_TRANSFORMS')
-            rdb.copy_transforms_ctrl.name = "Copy Transforms Ctrl"
-            rdb.copy_transforms_ctrl.target = rdb.ctrl_rig
-            rdb.copy_transforms_ctrl.subtarget = rdb.posebone.name
+            rbb.copy_transforms_ctrl = rbb.posebone.constraints.new('COPY_TRANSFORMS')
+            rbb.copy_transforms_ctrl.name = "Copy Transforms Ctrl"
+            rbb.copy_transforms_ctrl.target = rbb.ctrl_rig
+            rbb.copy_transforms_ctrl.subtarget = rbb.posebone.name
         
         print("Info: bone constraints set")
 
@@ -273,9 +315,9 @@ class RagDoll():
         # add custom property to ctrl armature to switch animation/simulationv
         self.ctrl_rig.data["rd_influence"] = 1.0
     
-        for rdb in self.rd_bones:
+        for rbb in self.rb_bones:
             # add driver to copy ragdoll transform constraint 
-            rd_influence = rdb.copy_transforms_rd.driver_add('influence') 
+            rd_influence = rbb.copy_transforms_rd.driver_add('influence') 
             rd_influence.driver.type = 'SCRIPTED'
             rd_influence.driver.expression = "rd_influence"
             var = rd_influence.driver.variables.new()
@@ -287,7 +329,7 @@ class RagDoll():
             target.data_path = '["rd_influence"]'
             
             # add driver to copy ctrl armature transform constraint 
-            ctrl_influence = rdb.copy_transforms_ctrl.driver_add('influence')
+            ctrl_influence = rbb.copy_transforms_ctrl.driver_add('influence')
             ctrl_influence.driver.type = 'SCRIPTED'
             ctrl_influence.driver.expression = "rd_influence"
             var = ctrl_influence.driver.variables.new()

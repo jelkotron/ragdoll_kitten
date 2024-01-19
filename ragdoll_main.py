@@ -1,4 +1,4 @@
-from ragdoll import RagDollBone, RagDoll
+from ragdoll import RigidBodyBone, RagDoll
 from ragdoll_aux import garbage_collect_armatures
 
 def main(config_file):

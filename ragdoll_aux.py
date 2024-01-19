@@ -59,6 +59,22 @@ def rb_constraint_collection_set(collection_name = 'RigidBodyConstraints'):
     else:
         bpy.data.collections.new(collection_name)
         
+#-------- create collection and/or add add objects --------
+def collection_objects_add(collection_name, objects=[]):
+    col = None
+    if collection_name not in bpy.data.collections:
+        col = bpy.data.collections.new(collection_name)
+        bpy.context.scene.collection.children.link(col)
+    else:
+        col = bpy.data.collections[collection_name]
+    
+    if col:
+        for obj in objects:
+            if obj.name not in bpy.data.collections[collection_name].objects:    
+                bpy.data.collections[collection_name].objects.link(obj)
+
+    return col
+
 
 #-------- add a cube --------
 def cube(width, name):

@@ -1,5 +1,31 @@
 import bpy
 import json
+import os
+
+def load_text(context, filepath):
+    # filename = os.path.split(filepath)[1]
+    # text = bpy.data.texts.new(filename)
+    # text.filepath = filepath
+    text = bpy.data.texts.load(filepath)
+
+    if validate_selection(bpy.context.active_object, 'ARMATURE'):
+        context.active_object.data.ragdoll.config = text
+        
+def deselect_all():
+    objs = []
+    for obj in bpy.context.selected_objects:
+        objs.append(obj)
+    for obj in objs:
+        obj.select_set(False)
+
+
+def get_bone_children(armature):
+    bones = {}
+    for bone in armature.pose.bones:
+        if bone.children:
+            bones[bone.name] = [child.name for child in bone.children]
+    return bones
+
 
 #-------- validate object type --------
 def validate_selection(selected_object, mode = 'ARMATURE'):
@@ -54,10 +80,11 @@ def config_load(filepath):
 
 #-------- add or set rigid body constraint collection --------
 def rb_constraint_collection_set(collection_name = 'RigidBodyConstraints'):
-    if collection_name in bpy.data.collections:
-        bpy.context.scene.rigidbody_world.constraints = bpy.data.collections[collection_name]
-    else:
+    if collection_name not in bpy.data.collections:
         bpy.data.collections.new(collection_name)
+
+    bpy.context.scene.rigidbody_world.constraints = bpy.data.collections[collection_name]
+    
         
 #-------- create collection and/or add add objects --------
 def collection_objects_add(collection_name, objects=[]):
@@ -73,7 +100,17 @@ def collection_objects_add(collection_name, objects=[]):
             if obj.name not in bpy.data.collections[collection_name].objects:    
                 bpy.data.collections[collection_name].objects.link(obj)
 
+
+    bpy.context.view_layer.update()
+
     return col
+
+
+def collection_objects_remove(collection, objects=[]):
+    for obj in objects:
+        if obj.name in collection.objects:
+            collection.objects.unlink(obj)
+
 
 
 #-------- add a cube --------

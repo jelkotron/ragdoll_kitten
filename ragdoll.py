@@ -202,12 +202,29 @@ def rag_doll_remove(armature_object):
         constraints = armature_object.data.ragdoll.constraints
         connectors = armature_object.data.ragdoll.connectors
 
+        if bpy.context.scene.rigidbody_world:
+            collection = bpy.context.scene.rigidbody_world.collection
+            object_remove_from_collection(collection, rigid_bodies.objects)
+
+        if bpy.context.scene.rigidbody_world.constraints:
+            collection = bpy.context.scene.rigidbody_world.constraints.collection_objects.data
+            rb_obj_list =  bpy.context.scene.rigidbody_world.constraints
+
+            object_remove_from_collection(collection, constraints.objects)
+            object_remove_from_collection(rb_obj_list, constraints.objects)
+
+        # C.scene.rigidbody_world.constraints.collection_objects.data.objects['Armature.mixamorig:
+
         collection_remove(rigid_bodies)
         collection_remove(constraints)
         collection_remove(connectors)
 
         armature_object.data.ragdoll.deform_rig.data.ragdoll.initialized = False
+        armature_data =armature_object.data
         bpy.data.objects.remove(armature_object, do_unlink=True)
+        if armature_data.name in bpy.data.armatures:
+            bpy.data.armatures.remove(armature_data, do_unlink=True)
+
 
         print("ragdoll removed!")
 
@@ -217,7 +234,15 @@ def collection_remove(collection):
         for obj in collection.objects:
             bpy.data.objects.remove(obj, do_unlink=True)
         bpy.context.scene.collection.children.unlink(collection)
+        bpy.data.collections.remove(collection, do_unlink=True)
 
+
+def object_remove_from_collection(collection, objects):
+    if collection:
+        for obj in objects:
+            if obj.name in collection.objects:
+                collection.objects.unlink(obj)
+    
 
 def rag_doll_update(context):
     control_rig = context.object
@@ -336,7 +361,6 @@ def rb_constraint_defaults():
 def rd_constraint_limit(control_rig):
     config = control_rig.data.ragdoll.config
     if config:
-        print("pipiMama")
         config_data = ragdoll_aux.config_load(config.filepath)
         for obj in control_rig.data.ragdoll.constraints.objects:
             if obj.rigid_body_constraint:
@@ -379,6 +403,11 @@ def rd_constraint_limit(control_rig):
                     constraint.limit_ang_z_lower = math.radians(limit_ang_z_lower) if limit_ang_z_lower else constraint.limit_ang_z_lower 
                     constraint.limit_ang_z_upper = math.radians(limit_ang_z_upper) if limit_ang_z_upper else constraint.limit_ang_z_upper 
 
+    else:
+        rb_constraint_defaults()
+
+
+
 #-------- additional hierarchy layer to copy transforms from, as rigid body meshes' pivots need to be centered --------
 def rb_connectors_add(control_rig):
     # store current frame & tmp reset to 0
@@ -419,12 +448,12 @@ def rb_connectors_add(control_rig):
             empties.append(empty)
 
     # add empties to collection
-    collection_name = deform_rig.name + control_rig.data.ragdoll.const_postfix
+    collection_name = deform_rig.name + control_rig.data.ragdoll.connect_postfix
     collection = ragdoll_aux.collection_objects_add(collection_name, empties)
     ragdoll_aux.collection_objects_remove(bpy.context.scene.collection, empties)
     # TODO: get objs current collection
-    control_rig.data.ragdoll.constraints = collection
-    deform_rig.data.ragdoll.constraints = collection
+    control_rig.data.ragdoll.connectors = collection
+    deform_rig.data.ragdoll.connectors = collection
 
 
     # reset current frame to initial value

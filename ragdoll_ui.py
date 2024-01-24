@@ -3,7 +3,7 @@ import bpy
 import sys
 sys.path.append("/home/schnollie/Work/bpy/ragdoll_tools")
 from ragdoll_aux import rb_constraint_collection_set, load_text
-from ragdoll_main import main
+
 from ragdoll import rag_doll_create, rag_doll_remove, rag_doll_update
 from bpy_extras.io_utils import ImportHelper
 import os
@@ -88,7 +88,6 @@ class UpdateRagDollOperator(bpy.types.Operator):
 
     def execute(self, context):
         rag_doll_update(context)
-        print("Info: updated ragdoll")
         return {'FINISHED'}
 
 
@@ -102,35 +101,39 @@ class RagDollSettingsPanel(bpy.types.Panel):
     bl_context = "data"
 
     def draw(self, context):
-        if context.scene.rigidbody_world and context.scene.rigidbody_world.constraints: 
-            layout = self.layout        
-            row = layout.row()
-            split = row.split(factor=0.25)
-            col_1 = split.column()
-            col_2 = split.column()
-            col_1.label(text="Type")
-            col_2.prop(context.armature.ragdoll,"type", text="")
-            
-            row = layout.row()
-            split = row.split(factor=0.25)
-            col_1 = split.column()
-            col_2 = split.column()
-            col_1.label(text="Config")
-            col_2.prop(context.armature.ragdoll,"config", text="")
-            
-            # split = col_2.split(factor=0.9)
-            # col_3 = split.column()
-            row.operator("text.open_filebrowser", text="", icon='FILEBROWSER')
-            
+        if context.object.type == 'ARMATURE':
+            if context.scene.rigidbody_world and context.scene.rigidbody_world.constraints: 
+                layout = self.layout        
+                row = layout.row()
+                split = row.split(factor=0.25)
+                col_1 = split.column()
+                col_2 = split.column()
+                col_1.label(text="Type")
+                col_2.prop(context.armature.ragdoll,"type", text="")
+                
+                row = layout.row()
+                split = row.split(factor=0.25)
+                col_1 = split.column()
+                col_2 = split.column()
+                col_1.label(text="Config")
+                if context.armature.ragdoll.type == 'CONTROL' or not context.armature.ragdoll.control_rig:
+                    col_2.prop(context.armature.ragdoll,"config", text="")
+                else:
+                    col_2.prop(context.armature.ragdoll.control_rig.data.ragdoll,"config", text="")
+                
+                # split = col_2.split(factor=0.9)
+                # col_3 = split.column()
+                row.operator("text.open_filebrowser", text="", icon='FILEBROWSER')
+                
 
-            if context.armature.ragdoll.initialized == False:
-                row = layout.row()
-                row.operator("armature.ragdoll_add", text="Create Ragdoll")
-            else:
-                row = layout.row()
-                row.operator("armature.ragdoll_remove", text="Remove Ragdoll")
-                row = layout.row()
-                row.operator("armature.ragdoll_update", text="Update Ragdoll")
+                if context.armature.ragdoll.initialized == False:
+                    row = layout.row()
+                    row.operator("armature.ragdoll_add", text="Create Ragdoll")
+                else:
+                    row = layout.row()
+                    row.operator("armature.ragdoll_remove", text="Remove Ragdoll")
+                    row = layout.row()
+                    row.operator("armature.ragdoll_update", text="Update Ragdoll")
 
 
 class RagDollCollectionsPanel(bpy.types.Panel):

@@ -17,9 +17,8 @@ def register():
 
     #-------- register UI elements --------
     bpy.utils.register_class(RagDollPanel)
-    bpy.utils.register_class(RagDollSettingsPanel)
     bpy.utils.register_class(RagDollCollectionsPanel)
-    bpy.utils.register_class(RagDollPostfixesPanel)
+    bpy.utils.register_class(RagDollSuffixesPanel)
 
     bpy.utils.register_class(AddRigidBodyConstraintsOperator)
     bpy.utils.register_class(AddRagDollOperator)
@@ -34,9 +33,8 @@ def unregister():
     bpy.utils.unregister_class(RagDollPropGroup)
 
     bpy.utils.unregister_class(RagDollPanel)
-    bpy.utils.register_class(RagDollSettingsPanel)
     bpy.utils.unregister_class(RagDollCollectionsPanel)
-    bpy.utils.unregister_class(RagDollPostfixesPanel)
+    bpy.utils.unregister_class(RagDollSuffixesPanel)
     
     bpy.utils.unregister_class(AddRigidBodyConstraintsOperator)
     bpy.utils.unregister_class(AddRagDollOperator)

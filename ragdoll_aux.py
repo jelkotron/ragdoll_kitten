@@ -3,13 +3,14 @@ import json
 import os
 
 def load_text(context, filepath):
-    # filename = os.path.split(filepath)[1]
-    # text = bpy.data.texts.new(filename)
-    # text.filepath = filepath
     text = bpy.data.texts.load(filepath)
-
     if validate_selection(bpy.context.active_object, 'ARMATURE'):
         context.active_object.data.ragdoll.config = text
+        if context.active_object.data.ragdoll.type == 'DEFORM':
+            control_rig = context.active_object.data.ragdoll.control_rig 
+            if control_rig:
+                control_rig.data.ragdoll.config = text
+
         
 def deselect_all():
     objs = []

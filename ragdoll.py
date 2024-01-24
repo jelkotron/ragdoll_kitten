@@ -9,25 +9,40 @@ def armature_poll(self, object):
 
 
 class RagDollPropGroup(bpy.types.PropertyGroup):
+    #-------- Object Pointers --------
     deform_rig: bpy.props.PointerProperty(type=bpy.types.Object, poll=armature_poll)
     control_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll)
     rigid_bodies: bpy.props.PointerProperty(type=bpy.types.Collection)
     constraints: bpy.props.PointerProperty(type=bpy.types.Collection)
     connectors: bpy.props.PointerProperty(type=bpy.types.Collection)
+    #-------- Armature Sub Type --------
     type: bpy.props.EnumProperty(items=[
                                                             ('CONTROL', "Control Rig", "Control Rig of a RagDoll"),
                                                             ('DEFORM', "Deform Rig", "Deform Rig of a RagDoll")                          
                                                             ], default='DEFORM')
+    #-------- JSON Config File Pointer --------
     config: bpy.props.PointerProperty(type=bpy.types.Text)
 
-    ctrl_rig_postfix: bpy.props.StringProperty(name="Control Rig Postfix", default=".Control")
-    def_rig_postfix: bpy.props.StringProperty(name="Deform Rig Postfix", default=".Deform")
-    rb_postfix: bpy.props.StringProperty(name="Ragdoll Geo Postfix", default=".RigidBody")
-    const_postfix: bpy.props.StringProperty(name="Rigid Body Constraint Postfix", default=".Constraint")
-    connect_postfix: bpy.props.StringProperty(name="Connector Postfix", default=".Connect")
-    rb_bone_width: bpy.props.FloatProperty(name="Rigid Body Geo Width", default=0.1)
-
+    #-------- Suffixes --------
+    ctrl_rig_suffix: bpy.props.StringProperty(name="Control Rig Suffix", default=".Control")
+    def_rig_suffix: bpy.props.StringProperty(name="Deform Rig Suffix", default=".Deform")
+    rb_suffix: bpy.props.StringProperty(name="Ragdoll Geo Suffix", default=".RigidBody")
+    const_suffix: bpy.props.StringProperty(name="Rigid Body Constraint Suffix", default=".Constraint")
+    connect_suffix: bpy.props.StringProperty(name="Connector Suffix", default=".Connect")
+    # -------- State --------
     initialized: bpy.props.BoolProperty(name="RagDoll initialized", default=False)
+    
+    # -------- Geometry Settings
+    rb_bone_width_min: bpy.props.FloatProperty(name="Minimum Rigid Body Geo Width", default=0.1)
+    rb_bone_width_relative: bpy.props.FloatProperty(name="Relative Rigid Body Geo Width", default=0.1)
+
+    # -------- Channels --------
+    simulated: bpy.props.BoolProperty(name="is_animated", default=True)
+    influence: bpy.props.FloatProperty(name="rigid_body_influence",min=0.0, max=1.0, default=1.0)
+    wobble: bpy.props.BoolProperty(name="is_wobbley", default=False)
+    wobble_distance: bpy.props.FloatProperty(name="wobble_distance_max",min=0.0, max=16.0, default=1.0)
+    wobble_rotation: bpy.props.FloatProperty(name="wobble_rotation_max", subtype="ANGLE", min=0.0, max=360.0, default=0)
+    
 
 
 def rag_doll_create(armature_object):
@@ -45,12 +60,12 @@ def rag_doll_create(armature_object):
         control_rig.data.ragdoll.initialized = True
         deform_rig.data.ragdoll.initialized = True
 
-
+        print("Info: added ragdoll")
 
 def secondary_rig_add(armature_object):
     if armature_object:
         secondary_rig = armature_object.copy()
-        secondary_rig.name = armature_object.name + armature_object.data.ragdoll.ctrl_rig_postfix
+        secondary_rig.name = armature_object.name + armature_object.data.ragdoll.ctrl_rig_suffix
         secondary_rig.data = armature_object.data.copy() # necessary?
         bpy.context.collection.objects.link(secondary_rig)
         
@@ -119,16 +134,16 @@ def rb_cubes_add(pbones):
 
     if control_rig:
         for pb in pbones:
-            geo_name = deform_rig.name + "." + pb.name + deform_rig.data.ragdoll.rb_postfix
+            geo_name = deform_rig.name + "." + pb.name + deform_rig.data.ragdoll.rb_suffix
             # add and scale box geometry per bone
             new_cube = ragdoll_aux.cube(1, geo_name)
             new_cube.display_type = 'WIRE'
 
             for vert in new_cube.data.vertices:
                 #TODO: consider armatures w/ scales other than 1
-                vert.co[0] *= 1 / new_cube.dimensions[1] * deform_rig.data.ragdoll.rb_bone_width
+                vert.co[0] *= 1 / new_cube.dimensions[1] * deform_rig.data.ragdoll.rb_bone_width_relative
                 vert.co[1] *= 1 / new_cube.dimensions[1] * pb.length
-                vert.co[2] *= 1 / new_cube.dimensions[1] * deform_rig.data.ragdoll.rb_bone_width
+                vert.co[2] *= 1 / new_cube.dimensions[1] * deform_rig.data.ragdoll.rb_bone_width_relative
 
             # parent cube to control rig bone
             new_cube.matrix_local = pb.matrix
@@ -166,7 +181,7 @@ def rb_cubes_add(pbones):
     
         
     # add cubes to collection
-    collection_name = deform_rig.name + bpy.context.object.data.ragdoll.rb_postfix
+    collection_name = deform_rig.name + bpy.context.object.data.ragdoll.rb_suffix
     collection = ragdoll_aux.collection_objects_add(collection_name, [rb_geo for rb_geo in rb_bones])
     ragdoll_aux.collection_objects_remove(bpy.context.scene.collection, [rb_geo for rb_geo in rb_bones])
     control_rig.data.ragdoll.rigid_bodies = collection
@@ -210,7 +225,7 @@ def rag_doll_remove(armature_object):
             bpy.data.armatures.remove(armature_data, do_unlink=True)
 
 
-        print("ragdoll removed!")
+        print("Info: removed ragdoll")
 
 
 def collection_remove(collection):
@@ -253,7 +268,7 @@ def rb_constraints_add(deform_rig):
             if bone.parent:
                 empty_name = ""
                 
-                empty_name = deform_rig.name + "." + bone.name + deform_rig.data.ragdoll.const_postfix
+                empty_name = deform_rig.name + "." + bone.name + deform_rig.data.ragdoll.const_suffix
                 empty = bpy.data.objects.new(empty_name, None)
                 bpy.context.collection.objects.link(empty)
                 
@@ -269,8 +284,8 @@ def rb_constraints_add(deform_rig):
                 empty.empty_display_size = 0.15
                 empty.rigid_body_constraint.type = 'GENERIC'
                 
-                name_0 = deform_rig.name + "." + bone.name + deform_rig.data.ragdoll.rb_postfix
-                name_1 = deform_rig.name + "." + bone.parent.name + deform_rig.data.ragdoll.rb_postfix
+                name_0 = deform_rig.name + "." + bone.name + deform_rig.data.ragdoll.rb_suffix
+                name_1 = deform_rig.name + "." + bone.parent.name + deform_rig.data.ragdoll.rb_suffix
                 geo0 = bpy.data.objects[name_0]
                 geo1 = bpy.data.objects[name_1]
                 empty.rigid_body_constraint.object1 = geo0
@@ -278,7 +293,7 @@ def rb_constraints_add(deform_rig):
                 empties.append(empty)
 
         # add empties to collection
-        collection_name = deform_rig.name + deform_rig.data.ragdoll.const_postfix
+        collection_name = deform_rig.name + deform_rig.data.ragdoll.const_suffix
         collection = ragdoll_aux.collection_objects_add(collection_name, empties)
         ragdoll_aux.collection_objects_remove(bpy.context.scene.collection, empties)
         # TODO: get objs current collection
@@ -346,13 +361,12 @@ def rb_constraint_defaults():
 
 def rd_constraint_limit(control_rig):
     config = control_rig.data.ragdoll.config
-    print("config: %s"%config)
     if config:
         config_data = ragdoll_aux.config_load(config.filepath)
         for obj in control_rig.data.ragdoll.constraints.objects:
             if obj.rigid_body_constraint:
                 constraint = obj.rigid_body_constraint
-                stripped_name = obj.name.rstrip(control_rig.data.ragdoll.const_postfix)
+                stripped_name = obj.name.rstrip(control_rig.data.ragdoll.const_suffix)
                 stripped_name = stripped_name.lstrip(control_rig.data.ragdoll.deform_rig.name).strip(".")
                 
                 if "strip" in config_data:
@@ -405,13 +419,13 @@ def rb_connectors_add(control_rig):
     deform_rig = control_rig.data.ragdoll.deform_rig
 
     for bone in bones:
-        geo_name = deform_rig.name + "." + bone.name + control_rig.data.ragdoll.rb_postfix
+        geo_name = deform_rig.name + "." + bone.name + control_rig.data.ragdoll.rb_suffix
         geo = bpy.data.objects.get(geo_name)
 
         if geo:
             # add empty
             empty_name = ""
-            empty_name = deform_rig.name + "." + bone.name + control_rig.data.ragdoll.connect_postfix
+            empty_name = deform_rig.name + "." + bone.name + control_rig.data.ragdoll.connect_suffix
             empty = bpy.data.objects.new(empty_name, None)
             bpy.context.collection.objects.link(empty)
             
@@ -435,7 +449,7 @@ def rb_connectors_add(control_rig):
             empties.append(empty)
 
     # add empties to collection
-    collection_name = deform_rig.name + control_rig.data.ragdoll.connect_postfix
+    collection_name = deform_rig.name + control_rig.data.ragdoll.connect_suffix
     collection = ragdoll_aux.collection_objects_add(collection_name, empties)
     ragdoll_aux.collection_objects_remove(bpy.context.scene.collection, empties)
     # TODO: get objs current collection
@@ -454,7 +468,7 @@ def bone_constraints_add(bones, control_rig):
     
     for bone in bones:
         deform_rig_name = bone.id_data.name
-        connector_name = deform_rig_name + "." + bone.name + control_rig.data.ragdoll.connect_postfix
+        connector_name = deform_rig_name + "." + bone.name + control_rig.data.ragdoll.connect_suffix
         connector = bpy.data.objects.get(connector_name)
         if connector:
             # add copy transform constraint for simulation

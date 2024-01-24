@@ -56,7 +56,7 @@ class AddRagDollOperator(bpy.types.Operator):
     def execute(self, context):
         # main(context.object.data.ragdoll_config)
         rag_doll_create(context.object)
-        print("Info: added ragdoll")
+        
         return {'FINISHED'}
 
 
@@ -72,7 +72,7 @@ class RemoveRagDollOperator(bpy.types.Operator):
 
     def execute(self, context):
         rag_doll_remove(context.object)
-        print("Info: removed ragdoll")
+        
         return {'FINISHED'}
 
 
@@ -89,51 +89,6 @@ class UpdateRagDollOperator(bpy.types.Operator):
     def execute(self, context):
         rag_doll_update(context)
         return {'FINISHED'}
-
-
-class RagDollSettingsPanel(bpy.types.Panel):
-    """Subpanel to Ragdoll"""
-    bl_label = "Settings"
-    bl_idname = "OBJECT_PT_ragdollsettings"
-    bl_parent_id = "OBJECT_PT_ragdoll"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "data"
-
-    def draw(self, context):
-        if context.object.type == 'ARMATURE':
-            if context.scene.rigidbody_world and context.scene.rigidbody_world.constraints: 
-                layout = self.layout        
-                row = layout.row()
-                split = row.split(factor=0.25)
-                col_1 = split.column()
-                col_2 = split.column()
-                col_1.label(text="Type")
-                col_2.prop(context.armature.ragdoll,"type", text="")
-                
-                row = layout.row()
-                split = row.split(factor=0.25)
-                col_1 = split.column()
-                col_2 = split.column()
-                col_1.label(text="Config")
-                if context.armature.ragdoll.type == 'CONTROL' or not context.armature.ragdoll.control_rig:
-                    col_2.prop(context.armature.ragdoll,"config", text="")
-                else:
-                    col_2.prop(context.armature.ragdoll.control_rig.data.ragdoll,"config", text="")
-                
-                # split = col_2.split(factor=0.9)
-                # col_3 = split.column()
-                row.operator("text.open_filebrowser", text="", icon='FILEBROWSER')
-                
-
-                if context.armature.ragdoll.initialized == False:
-                    row = layout.row()
-                    row.operator("armature.ragdoll_add", text="Create Ragdoll")
-                else:
-                    row = layout.row()
-                    row.operator("armature.ragdoll_remove", text="Remove Ragdoll")
-                    row = layout.row()
-                    row.operator("armature.ragdoll_update", text="Update Ragdoll")
 
 
 class RagDollCollectionsPanel(bpy.types.Panel):
@@ -171,10 +126,10 @@ class RagDollCollectionsPanel(bpy.types.Panel):
             col_5.prop(context.armature.ragdoll,"connectors", text="")
         
 
-class RagDollPostfixesPanel(bpy.types.Panel):
-    """Naming Postfixes for Ragdoll"""
+class RagDollSuffixesPanel(bpy.types.Panel):
+    """Naming Suffixes for Ragdoll"""
     bl_label = "Postifxes"
-    bl_idname = "OBJECT_PT_ragdollpostfixes"
+    bl_idname = "OBJECT_PT_ragdollsuffixes"
     bl_parent_id = "OBJECT_PT_ragdoll"
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
@@ -191,28 +146,28 @@ class RagDollPostfixesPanel(bpy.types.Panel):
             col_0 = split.column()
             col_1 = split.column()
             col_0.label(text="Control Rig")
-            col_1.prop(context.armature.ragdoll,"ctrl_rig_postfix", text="")
+            col_1.prop(context.armature.ragdoll,"ctrl_rig_suffix", text="")
             
             row = layout.row()
             split = row.split(factor=0.25)
             col_2 = split.column()
             col_3 = split.column()
             col_2.label(text="Geometry")
-            col_3.prop(context.armature.ragdoll,"rb_postfix", text="")
+            col_3.prop(context.armature.ragdoll,"rb_suffix", text="")
             
             row = layout.row()
             split = row.split(factor=0.25)
             col_4 = split.column()
             col_5 = split.column()
             col_4.label(text="Constraints")
-            col_5.prop(context.armature.ragdoll,"const_postfix", text="")
+            col_5.prop(context.armature.ragdoll,"const_suffix", text="")
 
             row = layout.row()
             split = row.split(factor=0.25)
             col_6 = split.column()
             col_7 = split.column()
             col_6.label(text="Connectors")
-            col_7.prop(context.armature.ragdoll,"connect_postfix", text="")
+            col_7.prop(context.armature.ragdoll,"connect_suffix", text="")
 
 
 
@@ -244,5 +199,78 @@ class RagDollPanel(bpy.types.Panel):
                 row.operator("scene.rbconstraints")
 
             else:
-                pass
-               
+                if context.object.type == 'ARMATURE':
+                    if context.scene.rigidbody_world and context.scene.rigidbody_world.constraints: 
+                        layout = self.layout        
+                        box = layout.box()
+
+                        row = box.row()
+                        split = row.split(factor=0.25)
+                        col_1 = split.column()
+                        col_2 = split.column()
+                        col_1.label(text="Rig Type")
+                        if context.armature.ragdoll.initialized:
+                            col_2.label(text=context.armature.ragdoll.type)
+                        else:
+                            col_2.prop(context.armature.ragdoll,"type", text="")
+                        
+
+                        row = box.row()
+                        split = row.split(factor=0.25)
+                        col_1 = split.column()
+                        col_2 = split.column()
+                        col_1.label(text="Config")
+                        if context.armature.ragdoll.type == 'CONTROL' or not context.armature.ragdoll.control_rig:
+                            col_2.prop(context.armature.ragdoll,"config", text="")
+                        else:
+                            col_2.prop(context.armature.ragdoll.control_rig.data.ragdoll,"config", text="")
+
+                        row.operator("text.open_filebrowser", text="", icon='FILEBROWSER')
+                        
+                        box = layout.box()
+                        row = box.row()
+                        row.label(text="Geometry")
+                        row = box.row()
+                        row.prop(context.armature.ragdoll, "rb_bone_width_relative", text="Relative Bone Width")
+                        row = box.row()
+                        row.prop(context.armature.ragdoll, "rb_bone_width_min", text="Minimum Bone Width")
+                        
+                        if context.armature.ragdoll.initialized == False:
+                            row = layout.row()
+                            row.operator("armature.ragdoll_add", text="Create Ragdoll")
+                        else:
+                            row = layout.row()
+                            
+                            split = layout.split(factor=0.33)
+                            col_1 = split.column()
+                            col_2 = split.column()
+                            row = col_1.row()
+                            row.prop(context.object.data.ragdoll, "simulated", text="Simulated")
+                            
+                            row0 = col_1.row()
+                            row0.prop(context.armature.ragdoll, "wobble", text="Wobble")
+                            row1 = col_2.row()
+                            row1.prop(context.armature.ragdoll, "influence", text="Influence")
+                            row2 = col_2.row()
+                            row2.prop(context.armature.ragdoll, "wobble_distance", text="Distance")
+                            row3 = col_2.row()
+                            row3.prop(context.armature.ragdoll, "wobble_rotation", text="Rotation")
+                            
+                            if context.armature.ragdoll.simulated == False:
+                                row1.enabled = False
+                            else:
+                                row1.enabled = True
+
+                            if context.armature.ragdoll.wobble == False:
+                                row2.enabled = False
+                                row3.enabled = False
+                            else:
+                                row2.enabled = True
+                                row3.enabled = True
+
+
+                            row = layout.row()
+                            row = layout.row()
+                            row.operator("armature.ragdoll_update", text="Update Ragdoll")
+                            row.operator("armature.ragdoll_remove", text="Remove Ragdoll")
+                    

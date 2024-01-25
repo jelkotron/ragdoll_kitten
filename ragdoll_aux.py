@@ -115,7 +115,7 @@ def collection_objects_remove(collection, objects=[]):
 
 
 #-------- add a cube --------
-def cube(width, name):
+def cube(width, name, mode='OBJECT'):
     verts = [
             (width/2, width/2, -width/2),
             (width/2, -width/2, -width/2),
@@ -126,7 +126,10 @@ def cube(width, name):
             (-width/2, -width/2, width/2), 
             (-width/2, width/2, width/2)
             ] 
-                
+    
+    if mode == 'VERTICES':
+        return verts
+
     faces = [
             (0, 1, 2, 3), 
             (4, 7, 6, 5), 
@@ -136,12 +139,14 @@ def cube(width, name):
             (4, 0, 3, 7)
             ]
 
-    mesh = bpy.data.meshes.new(name) 
-    mesh.from_pydata(verts, [], faces)
-    cube = bpy.data.objects.new(name, mesh) 
-    bpy.context.scene.collection.objects.link(cube)
+    if mode == 'OBJECT':
+        mesh = bpy.data.meshes.new(name) 
+        mesh.from_pydata(verts, [], faces)
+        cube = bpy.data.objects.new(name, mesh) 
+        bpy.context.scene.collection.objects.link(cube)
 
-    return cube 
+        return cube 
+
 
 #-------- remove armatures w/o users --------
 def garbage_collect_armatures():

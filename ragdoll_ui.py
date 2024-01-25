@@ -233,7 +233,12 @@ class RagDollPanel(bpy.types.Panel):
                         row = box.row()
                         row.prop(context.armature.ragdoll, "rb_bone_width_relative", text="Relative Bone Width")
                         row = box.row()
-                        row.prop(context.armature.ragdoll, "rb_bone_width_min", text="Minimum Bone Width")
+                        row.prop(context.armature.ragdoll, "rb_bone_width_min", text="Minimum Width")
+                        row.enabled = False
+
+                        row = box.row()
+                        row.prop(context.armature.ragdoll, "rb_bone_width_max", text="Maximum Width")
+                        row.enabled = False
                         
                         if context.armature.ragdoll.initialized == False:
                             row = layout.row()
@@ -245,21 +250,19 @@ class RagDollPanel(bpy.types.Panel):
                             col_1 = split.column()
                             col_2 = split.column()
                             row = col_1.row()
-                            row.prop(context.object.data.ragdoll, "simulated", text="Simulated")
+                            row.prop(context.object.data.ragdoll, "kinematic", text="Animated")
                             
                             row0 = col_1.row()
                             row0.prop(context.armature.ragdoll, "wobble", text="Wobble")
                             row1 = col_2.row()
-                            row1.prop(context.armature.ragdoll, "influence", text="Influence")
+                            row1.prop(context.armature.ragdoll, "kinematic_influence", text="Override")
                             row2 = col_2.row()
                             row2.prop(context.armature.ragdoll, "wobble_distance", text="Distance")
                             row3 = col_2.row()
                             row3.prop(context.armature.ragdoll, "wobble_rotation", text="Rotation")
                             
-                            if context.armature.ragdoll.simulated == False:
-                                row1.enabled = False
-                            else:
-                                row1.enabled = True
+                            row1.enabled = not context.armature.ragdoll.kinematic
+                                
 
                             if context.armature.ragdoll.wobble == False:
                                 row2.enabled = False

@@ -34,11 +34,12 @@ class RagDollPropGroup(bpy.types.PropertyGroup):
     
     # -------- Geometry Settings
     rb_bone_width_min: bpy.props.FloatProperty(name="Minimum Rigid Body Geo Width", default=0.1)
+    rb_bone_width_max: bpy.props.FloatProperty(name="Minimum Rigid Body Geo Width", default=0.1)
     rb_bone_width_relative: bpy.props.FloatProperty(name="Relative Rigid Body Geo Width", default=0.1)
 
     # -------- Channels --------
-    simulated: bpy.props.BoolProperty(name="is_animated", default=True)
-    influence: bpy.props.FloatProperty(name="rigid_body_influence",min=0.0, max=1.0, default=1.0)
+    kinematic: bpy.props.BoolProperty(name="is_animated", default=True)
+    kinematic_influence: bpy.props.FloatProperty(name="rigid_body_influence",min=0.0, max=1.0, default=1.0)
     wobble: bpy.props.BoolProperty(name="is_wobbley", default=False)
     wobble_distance: bpy.props.FloatProperty(name="wobble_distance_max",min=0.0, max=16.0, default=1.0)
     wobble_rotation: bpy.props.FloatProperty(name="wobble_rotation_max", subtype="ANGLE", min=0.0, max=360.0, default=0)
@@ -112,7 +113,46 @@ def secondary_rig_add(armature_object):
         print("Error: No active armature.")
         return None
         
+
+def rb_cubes_scale(control_rig):
+    control_rig.data.id_properties_ensure()  # Make sure the manager is updated
+    meshes = control_rig.data.ragdoll.rigid_bodies.objects
+    bones = control_rig.pose.bones
+    width_relative = control_rig.data.ragdoll.rb_bone_width_relative
+    width_min = control_rig.data.ragdoll.rb_bone_width_min
+    width_max = control_rig.data.ragdoll.rb_bone_width_max
+   
+   
+    deform_rig_name = control_rig.data.ragdoll.deform_rig.name
+    rb_suffix = control_rig.data.ragdoll.rb_suffix
+
+    for mesh in meshes:
+        # print(mesh.name, mesh.dimensions)
+        bone = bones.get(mesh.name.replace(deform_rig_name,"").replace(rb_suffix,"").strip("."))
+        # cube_verts = ragdoll_aux.cube(width, name, mode='VERTICES')
+        # print(bone, "bone")
+        if bone:
+            dimensions = mesh.dimensions
+            for vert in mesh.data.vertices:
+                for i in range(3):
+                    # reset cube to dimensions = [1,1,1] 
+                    vert.co[i] *= abs(0.5 / vert.co[i])
+                    # apply new transform
+                    if i!=1:
+                        maximum = (vert.co[i] / abs(vert.co[i]) * width_max) / 2
+                        minimum = (vert.co[i] / abs(vert.co[i]) * width_min) / 2
+                        vert.co[i] *= bone.length * width_relative
+                        # vert.co[i] = min(vert.co[i], maximum)
+                        # vert.co[i] = max(vert.co[i], minimum)
+
+                    else:
+                        vert.co[i] *= 1 / 1 * bone.length
+                    # apply relative value to x, z axis
+        mesh.data.update()
+
+    bpy.context.view_layer.update()
         
+
 def rb_cubes_add(pbones):
     rb_bones = []
     # store current frame & tmp reset to 0
@@ -137,13 +177,12 @@ def rb_cubes_add(pbones):
             geo_name = deform_rig.name + "." + pb.name + deform_rig.data.ragdoll.rb_suffix
             # add and scale box geometry per bone
             new_cube = ragdoll_aux.cube(1, geo_name)
-            new_cube.display_type = 'WIRE'
+            # new_cube.display_type = 'WIRE'
 
             for vert in new_cube.data.vertices:
-                #TODO: consider armatures w/ scales other than 1
-                vert.co[0] *= 1 / new_cube.dimensions[1] * deform_rig.data.ragdoll.rb_bone_width_relative
+                vert.co[0] *= 1 / new_cube.dimensions[1] * pb.length * deform_rig.data.ragdoll.rb_bone_width_relative
                 vert.co[1] *= 1 / new_cube.dimensions[1] * pb.length
-                vert.co[2] *= 1 / new_cube.dimensions[1] * deform_rig.data.ragdoll.rb_bone_width_relative
+                vert.co[2] *= 1 / new_cube.dimensions[1] * pb.length * deform_rig.data.ragdoll.rb_bone_width_relative
 
             # parent cube to control rig bone
             new_cube.matrix_local = pb.matrix
@@ -167,14 +206,14 @@ def rb_cubes_add(pbones):
             # add driver to switch animation/simulation
             driven_value = new_cube.rigid_body.driver_add("kinematic")
             driven_value.driver.type = 'SCRIPTED'
-            driven_value.driver.expression = "animated"
+            driven_value.driver.expression = "kinematic"
             driver_var = driven_value.driver.variables.new()
-            driver_var.name = "animated"
+            driver_var.name = "kinematic"
             driver_var.type = 'SINGLE_PROP'
             target = driver_var.targets[0]
             target.id_type = 'ARMATURE'
             target.id = control_rig.data
-            target.data_path = '["kinematic"]'
+            target.data_path = 'ragdoll.kinematic'
 
             rb_bones.append(new_cube)
    
@@ -195,11 +234,22 @@ def rb_cubes_add(pbones):
 def rag_doll_remove(armature_object):
     if armature_object.type == 'ARMATURE':
         if armature_object.data.ragdoll.type == 'DEFORM':
+            deform_rig = armature_object
+            control_rig = armature_object.data.ragdoll.control_rig
             armature_object = armature_object.data.ragdoll.control_rig
+        else:
+            control_rig = armature_object
+            deform_rig = armature_object.data.ragdoll.deform_rig
+            
+        for bone in deform_rig.pose.bones:
+            for const in bone.constraints:
+                if const.name == "Copy Transforms RD" or const.name == "Copy Transforms CTRL":
+                    bone.constraints.remove(const)
 
-        rigid_bodies = armature_object.data.ragdoll.rigid_bodies
-        constraints = armature_object.data.ragdoll.constraints
-        connectors = armature_object.data.ragdoll.connectors
+
+        rigid_bodies = control_rig.data.ragdoll.rigid_bodies
+        constraints = control_rig.data.ragdoll.constraints
+        connectors = control_rig.data.ragdoll.connectors
 
         if bpy.context.scene.rigidbody_world:
             collection = bpy.context.scene.rigidbody_world.collection
@@ -218,12 +268,13 @@ def rag_doll_remove(armature_object):
         collection_remove(constraints)
         collection_remove(connectors)
 
-        armature_object.data.ragdoll.deform_rig.data.ragdoll.initialized = False
         armature_data =armature_object.data
         bpy.data.objects.remove(armature_object, do_unlink=True)
         if armature_data.name in bpy.data.armatures:
             bpy.data.armatures.remove(armature_data, do_unlink=True)
 
+        drivers_remove_invalid(deform_rig)
+        deform_rig.data.ragdoll.initialized = False
 
         print("Info: removed ragdoll")
 
@@ -250,6 +301,7 @@ def rag_doll_update(context):
         if rig.data.ragdoll.type == 'DEFORM':
             control_rig = rig.data.ragdoll.control_rig
         rd_constraint_limit(control_rig)
+        rb_cubes_scale(control_rig)
         print("Info: ragdoll updated")
 
 
@@ -497,15 +549,20 @@ def bone_drivers_add(deform_rig, control_rig):
                 rd_influence = const.driver_add("influence")
                 rd_influence.driver.type = 'SCRIPTED'
                 var = rd_influence.driver.variables.new()
-                var.name = "rd_influence"
+                var.name = "kinematic_influence"
                 var.type = 'SINGLE_PROP'
                 target = var.targets[0]
                 target.id_type = 'ARMATURE'
                 target.id = control_rig.data
-                target.data_path = '["rd_influence"]'
-                rd_influence.driver.expression = "rd_influence"
+                target.data_path = 'ragdoll.kinematic_influence'
+                rd_influence.driver.expression = "kinematic_influence"
 
                 if 'CTRL' in const.name:
-                    rd_influence.driver.expression = "1 - rd_influence"
+                    rd_influence.driver.expression = "1 - kinematic_influence"
 
     print("Info: bone constraint drivers set")
+
+def drivers_remove_invalid(object):
+    for d in object.animation_data.drivers:
+        if 'kinematic_influence' in d.driver.expression:
+            object.animation_data.drivers.remove(d)

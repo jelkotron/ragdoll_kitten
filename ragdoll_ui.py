@@ -4,7 +4,7 @@ import sys
 sys.path.append("/home/schnollie/Work/bpy/ragdoll_tools")
 from ragdoll_aux import rb_constraint_collection_set, load_text
 
-from ragdoll import rag_doll_create, rag_doll_remove, rag_doll_update
+from ragdoll import rag_doll_create, rag_doll_remove, rag_doll_update, wobbles_update
 from bpy_extras.io_utils import ImportHelper
 import os
 
@@ -89,6 +89,23 @@ class UpdateRagDollOperator(bpy.types.Operator):
     def execute(self, context):
         rag_doll_update(context)
         return {'FINISHED'}
+
+
+class UpdateWobblesOperator(bpy.types.Operator):
+    """Update selected Armature's RagDoll"""
+    bl_idname = "armature.wobbles_update"
+    bl_label = "Update Wobbles"
+    bl_options = {'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+        wobbles_update(context)
+        return {'FINISHED'}
+
+
 
 
 class RagDollCollectionsPanel(bpy.types.Panel):
@@ -245,31 +262,77 @@ class RagDollPanel(bpy.types.Panel):
                             row.operator("armature.ragdoll_add", text="Create Ragdoll")
                         else:
                             row = layout.row()
+                            split = layout.split(factor=0.33)
+                            col_1 = split.column()
+                            col_2 = split.column()
+                            col_1_row_0 = col_1.row()
+                            col_1_row_0.prop(context.object.data.ragdoll, "kinematic", text="Animated")
+                            col_2_row_0 = col_2.row()
+                            col_2_row_0.prop(context.armature.ragdoll, "kinematic_influence", text="Override")
+
+                            row = layout.row()
+                            row.prop(context.armature.ragdoll, "wobble", text="Wobble")
                             
                             split = layout.split(factor=0.33)
                             col_1 = split.column()
                             col_2 = split.column()
-                            row = col_1.row()
-                            row.prop(context.object.data.ragdoll, "kinematic", text="Animated")
                             
-                            row0 = col_1.row()
-                            row0.prop(context.armature.ragdoll, "wobble", text="Wobble")
-                            row1 = col_2.row()
-                            row1.prop(context.armature.ragdoll, "kinematic_influence", text="Override")
-                            row2 = col_2.row()
-                            row2.prop(context.armature.ragdoll, "wobble_distance", text="Distance")
-                            row3 = col_2.row()
-                            row3.prop(context.armature.ragdoll, "wobble_rotation", text="Rotation")
                             
-                            row1.enabled = not context.armature.ragdoll.kinematic
-                                
+                            
+                            col_1_row_2 = col_1.row()
+                            col_1_row_2.prop(context.armature.ragdoll, "wobble_restrict_linear", text="")
+
+                            col_1_row_3 = col_1.row()
+                            col_1_row_3.prop(context.armature.ragdoll, "wobble_restrict_angular", text="")
+
+                            col_2_row_0 = col_2.row()
+                            col_2_row_1 = col_2.row()
+                            col_2_row_1.prop(context.armature.ragdoll, "wobble_distance", text="Distance")
+
+                            col_2_row_2 = col_2.row()
+                            col_2_row_2.prop(context.armature.ragdoll, "wobble_rotation", text="Rotation")
+
+                            col_2_row_3 = col_2.row()
+                            col_2_row_3.operator("armature.wobbles_update", text="Update")
 
                             if context.armature.ragdoll.wobble == False:
-                                row2.enabled = False
-                                row3.enabled = False
+                                col_1.enabled = False
+                                col_2.enabled = False
                             else:
-                                row2.enabled = True
-                                row3.enabled = True
+                                col_1.enabled = True
+                                col_2.enabled = True
+
+                            if context.armature.ragdoll.wobble_restrict_linear == False:
+                                col_2_row_1.enabled = False
+                            else:
+                                col_2_row_1.enabled = True
+                            
+                            if context.armature.ragdoll.wobble_restrict_angular == False:
+                                col_2_row_2.enabled = False
+                            else:
+                                col_2_row_2.enabled = True
+                            
+                            
+                            
+                            # row2 = col_2.row()
+                            # row2.prop(context.armature.ragdoll, "kinematic_influence", text="Override")
+                            # row3 = col_2.row()
+                            # row3.prop(context.armature.ragdoll, "wobble_restrict_linear", text="")
+                            # row3.prop(context.armature.ragdoll, "wobble_distance", text="Distance")
+                            # row4 = col_2.row()
+                            # row4.prop(context.armature.ragdoll, "wobble_restrict_angular", text="")
+                            # row4.prop(context.armature.ragdoll, "wobble_rotation", text="Rotation")
+
+                            
+                            # row1.enabled = not context.armature.ragdoll.kinematic
+                                
+
+                            # if context.armature.ragdoll.wobble == False:
+                            #     row2.enabled = False
+                            #     row3.enabled = False
+                            # else:
+                            #     row2.enabled = True
+                            #     row3.enabled = True
 
 
                             row = layout.row()

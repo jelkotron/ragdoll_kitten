@@ -15,8 +15,8 @@ class RagDollPropGroup(bpy.types.PropertyGroup):
     rigid_bodies: bpy.props.PointerProperty(type=bpy.types.Collection)
     constraints: bpy.props.PointerProperty(type=bpy.types.Collection)
     connectors: bpy.props.PointerProperty(type=bpy.types.Collection)
-    wigglers: bpy.props.PointerProperty(type=bpy.types.Collection)
-    wiggler_constraints: bpy.props.PointerProperty(type=bpy.types.Collection)
+    wobbles: bpy.props.PointerProperty(type=bpy.types.Collection)
+    wobble_constraints: bpy.props.PointerProperty(type=bpy.types.Collection)
     #-------- Armature Sub Type --------
     type: bpy.props.EnumProperty(items=[
                                                             ('CONTROL', "Control Rig", "Control Rig of a RagDoll"),
@@ -29,8 +29,8 @@ class RagDollPropGroup(bpy.types.PropertyGroup):
     ctrl_rig_suffix: bpy.props.StringProperty(name="Control Rig Suffix", default=".Control")
     def_rig_suffix: bpy.props.StringProperty(name="Deform Rig Suffix", default=".Deform")
     rb_suffix: bpy.props.StringProperty(name="Ragdoll Geo Suffix", default=".RigidBody")
-    wiggler_suffix: bpy.props.StringProperty(name="Ragdoll Geo Suffix", default=".Wiggler")
-    wiggler_const_suffix: bpy.props.StringProperty(name="Ragdoll Geo Suffix", default=".WigglerConstraint")
+    wobble_suffix: bpy.props.StringProperty(name="Ragdoll Geo Suffix", default=".Wobble")
+    wobble_const_suffix: bpy.props.StringProperty(name="Ragdoll Geo Suffix", default=".WobbleConstraint")
     const_suffix: bpy.props.StringProperty(name="Rigid Body Constraint Suffix", default=".Constraint")
     connect_suffix: bpy.props.StringProperty(name="Connector Suffix", default=".Connect")
     # -------- State --------
@@ -45,9 +45,10 @@ class RagDollPropGroup(bpy.types.PropertyGroup):
     kinematic: bpy.props.BoolProperty(name="is_animated", default=True)
     kinematic_influence: bpy.props.FloatProperty(name="rigid_body_influence",min=0.0, max=1.0, default=1.0)
     wobble: bpy.props.BoolProperty(name="is_wobbley", default=False)
-    wobble_distance: bpy.props.FloatProperty(name="wobble_distance_max",min=0.0, max=16.0, default=1.0)
-    wobble_rotation: bpy.props.FloatProperty(name="wobble_rotation_max", subtype="ANGLE", min=0.0, max=360.0, default=0)
-    
+    wobble_distance: bpy.props.FloatProperty(name="wobble_distance_max",min=0.0, max=16.0, default=0.2)
+    wobble_rotation: bpy.props.FloatProperty(name="wobble_rotation_max", subtype="ANGLE", min=0.0, max=math.radians(360.0), default=math.radians(22.5))
+    wobble_restrict_linear: bpy.props.BoolProperty(name="wobble_restrict_linear", default=True)
+    wobble_restrict_angular: bpy.props.BoolProperty(name="wobble_restrict_angular", default=False)
 
 
 def rag_doll_create(armature_object):
@@ -56,13 +57,13 @@ def rag_doll_create(armature_object):
         deform_rig = armature_object
         control_rig = secondary_rig_add(armature_object)
         rb_cubes_add(bones, mode='PRIMARY') 
-        rb_cubes_add(bones, mode='SECONDARY') # wigglers
+        rb_cubes_add(bones, mode='SECONDARY') # wobbles
 
         rb_constraints_add(deform_rig, mode='PRIMARY')
         rb_constraint_defaults(control_rig.data.ragdoll.constraints, 0, 22.5)
         
-        rb_constraints_add(deform_rig, mode='SECONDARY') # wiggler constraints
-        rb_constraint_defaults(control_rig.data.ragdoll.wiggler_constraints, 0.01, 22.5)
+        rb_constraints_add(deform_rig, mode='SECONDARY') # wobble constraints
+        rb_constraint_defaults(control_rig.data.ragdoll.wobble_constraints, 0.01, 22.5)
         
         rd_constraint_limit(control_rig)
         rb_connectors_add(control_rig)
@@ -105,7 +106,7 @@ def secondary_rig_add(armature_object):
         ctrl.data.id_properties_ensure()  # Make sure the manager is updated
         property_manager = ctrl.data.id_properties_ui("rd_influence")
         property_manager.update(min=0, max=1)
-        ctrl.data["kinematic"] = False
+        
 
         ctrl.data.ragdoll.deform_rig = deform
         ctrl.data.ragdoll.initialized = True
@@ -187,7 +188,7 @@ def rb_cubes_add(pbones, mode='PRIMARY'):
         suffix = deform_rig.data.ragdoll.rb_suffix
     
     elif mode == 'SECONDARY':
-        suffix = deform_rig.data.ragdoll.wiggler_suffix
+        suffix = deform_rig.data.ragdoll.wobble_suffix
 
     if control_rig:
         for pb in pbones:
@@ -250,7 +251,7 @@ def rb_cubes_add(pbones, mode='PRIMARY'):
     if mode == 'PRIMARY':
         control_rig.data.ragdoll.rigid_bodies = collection
     if mode == 'SECONDARY':
-        control_rig.data.ragdoll.wigglers = collection
+        control_rig.data.ragdoll.wobbles = collection
     
     # restore current frame
     bpy.context.scene.frame_current = f_init
@@ -275,23 +276,31 @@ def rag_doll_remove(armature_object):
         rigid_bodies = control_rig.data.ragdoll.rigid_bodies
         constraints = control_rig.data.ragdoll.constraints
         connectors = control_rig.data.ragdoll.connectors
+        wobbles = control_rig.data.ragdoll.wobbles
+        wobble_constraints = control_rig.data.ragdoll.wobble_constraints
 
         if bpy.context.scene.rigidbody_world:
             collection = bpy.context.scene.rigidbody_world.collection
             object_remove_from_collection(collection, rigid_bodies.objects)
+            object_remove_from_collection(collection, wobbles.objects)
 
         if bpy.context.scene.rigidbody_world.constraints:
+            #TODO: be more concise
             collection = bpy.context.scene.rigidbody_world.constraints.collection_objects.data
             rb_obj_list =  bpy.context.scene.rigidbody_world.constraints
 
             object_remove_from_collection(collection, constraints.objects)
             object_remove_from_collection(rb_obj_list, constraints.objects)
+            object_remove_from_collection(collection, wobble_constraints.objects)
+            object_remove_from_collection(rb_obj_list, wobble_constraints.objects)
 
         # C.scene.rigidbody_world.constraints.collection_objects.data.objects['Armature.mixamorig:
 
         collection_remove(rigid_bodies)
         collection_remove(constraints)
         collection_remove(connectors)
+        collection_remove(wobbles)
+        collection_remove(wobble_constraints)
 
         armature_data =armature_object.data
         bpy.data.objects.remove(armature_object, do_unlink=True)
@@ -345,20 +354,63 @@ def rb_constraints_add(deform_rig, mode='PRIMARY'):
         deform_rig = control_rig.data.ragdoll.deform_rig
 
     rb_suffix = control_rig.data.ragdoll.rb_suffix
-    wiggler_suffix = control_rig.data.ragdoll.wiggler_suffix
+    wobble_suffix = control_rig.data.ragdoll.wobble_suffix
 
 
     if mode == 'PRIMARY':
         empty_suffix = deform_rig.data.ragdoll.const_suffix
 
     elif mode == 'SECONDARY':
-        empty_suffix = deform_rig.data.ragdoll.wiggler_const_suffix
+        empty_suffix = deform_rig.data.ragdoll.wobble_const_suffix
     
     empties = []
     bones = ragdoll_aux.get_visible_posebones()
     # deform_rig = armature_object.data.ragdoll.deform_rig
     
     for bone in bones:
+    #     if len(bone.children > 0):
+    #         if i in range(len(bone.children)):
+    #             child = bone.children[i]
+    #             empty_name = deform_rig.name + "." + child.name + empty_suffix
+    #             empty = bpy.data.objects.new(empty_name, None)
+    #             bpy.context.collection.objects.link(empty)
+    #             empty.empty_display_size = 0.15
+
+    #             bpy.context.scene.rigidbody_world.constraints.objects.link(empty)
+    #             empty.rigid_body_constraint.type = 'GENERIC'
+                
+    #             vec = (child.head - child.tail)
+
+    #             if mode == 'SECONDARY':
+    #                 # vec *= 0.5
+    #                 empty.empty_display_size = 0.05
+    #                 empty.rigid_body_constraint.type = 'GENERIC'
+    #                 empty.rigid_body_constraint.enabled = deform_rig.data.ragdoll.wobble
+
+
+    #             trans = mathutils.Matrix.Translation(vec)
+                            
+    #             empty.matrix_local = child.matrix
+    #             empty.parent = deform_rig
+    #             empty.parent_type = 'BONE'
+    #             empty.parent_bone = child.name
+    #             empty.matrix_parent_inverse = child.matrix.inverted() @ trans
+
+    #             if mode == 'PRIMARY':
+    #                 name_0 = deform_rig.name + "." + bone.name + control_rig.data.ragdoll.rb_suffix
+    #                 name_1 = deform_rig.name + "." + bone.parent.name + control_rig.data.ragdoll.rb_suffix
+    #             if mode == 'SECONDARY':
+    #                 name_0 = deform_rig.name + "." + bone.name + control_rig.data.ragdoll.rb_suffix
+    #                 name_1 = deform_rig.name + "." + bone.name + control_rig.data.ragdoll.wobble_suffix
+                        
+
+    #             geo0 = bpy.data.objects[name_0]
+    #             geo1 = bpy.data.objects[name_1]
+    #             empty.rigid_body_constraint.object1 = geo0
+    #             empty.rigid_body_constraint.object2 = geo1
+    #             empties.append(empty)
+                
+        
         if bone.parent:
             empty_name = ""
             
@@ -375,7 +427,7 @@ def rb_constraints_add(deform_rig, mode='PRIMARY'):
                 # vec *= 0.5
                 empty.empty_display_size = 0.05
                 empty.rigid_body_constraint.type = 'GENERIC'
-
+                empty.rigid_body_constraint.enabled = deform_rig.data.ragdoll.wobble
 
             trans = mathutils.Matrix.Translation(vec)
                         
@@ -390,7 +442,8 @@ def rb_constraints_add(deform_rig, mode='PRIMARY'):
                 name_1 = deform_rig.name + "." + bone.parent.name + control_rig.data.ragdoll.rb_suffix
             if mode == 'SECONDARY':
                 name_0 = deform_rig.name + "." + bone.name + control_rig.data.ragdoll.rb_suffix
-                name_1 = deform_rig.name + "." + bone.name + control_rig.data.ragdoll.wiggler_suffix
+                name_1 = deform_rig.name + "." + bone.name + control_rig.data.ragdoll.wobble_suffix
+                    
 
             geo0 = bpy.data.objects[name_0]
             geo1 = bpy.data.objects[name_1]
@@ -410,8 +463,8 @@ def rb_constraints_add(deform_rig, mode='PRIMARY'):
         print("Info: rd constraint limits set")
 
     else:
-        control_rig.data.ragdoll.wiggler_constraints = collection
-        deform_rig.data.ragdoll.wiggler_constraints = collection
+        control_rig.data.ragdoll.wobble_constraints = collection
+        deform_rig.data.ragdoll.wobble_constraints = collection
 
     bpy.context.scene.frame_current = f_init
            
@@ -577,9 +630,6 @@ def bone_constraints_add(bones, control_rig):
 
 
 def bone_drivers_add(deform_rig, control_rig):
-    # add custom property to ctrl armature to switch animation/simulationv
-    control_rig.data["rd_influence"] = 1.0
-
     for bone in deform_rig.pose.bones:
         # add driver to copy ragdoll transform constraint
         for const in bone.constraints:
@@ -605,3 +655,35 @@ def drivers_remove_invalid(object):
     for d in object.animation_data.drivers:
         if 'kinematic_influence' in d.driver.expression:
             object.animation_data.drivers.remove(d)
+
+
+def wobbles_update(context):
+    control_rig = ragdoll_aux.validate_selection(context.object)
+    if control_rig.data.ragdoll.type == 'DEFORM':
+        control_rig = control_rig.data.ragdoll.control_rig
+    if control_rig:
+        wobble_constraints = control_rig.data.ragdoll.wobble_constraints.objects
+        wobble = control_rig.data.ragdoll.wobble
+        limit_lin = control_rig.data.ragdoll.wobble_restrict_linear
+        limit_ang = control_rig.data.ragdoll.wobble_restrict_angular
+        max_lin = control_rig.data.ragdoll.wobble_distance
+        max_ang = control_rig.data.ragdoll.wobble_rotation
+        
+        for obj in wobble_constraints:
+            const = obj.rigid_body_constraint
+            if const:
+                if not wobble:
+                    const.enabled = False
+                else:
+                    const.enabled = True
+                    if const.type == 'GENERIC' or const.type == 'GENERIC_SPRING':
+                        const.use_limit_ang_x, const.use_limit_ang_y, const.use_limit_ang_z = limit_ang, limit_ang, limit_ang
+                        const.use_limit_lin_x, const.use_limit_lin_y, const.use_limit_lin_z = limit_lin, limit_lin, limit_lin
+                        const.limit_lin_x_lower, const.limit_lin_x_upper = - max_lin, max_lin
+                        const.limit_lin_y_lower, const.limit_lin_y_upper = - max_lin, max_lin
+                        const.limit_lin_z_lower, const.limit_lin_z_upper = - max_lin, max_lin 
+
+                        const.limit_ang_x_lower, const.limit_ang_x_upper = math.degrees(- max_ang), math.degrees(max_ang)
+                        const.limit_ang_y_lower, const.limit_ang_y_upper = math.degrees(- max_ang), math.degrees(max_ang)
+                        const.limit_ang_z_lower, const.limit_ang_z_upper = math.degrees(- max_ang), math.degrees(max_ang)
+                    

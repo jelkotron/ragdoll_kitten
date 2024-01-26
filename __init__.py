@@ -24,6 +24,7 @@ def register():
     bpy.utils.register_class(AddRagDollOperator)
     bpy.utils.register_class(RemoveRagDollOperator)
     bpy.utils.register_class(UpdateRagDollOperator)
+    bpy.utils.register_class(UpdateWobblesOperator)
     bpy.utils.register_class(OT_TextBrowse)
 
     
@@ -40,6 +41,7 @@ def unregister():
     bpy.utils.unregister_class(AddRagDollOperator)
     bpy.utils.unregister_class(RemoveRagDollOperator)
     bpy.utils.unregister_class(UpdateRagDollOperator)
+    bpy.utils.unregister_class(UpdateWobblersOperator)
     bpy.utils.unregister_class(OT_TextBrowse)
     
 if __name__ == "__main__":

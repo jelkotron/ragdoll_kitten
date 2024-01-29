@@ -4,7 +4,7 @@ import sys
 sys.path.append("/home/schnollie/Work/bpy/ragdoll_tools")
 from ragdoll_aux import rb_constraint_collection_set, load_text
 
-from ragdoll import rag_doll_create, rag_doll_remove, rag_doll_update, wobbles_update
+from ragdoll import rag_doll_create, rag_doll_remove, rag_doll_update, wiggles_update, force_update_drivers
 from bpy_extras.io_utils import ImportHelper
 import os
 
@@ -91,10 +91,10 @@ class UpdateRagDollOperator(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class UpdateWobblesOperator(bpy.types.Operator):
-    """Update selected Armature's RagDoll"""
-    bl_idname = "armature.wobbles_update"
-    bl_label = "Update Wobbles"
+class UpdateDriversOperator(bpy.types.Operator):
+    """Update all armatures Drivers"""
+    bl_idname = "armature.update_drivers"
+    bl_label = "Update Drivers"
     bl_options = {'UNDO'}
 
     @classmethod
@@ -102,7 +102,22 @@ class UpdateWobblesOperator(bpy.types.Operator):
         return True
 
     def execute(self, context):
-        wobbles_update(context)
+        force_update_drivers(context)
+        return {'FINISHED'}
+
+
+class UpdateWigglesOperator(bpy.types.Operator):
+    """Update selected Armature's RagDoll"""
+    bl_idname = "armature.wiggles_update"
+    bl_label = "Update Wiggles"
+    bl_options = {'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+        wiggles_update(context)
         return {'FINISHED'}
 
 
@@ -116,7 +131,7 @@ class RagDollCollectionsPanel(bpy.types.Panel):
     bl_options = {'DEFAULT_CLOSED'}
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
-    bl_context = "data"
+    bl_context = "physics"
 
     def draw(self, context):
         if context.scene.rigidbody_world and context.scene.rigidbody_world.constraints:         
@@ -126,21 +141,21 @@ class RagDollCollectionsPanel(bpy.types.Panel):
             col_0 = split.column()
             col_1 = split.column()
             col_0.label(text="Geometry")
-            col_1.prop(context.armature.ragdoll,"rigid_bodies", text="")
+            col_1.prop(context.object.data.ragdoll,"rigid_bodies", text="")
 
             row = layout.row()
             split = row.split(factor=0.25)
             col_2 = split.column()
             col_3 = split.column()
             col_2.label(text="Constraints")
-            col_3.prop(context.armature.ragdoll,"constraints", text="")
+            col_3.prop(context.object.data.ragdoll,"constraints", text="")
             
             row = layout.row()
             split = row.split(factor=0.25)
             col_4 = split.column()
             col_5 = split.column()
             col_4.label(text="Connectors")
-            col_5.prop(context.armature.ragdoll,"connectors", text="")
+            col_5.prop(context.object.data.ragdoll,"connectors", text="")
         
 
 class RagDollSuffixesPanel(bpy.types.Panel):
@@ -150,7 +165,7 @@ class RagDollSuffixesPanel(bpy.types.Panel):
     bl_parent_id = "OBJECT_PT_ragdoll"
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
-    bl_context = "data"
+    bl_context = "physics"
     bl_options = {'DEFAULT_CLOSED'}
 
     def draw(self, context):
@@ -163,28 +178,28 @@ class RagDollSuffixesPanel(bpy.types.Panel):
             col_0 = split.column()
             col_1 = split.column()
             col_0.label(text="Control Rig")
-            col_1.prop(context.armature.ragdoll,"ctrl_rig_suffix", text="")
+            col_1.prop(context.object.data.ragdoll,"ctrl_rig_suffix", text="")
             
             row = layout.row()
             split = row.split(factor=0.25)
             col_2 = split.column()
             col_3 = split.column()
             col_2.label(text="Geometry")
-            col_3.prop(context.armature.ragdoll,"rb_suffix", text="")
+            col_3.prop(context.object.data.ragdoll,"rb_suffix", text="")
             
             row = layout.row()
             split = row.split(factor=0.25)
             col_4 = split.column()
             col_5 = split.column()
             col_4.label(text="Constraints")
-            col_5.prop(context.armature.ragdoll,"const_suffix", text="")
+            col_5.prop(context.object.data.ragdoll,"const_suffix", text="")
 
             row = layout.row()
             split = row.split(factor=0.25)
             col_6 = split.column()
             col_7 = split.column()
             col_6.label(text="Connectors")
-            col_7.prop(context.armature.ragdoll,"connect_suffix", text="")
+            col_7.prop(context.object.data.ragdoll,"connect_suffix", text="")
 
 
 
@@ -194,7 +209,7 @@ class RagDollPanel(bpy.types.Panel):
     bl_idname = "OBJECT_PT_ragdoll"
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
-    bl_context = "data"
+    bl_context = "physics"
 
     def draw(self, context):
         obj = context.object
@@ -216,7 +231,7 @@ class RagDollPanel(bpy.types.Panel):
                 row.operator("scene.rbconstraints")
 
             else:
-                if context.object.type == 'ARMATURE':
+                if context.object.type == 'ARMATURE' and context.object.data.ragdoll != None:
                     if context.scene.rigidbody_world and context.scene.rigidbody_world.constraints: 
                         layout = self.layout        
                         box = layout.box()
@@ -226,10 +241,10 @@ class RagDollPanel(bpy.types.Panel):
                         col_1 = split.column()
                         col_2 = split.column()
                         col_1.label(text="Rig Type")
-                        if context.armature.ragdoll.initialized:
-                            col_2.label(text=context.armature.ragdoll.type)
+                        if context.object.data.ragdoll.initialized:
+                            col_2.label(text=context.object.data.ragdoll.type)
                         else:
-                            col_2.prop(context.armature.ragdoll,"type", text="")
+                            col_2.prop(context.object.data.ragdoll,"type", text="")
                         
 
                         row = box.row()
@@ -237,10 +252,10 @@ class RagDollPanel(bpy.types.Panel):
                         col_1 = split.column()
                         col_2 = split.column()
                         col_1.label(text="Config")
-                        if context.armature.ragdoll.type == 'CONTROL' or not context.armature.ragdoll.control_rig:
-                            col_2.prop(context.armature.ragdoll,"config", text="")
+                        if context.object.data.ragdoll.type == 'CONTROL' or not context.object.data.ragdoll.control_rig:
+                            col_2.prop(context.object.data.ragdoll,"config", text="")
                         else:
-                            col_2.prop(context.armature.ragdoll.control_rig.data.ragdoll,"config", text="")
+                            col_2.prop(context.object.data.ragdoll.control_rig.data.ragdoll,"config", text="")
 
                         row.operator("text.open_filebrowser", text="", icon='FILEBROWSER')
                         
@@ -248,19 +263,21 @@ class RagDollPanel(bpy.types.Panel):
                         row = box.row()
                         row.label(text="Geometry")
                         row = box.row()
-                        row.prop(context.armature.ragdoll, "rb_bone_width_relative", text="Relative Bone Width")
+                        row.prop(context.object.data.ragdoll, "rb_bone_width_relative", text="Relative Bone Width")
                         row = box.row()
-                        row.prop(context.armature.ragdoll, "rb_bone_width_min", text="Minimum Width")
+                        row.prop(context.object.data.ragdoll, "rb_bone_width_min", text="Minimum Width")
                         row.enabled = False
 
                         row = box.row()
-                        row.prop(context.armature.ragdoll, "rb_bone_width_max", text="Maximum Width")
+                        row.prop(context.object.data.ragdoll, "rb_bone_width_max", text="Maximum Width")
                         row.enabled = False
                         
-                        if context.armature.ragdoll.initialized == False:
+                        if context.object.data.ragdoll.initialized == False:
                             row = layout.row()
                             row.operator("armature.ragdoll_add", text="Create Ragdoll")
                         else:
+                            row = layout.row()
+                            row.operator("armature.update_drivers", text="Update Drivers")
                             row = layout.row()
                             split = layout.split(factor=0.33)
                             col_1 = split.column()
@@ -268,10 +285,10 @@ class RagDollPanel(bpy.types.Panel):
                             col_1_row_0 = col_1.row()
                             col_1_row_0.prop(context.object.data.ragdoll, "kinematic", text="Animated")
                             col_2_row_0 = col_2.row()
-                            col_2_row_0.prop(context.armature.ragdoll, "kinematic_influence", text="Override")
+                            col_2_row_0.prop(context.object.data.ragdoll, "kinematic_influence", text="Override")
 
                             row = layout.row()
-                            row.prop(context.armature.ragdoll, "wobble", text="Wobble")
+                            row.prop(context.object.data.ragdoll, "wiggle", text="Wiggle")
                             
                             split = layout.split(factor=0.33)
                             col_1 = split.column()
@@ -280,34 +297,34 @@ class RagDollPanel(bpy.types.Panel):
                             
                             
                             col_1_row_2 = col_1.row()
-                            col_1_row_2.prop(context.armature.ragdoll, "wobble_restrict_linear", text="")
+                            col_1_row_2.prop(context.object.data.ragdoll, "wiggle_restrict_linear", text="")
 
                             col_1_row_3 = col_1.row()
-                            col_1_row_3.prop(context.armature.ragdoll, "wobble_restrict_angular", text="")
+                            col_1_row_3.prop(context.object.data.ragdoll, "wiggle_restrict_angular", text="")
 
                             col_2_row_0 = col_2.row()
                             col_2_row_1 = col_2.row()
-                            col_2_row_1.prop(context.armature.ragdoll, "wobble_distance", text="Distance")
+                            col_2_row_1.prop(context.object.data.ragdoll, "wiggle_distance", text="Distance")
 
                             col_2_row_2 = col_2.row()
-                            col_2_row_2.prop(context.armature.ragdoll, "wobble_rotation", text="Rotation")
+                            col_2_row_2.prop(context.object.data.ragdoll, "wiggle_rotation", text="Rotation")
 
                             col_2_row_3 = col_2.row()
-                            col_2_row_3.operator("armature.wobbles_update", text="Update")
+                            col_2_row_3.operator("armature.wiggles_update", text="Update")
 
-                            if context.armature.ragdoll.wobble == False:
+                            if context.object.data.ragdoll.wiggle == False:
                                 col_1.enabled = False
                                 col_2.enabled = False
                             else:
                                 col_1.enabled = True
                                 col_2.enabled = True
 
-                            if context.armature.ragdoll.wobble_restrict_linear == False:
+                            if context.object.data.ragdoll.wiggle_restrict_linear == False:
                                 col_2_row_1.enabled = False
                             else:
                                 col_2_row_1.enabled = True
                             
-                            if context.armature.ragdoll.wobble_restrict_angular == False:
+                            if context.object.data.ragdoll.wiggle_restrict_angular == False:
                                 col_2_row_2.enabled = False
                             else:
                                 col_2_row_2.enabled = True
@@ -317,17 +334,17 @@ class RagDollPanel(bpy.types.Panel):
                             # row2 = col_2.row()
                             # row2.prop(context.armature.ragdoll, "kinematic_influence", text="Override")
                             # row3 = col_2.row()
-                            # row3.prop(context.armature.ragdoll, "wobble_restrict_linear", text="")
-                            # row3.prop(context.armature.ragdoll, "wobble_distance", text="Distance")
+                            # row3.prop(context.armature.ragdoll, "wiggle_restrict_linear", text="")
+                            # row3.prop(context.armature.ragdoll, "wiggle_distance", text="Distance")
                             # row4 = col_2.row()
-                            # row4.prop(context.armature.ragdoll, "wobble_restrict_angular", text="")
-                            # row4.prop(context.armature.ragdoll, "wobble_rotation", text="Rotation")
+                            # row4.prop(context.armature.ragdoll, "wiggle_restrict_angular", text="")
+                            # row4.prop(context.armature.ragdoll, "wiggle_rotation", text="Rotation")
 
                             
                             # row1.enabled = not context.armature.ragdoll.kinematic
                                 
 
-                            # if context.armature.ragdoll.wobble == False:
+                            # if context.armature.ragdoll.wiggle == False:
                             #     row2.enabled = False
                             #     row3.enabled = False
                             # else:

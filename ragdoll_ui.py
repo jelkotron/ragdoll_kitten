@@ -276,10 +276,10 @@ class RagDollPanel(bpy.types.Panel):
                             row = layout.row()
                             row.operator("armature.ragdoll_add", text="Create Ragdoll")
                         else:
-                            row = layout.row()
-                            row.operator("armature.update_drivers", text="Update Drivers")
-                            row = layout.row()
-                            split = layout.split(factor=0.33)
+                            animated_box = layout.box()
+                            row = animated_box.row()
+                            row.label(text="Animation")
+                            split = animated_box.split(factor=0.33)
                             col_1 = split.column()
                             col_2 = split.column()
                             col_1_row_0 = col_1.row()
@@ -287,20 +287,33 @@ class RagDollPanel(bpy.types.Panel):
                             col_2_row_0 = col_2.row()
                             col_2_row_0.prop(context.object.data.ragdoll, "kinematic_influence", text="Override")
 
-                            row = layout.row()
-                            row.prop(context.object.data.ragdoll, "wiggle", text="Wiggle")
                             
-                            split = layout.split(factor=0.33)
+                            wiggle_box = layout.box()
+                            row = wiggle_box.row()
+                            row.label(text="Wiggle")
+                            row = wiggle_box.row()
+                            split = row.split(factor=0.33)
+                            col_0 = split.row()
+                            col_1 = split.row()
+                            row = col_0.row()
+                            row.prop(context.object.data.ragdoll, "wiggle", text="Use")
+                            update_wiggle_row = col_1.row()
+                            update_wiggle_row.operator("armature.wiggles_update", text="Update Wiggle")
+                            
+                            
+                            split = wiggle_box.split(factor=0.33)
                             col_1 = split.column()
                             col_2 = split.column()
                             
-                            
-                            
                             col_1_row_2 = col_1.row()
-                            col_1_row_2.prop(context.object.data.ragdoll, "wiggle_restrict_linear", text="")
+                            col_1_row_2.prop(context.object.data.ragdoll, "wiggle_restrict_linear", text="Limit Linear")
 
                             col_1_row_3 = col_1.row()
-                            col_1_row_3.prop(context.object.data.ragdoll, "wiggle_restrict_angular", text="")
+                            col_1_row_3.prop(context.object.data.ragdoll, "wiggle_restrict_angular", text="Limit Angular")
+
+                            col_1_row_4 = col_1.row()
+                            col_1_row_4.prop(context.object.data.ragdoll, "wiggle_use_falloff", text="Falloff")
+
 
                             col_2_row_0 = col_2.row()
                             col_2_row_1 = col_2.row()
@@ -309,15 +322,34 @@ class RagDollPanel(bpy.types.Panel):
                             col_2_row_2 = col_2.row()
                             col_2_row_2.prop(context.object.data.ragdoll, "wiggle_rotation", text="Rotation")
 
+
                             col_2_row_3 = col_2.row()
-                            col_2_row_3.operator("armature.wiggles_update", text="Update Wiggle")
+                            split = col_2_row_3.split(factor=0.5)
+                            subcol_0 = split.column()
+                            subcol_1 = split.column()
+                            subcol_0.prop(context.object.data.ragdoll, "wiggle_falloff_mode", text="")
+                            subcol_1.prop(context.object.data.ragdoll, "wiggle_falloff_invert", text="Invert")
+                            
+                            col_2_row_4 = col_2.row()
+                            split = col_2_row_4.split(factor=0.5)
+                            subcol_0 = split.column()
+                            subcol_1 = split.column()
+                            subcol_0.prop(context.object.data.ragdoll, "wiggle_falloff_factor", text="Factor")
+                            subcol_1.prop(context.object.data.ragdoll, "wiggle_falloff_offset", text="Offset")
+
+                            # col_2_row_3.operator("armature.wiggles_update", text="Update Wiggle")
+
+                            
+                            
 
                             if context.object.data.ragdoll.wiggle == False:
                                 col_1.enabled = False
                                 col_2.enabled = False
+                                update_wiggle_row.enabled = False
                             else:
                                 col_1.enabled = True
                                 col_2.enabled = True
+                                update_wiggle_row.enabled = True
 
                             if context.object.data.ragdoll.wiggle_restrict_linear == False:
                                 col_2_row_1.enabled = False
@@ -353,7 +385,7 @@ class RagDollPanel(bpy.types.Panel):
 
 
                             row = layout.row()
-                            row = layout.row()
                             row.operator("armature.ragdoll_update", text="Update Ragdoll")
                             row.operator("armature.ragdoll_remove", text="Remove Ragdoll")
+                            row.operator("armature.update_drivers", text="Update Drivers")
                     

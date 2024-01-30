@@ -21,9 +21,10 @@ def deselect_all():
 
 
 #-------- create dictionary w/ bones' level in tree --------
-def bones_tree_lvls_get(armature):
+def bones_tree_levels_get(armature):
     pose_bones = armature.pose.bones
-        
+    max_level = 0
+
     root_level_bones = []
     for bone in pose_bones:
         if bone.parent == None:
@@ -33,8 +34,8 @@ def bones_tree_lvls_get(armature):
             
     for bone in root_level_bones:
         bone_map_children(bone, levels)
-    
-    print(levels.items())
+
+
     return levels
 
 
@@ -47,12 +48,14 @@ def bone_map_children(root, map_obj, level=0):
 
 
 #-------- set bones' tree level properties --------
-def bones_tree_lvls_set(armature):
-    level_map = bones_tree_lvls_get(armature)
+def bones_tree_levels_set(armature, pose_bones_to_use):
+    level_map = bones_tree_levels_get(armature)
     for bone in armature.pose.bones:
         if bone.name in level_map:
-            bone.ragdoll.tree_lvl = level_map[bone.name]
-
+            bone.ragdoll.tree_level = level_map[bone.name]
+            if bone in pose_bones_to_use:
+                armature.data.ragdoll.bone_level_max = max(armature.data.ragdoll.bone_level_max, level_map[bone.name])
+            
     return armature
 
 

@@ -33,8 +33,8 @@ def register():
 
     
 def unregister():
-    del bpy.types.Armature.ragdoll
-    del bpy.types.Bone.ragdoll
+    # del bpy.types.Armature.ragdoll
+    # del bpy.types.Bone.ragdoll
     bpy.utils.unregister_class(ragdoll.RagDollPropGroup)
     bpy.utils.unregister_class(ragdoll.RagDollBonePropGroup)
 
@@ -50,12 +50,14 @@ def unregister():
     bpy.utils.unregister_class(ragdoll_ui.UpdateDriversOperator)
     bpy.utils.unregister_class(ragdoll_ui.OT_TextBrowse)
     
-if __name__ == "__main__":
-    register()
-    
-
 if "bpy" in locals():
     import importlib
     importlib.reload(ragdoll)
     importlib.reload(ragdoll_ui)
     importlib.reload(ragdoll_aux)
+
+
+if __name__ == "__main__":
+    register()
+    
+

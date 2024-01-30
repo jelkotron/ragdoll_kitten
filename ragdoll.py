@@ -17,7 +17,7 @@ def empty_poll(self, object):
     return object.type == 'EMPTY'
 
 class RagDollBonePropGroup(bpy.types.PropertyGroup):
-    tree_lvl: bpy.props.IntProperty(name="tree_level", min=0, default =0)
+    tree_level: bpy.props.IntProperty(name="tree_level", min=0, default =0)
     rigid_body: bpy.props.PointerProperty(type=bpy.types.Object, name="rigid_body", poll=mesh_poll)
     constraint: bpy.props.PointerProperty(type=bpy.types.Object, name="constraint", poll=empty_poll)
     connector: bpy.props.PointerProperty(type=bpy.types.Object, name="connector", poll=empty_poll)
@@ -68,24 +68,49 @@ class RagDollPropGroup(bpy.types.PropertyGroup):
     wiggle_restrict_linear: bpy.props.BoolProperty(name="wiggle_restrict_linear", default=True)
     wiggle_restrict_angular: bpy.props.BoolProperty(name="wiggle_restrict_angular", default=False)
 
+    wiggle_use_falloff: bpy.props.BoolProperty(name="wiggle_use_falloff", default=False)
+    wiggle_falloff_invert: bpy.props.BoolProperty(name="wiggle_invert_falloff", default=False)
+    wiggle_falloff_mode: bpy.props.EnumProperty(items=[
+                                                            ('LINEAR', "Linear", "Linear bone chain based falloff in wiggle"),
+                                                            ('QUADRATIC', "Quadratic", "Quadratic bone chain based falloff in wiggle")                          
+                                                            ], default='LINEAR')
+    
+    wiggle_falloff_factor: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=0.0, max=10.0)
+    wiggle_falloff_offset: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=-10.0, max=10.0)
+
+    bone_level_max: bpy.props.IntProperty(name="bone_level_max", min=0, default=0)
+
 
 def rag_doll_create(armature_object):
     if armature_object.type == 'ARMATURE':
+        # get selected bones that are not hidden
         bones = ragdoll_aux.get_visible_posebones()
         deform_rig = armature_object
-        deform_rig = ragdoll_aux.bones_tree_lvls_set(deform_rig)
+        # store bones' hierarchy level in bone prop
+        deform_rig = ragdoll_aux.bones_tree_levels_set(deform_rig, bones)
+        # copy deform armature to use as control
         control_rig = secondary_rig_add(deform_rig)
-        rb_cubes_add(bones, mode='PRIMARY') 
-        rb_cubes_add(bones, mode='SECONDARY') # wiggles
-
+      
+        # primary rigid body objects (transform targets for bones)
+        rb_cubes_add(bones, mode='PRIMARY')
+        # secondary rigid body objects (wiggles)
+        rb_cubes_add(bones, mode='SECONDARY')
+       
+        # primary constraints (joints between bones)
         rb_constraints_add(deform_rig, mode='PRIMARY')
         rb_constraint_defaults(control_rig.data.ragdoll.constraints, 0, 22.5)
         
+        # secondary constraints (connection between primary rigid bodies and wiggle objects)
         rb_constraints_add(deform_rig, mode='SECONDARY') # wiggle constraints
         rb_constraint_defaults(control_rig.data.ragdoll.wiggle_constraints, 0.01, 22.5)
         
+        # read transformational limits from file, set to primary rigid body constraints
         rd_constraint_limit(control_rig)
+
+        # additional object layer to copy transforms from, as rigid body meshes' pivots have to be centered
         rb_connectors_add(control_rig)
+
+        # 
         bone_constraints_add(bones, control_rig)
         bone_drivers_add(deform_rig, control_rig)
         control_rig.data.ragdoll.initialized = True
@@ -96,9 +121,14 @@ def rag_doll_create(armature_object):
 
 def secondary_rig_add(armature_object):
     if armature_object:
+        # copy armature
         secondary_rig = armature_object.copy()
         secondary_rig.name = armature_object.name + armature_object.data.ragdoll.ctrl_rig_suffix
-        secondary_rig.data = armature_object.data.copy() # necessary?
+        # copy armature data
+        secondary_rig.data = armature_object.data.copy()
+        # copy armature custom props
+        for key in armature_object.keys():
+            secondary_rig[key] = armature_object[key]
         bpy.context.collection.objects.link(secondary_rig)
         
         # adjust viewport display to differentiate Armatures
@@ -405,7 +435,6 @@ def rb_constraints_add(deform_rig, mode='PRIMARY'):
     
     empties = []
     bones = ragdoll_aux.get_visible_posebones()
-    # deform_rig = armature_object.data.ragdoll.deform_rig
     
     for bone in bones:
         if mode == 'PRIMARY':
@@ -436,6 +465,8 @@ def rb_constraints_add(deform_rig, mode='PRIMARY'):
                         empty.rigid_body_constraint.object1 = bpy.data.objects[name_0]
                         empty.rigid_body_constraint.object2 = bpy.data.objects[name_1]
                         empties.append(empty)
+                        bone.ragdoll.constraint = empty
+                        control_rig.pose.bones[bone.name].ragdoll.constraint =  empty
         else:
             # add rigid body constraints to wiggles
             name_0 = deform_rig.name + "." + bone.name + rb_suffix
@@ -461,6 +492,9 @@ def rb_constraints_add(deform_rig, mode='PRIMARY'):
                 empty.rigid_body_constraint.object1 = bpy.data.objects[name_0]
                 empty.rigid_body_constraint.object2 = bpy.data.objects[name_1]
                 empties.append(empty)
+
+                bone.ragdoll.wiggle_constraint = empty
+                control_rig.pose.bones[bone.name].ragdoll.wiggle_constraint =  empty
 
     # add empties to collection
     collection_name = deform_rig.name + empty_suffix
@@ -563,7 +597,6 @@ def rd_constraint_limit(control_rig):
         rb_constraint_defaults(control_rig.data.ragdoll.constraints, 0, 22.5)
 
 
-#-------- additional object layer to copy transforms from, as rigid body meshes' pivots need to be centered --------
 def rb_connectors_add(control_rig):
     # store current frame & tmp reset to 0
     f_init = bpy.context.scene.frame_current
@@ -673,28 +706,79 @@ def wiggles_update(context):
     if control_rig.data.ragdoll.type == 'DEFORM':
         control_rig = control_rig.data.ragdoll.control_rig
     if control_rig:
-        wiggle_constraints = control_rig.data.ragdoll.wiggle_constraints.objects
-        wiggle = control_rig.data.ragdoll.wiggle
+        # limits
         limit_lin = control_rig.data.ragdoll.wiggle_restrict_linear
         limit_ang = control_rig.data.ragdoll.wiggle_restrict_angular
-        max_lin = control_rig.data.ragdoll.wiggle_distance
-        max_ang = control_rig.data.ragdoll.wiggle_rotation
-        
-        for obj in wiggle_constraints:
-            const = obj.rigid_body_constraint
-            if const:
-                if not wiggle:
-                    const.enabled = False
-                else:
-                    const.enabled = True
-                    if const.type == 'GENERIC' or const.type == 'GENERIC_SPRING':
-                        const.use_limit_ang_x, const.use_limit_ang_y, const.use_limit_ang_z = limit_ang, limit_ang, limit_ang
-                        const.use_limit_lin_x, const.use_limit_lin_y, const.use_limit_lin_z = limit_lin, limit_lin, limit_lin
-                        const.limit_lin_x_lower, const.limit_lin_x_upper = - max_lin, max_lin
-                        const.limit_lin_y_lower, const.limit_lin_y_upper = - max_lin, max_lin
-                        const.limit_lin_z_lower, const.limit_lin_z_upper = - max_lin, max_lin 
+        global_max_lin = control_rig.data.ragdoll.wiggle_distance
+        global_max_ang = control_rig.data.ragdoll.wiggle_rotation
+        # settings
+        use_wiggle = control_rig.data.ragdoll.wiggle
+        use_falloff = control_rig.data.ragdoll.wiggle_use_falloff
+        falloff_mode = control_rig.data.ragdoll.wiggle_falloff_mode
+        falloff_factor = control_rig.data.ragdoll.wiggle_falloff_factor
+        falloff_offset = control_rig.data.ragdoll.wiggle_falloff_offset
+        falloff_invert = control_rig.data.ragdoll.wiggle_falloff_invert
+        bone_level_max = control_rig.data.ragdoll.bone_level_max
 
-                        const.limit_ang_x_lower, const.limit_ang_x_upper = math.degrees(- max_ang), math.degrees(max_ang)
-                        const.limit_ang_y_lower, const.limit_ang_y_upper = math.degrees(- max_ang), math.degrees(max_ang)
-                        const.limit_ang_z_lower, const.limit_ang_z_upper = math.degrees(- max_ang), math.degrees(max_ang)
+        for pbone in control_rig.pose.bones:
+            max_lin = global_max_lin
+            max_ang = global_max_ang
+            
+            if pbone.ragdoll.wiggle_constraint != None:
+                wiggle_const = pbone.ragdoll.wiggle_constraint.rigid_body_constraint
+                if wiggle_const:
+                    if not use_wiggle:
+                        wiggle_const.enabled = False
+                    else:
+                        wiggle_const.enabled = True
+                        if use_falloff:
+                            tree_level = pbone.ragdoll.tree_level
+                            if falloff_invert:
+                                tree_level = control_rig.data.ragdoll.bone_level_max - pbone.ragdoll.tree_level
+
+                            if falloff_mode == 'QUADRATIC':
+                                max_lin = global_max_lin ** (tree_level+1)
+                            else:
+                                max_lin = global_max_lin - ((global_max_lin / bone_level_max ) * tree_level ) 
+                        # modify constraints
+                        if wiggle_const.type == 'GENERIC' or wiggle_const.type == 'GENERIC_SPRING':
+                            wiggle_const.use_limit_ang_x, wiggle_const.use_limit_ang_y, wiggle_const.use_limit_ang_z = limit_ang, limit_ang, limit_ang
+                            wiggle_const.use_limit_lin_x, wiggle_const.use_limit_lin_y, wiggle_const.use_limit_lin_z = limit_lin, limit_lin, limit_lin
+                            
+                            wiggle_const.limit_lin_x_lower, wiggle_const.limit_lin_x_upper = - max_lin, max_lin
+                            wiggle_const.limit_lin_y_lower, wiggle_const.limit_lin_y_upper = - max_lin, max_lin
+                            wiggle_const.limit_lin_z_lower, wiggle_const.limit_lin_z_upper = - max_lin, max_lin 
+
+                            wiggle_const.limit_ang_x_lower, wiggle_const.limit_ang_x_upper = math.degrees(- max_ang), math.degrees(max_ang)
+                            wiggle_const.limit_ang_y_lower, wiggle_const.limit_ang_y_upper = math.degrees(- max_ang), math.degrees(max_ang)
+                            wiggle_const.limit_ang_z_lower, wiggle_const.limit_ang_z_upper = math.degrees(- max_ang), math.degrees(max_ang)
+
+
+
+
+        # wiggle_constraints = control_rig.data.ragdoll.wiggle_constraints.objects
+        # wiggle = control_rig.data.ragdoll.wiggle
+        # limit_lin = control_rig.data.ragdoll.wiggle_restrict_linear
+        # limit_ang = control_rig.data.ragdoll.wiggle_restrict_angular
+        # max_lin = control_rig.data.ragdoll.wiggle_distance
+        # max_ang = control_rig.data.ragdoll.wiggle_rotation
+        
+        # for obj in wiggle_constraints:
+        #     const = obj.rigid_body_constraint
+        #     if const:
+        #         if not wiggle:
+        #             const.enabled = False
+        #         else:
+        #             const.enabled = True
+        #             if const.type == 'GENERIC' or const.type == 'GENERIC_SPRING':
+        #                 const.use_limit_ang_x, const.use_limit_ang_y, const.use_limit_ang_z = limit_ang, limit_ang, limit_ang
+        #                 const.use_limit_lin_x, const.use_limit_lin_y, const.use_limit_lin_z = limit_lin, limit_lin, limit_lin
+                        
+        #                 const.limit_lin_x_lower, const.limit_lin_x_upper = - max_lin, max_lin
+        #                 const.limit_lin_y_lower, const.limit_lin_y_upper = - max_lin, max_lin
+        #                 const.limit_lin_z_lower, const.limit_lin_z_upper = - max_lin, max_lin 
+
+        #                 const.limit_ang_x_lower, const.limit_ang_x_upper = math.degrees(- max_ang), math.degrees(max_ang)
+        #                 const.limit_ang_y_lower, const.limit_ang_y_upper = math.degrees(- max_ang), math.degrees(max_ang)
+        #                 const.limit_ang_z_lower, const.limit_ang_z_upper = math.degrees(- max_ang), math.degrees(max_ang)
                     

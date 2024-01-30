@@ -20,12 +20,40 @@ def deselect_all():
         obj.select_set(False)
 
 
-def get_bone_children(armature):
-    bones = {}
+#-------- create dictionary w/ bones' level in tree --------
+def bones_tree_lvls_get(armature):
+    pose_bones = armature.pose.bones
+        
+    root_level_bones = []
+    for bone in pose_bones:
+        if bone.parent == None:
+            root_level_bones.append(bone)
+
+    levels = {}
+            
+    for bone in root_level_bones:
+        bone_map_children(bone, levels)
+    
+    print(levels.items())
+    return levels
+
+
+#-------- recursively iterate over bones' children to map their position in tree
+def bone_map_children(root, map_obj, level=0):
+    if root.name not in map_obj: 
+        map_obj[root.name] = level
+    for child in root.children:
+        bone_map_children(child, map_obj, level+1)
+
+
+#-------- set bones' tree level properties --------
+def bones_tree_lvls_set(armature):
+    level_map = bones_tree_lvls_get(armature)
     for bone in armature.pose.bones:
-        if bone.children:
-            bones[bone.name] = [child.name for child in bone.children]
-    return bones
+        if bone.name in level_map:
+            bone.ragdoll.tree_lvl = level_map[bone.name]
+
+    return armature
 
 
 #-------- validate object type --------

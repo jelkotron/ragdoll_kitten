@@ -310,7 +310,7 @@ class RagDollPanel(bpy.types.Panel):
                             col_2_row_2.prop(context.object.data.ragdoll, "wiggle_rotation", text="Rotation")
 
                             col_2_row_3 = col_2.row()
-                            col_2_row_3.operator("armature.wiggles_update", text="Update")
+                            col_2_row_3.operator("armature.wiggles_update", text="Update Wiggle")
 
                             if context.object.data.ragdoll.wiggle == False:
                                 col_1.enabled = False

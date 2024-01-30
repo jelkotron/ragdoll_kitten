@@ -720,7 +720,8 @@ def wiggles_update(context):
         falloff_invert = control_rig.data.ragdoll.wiggle_falloff_invert
         bone_level_max = control_rig.data.ragdoll.bone_level_max
 
-        for pbone in control_rig.pose.bones:
+        for i in range(len(control_rig.pose.bones)):
+            pbone = control_rig.pose.bones[i]
             max_lin = global_max_lin
             max_ang = global_max_ang
             
@@ -737,9 +738,9 @@ def wiggles_update(context):
                                 tree_level = control_rig.data.ragdoll.bone_level_max - pbone.ragdoll.tree_level
 
                             if falloff_mode == 'QUADRATIC':
-                                max_lin = global_max_lin ** (tree_level+1)
+                                max_lin = min(global_max_lin ** (tree_level+1) + falloff_offset, global_max_lin)
                             else:
-                                max_lin = global_max_lin - ((global_max_lin / bone_level_max ) * tree_level ) 
+                                max_lin = min(global_max_lin - ((global_max_lin / bone_level_max ) * tree_level ) + falloff_offset, max_lin) 
                         # modify constraints
                         if wiggle_const.type == 'GENERIC' or wiggle_const.type == 'GENERIC_SPRING':
                             wiggle_const.use_limit_ang_x, wiggle_const.use_limit_ang_y, wiggle_const.use_limit_ang_z = limit_ang, limit_ang, limit_ang

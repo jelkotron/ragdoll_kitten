@@ -3,22 +3,19 @@ import math
 import mathutils
 import ragdoll_aux
 
-
-
-#  polls
-
-
+#---- callback functions ---- 
 def armature_poll(self, object):
     return object.type == 'ARMATURE'
 
+
 def mesh_poll(self, object):
      return object.type == 'MESH'
- 
+
+
 def empty_poll(self, object):
     return object.type == 'EMPTY'
 
-
-#  property update callback functions 
+ 
 def wiggle_update(self, context):
     control_rig = ragdoll_aux.validate_selection(context.object)
     if control_rig.data.ragdoll.type == 'DEFORM':
@@ -38,14 +35,17 @@ def wiggle_update(self, context):
         falloff_offset = control_rig.data.ragdoll.wiggle_falloff_offset
         falloff_invert = control_rig.data.ragdoll.wiggle_falloff_invert
         bone_level_max = control_rig.data.ragdoll.bone_level_max
+        wiggle_falloff_chain_ends = control_rig.data.ragdoll.wiggle_falloff_chain_ends
 
         for i in range(len(control_rig.pose.bones)):
             pbone = control_rig.pose.bones[i]
             max_lin = global_max_lin
             max_ang = global_max_ang
+
             
             if pbone.ragdoll.wiggle_constraint != None:
                 wiggle_const = pbone.ragdoll.wiggle_constraint.rigid_body_constraint
+                
                 if wiggle_const:
                     if not use_wiggle:
                         wiggle_const.enabled = False
@@ -53,6 +53,16 @@ def wiggle_update(self, context):
                         wiggle_const.enabled = True
                         if use_falloff:
                             tree_level = pbone.ragdoll.tree_level
+                            bone_name = wiggle_const.object1.parent_bone
+                            # TODO: check if this make sense, it's late.
+                            if wiggle_falloff_chain_ends == True:
+                                last_in_chain = True
+                                for child in control_rig.pose.bones[bone_name].children:
+                                    if child in ragdoll_aux.get_visible_posebones():
+                                        last_in_chain = False
+                                if last_in_chain:
+                                    tree_level = bone_level_max 
+                    
                             if falloff_invert:
                                 # reverse falloff direction / bone chain hierarchy if desired
                                 tree_level = control_rig.data.ragdoll.bone_level_max - pbone.ragdoll.tree_level
@@ -103,9 +113,8 @@ def wiggle_update(self, context):
                                 wiggle_const.spring_damping_z = control_rig.data.ragdoll.wiggle_damping
         print("Info: Wiggle updated")
 
-                
 
-
+#---- additional properties definition ----
 class RagDollBonePropGroup(bpy.types.PropertyGroup):
     tree_level: bpy.props.IntProperty(name="tree_level", min=0, default =0)
     rigid_body: bpy.props.PointerProperty(type=bpy.types.Object, name="Rigid Body", poll=mesh_poll)
@@ -160,10 +169,11 @@ class RagDollPropGroup(bpy.types.PropertyGroup):
 
     wiggle_use_falloff: bpy.props.BoolProperty(name="Use Wiggle Falloff", default=False, update=wiggle_update)
     wiggle_falloff_invert: bpy.props.BoolProperty(name="Invert Falloff", default=False, update=wiggle_update)
+    wiggle_falloff_chain_ends: bpy.props.BoolProperty(name="Chain Ends", default=True, update=wiggle_update)
     wiggle_falloff_mode: bpy.props.EnumProperty(items=[
                                                             ('LINEAR', "Linear", "Linear bone chain based falloff in wiggle"),
                                                             ('QUADRATIC', "Quadratic", "Quadratic bone chain based falloff in wiggle")                          
-                                                            ], default='LINEAR', name="Falloff Mode", update=wiggle_update)
+                                                            ], default='QUADRATIC', name="Falloff Mode", update=wiggle_update)
     
     wiggle_falloff_factor: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=0.0, max=10.0, default=1.0, update=wiggle_update)
     wiggle_falloff_offset: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=-10.0, max=10.0, update=wiggle_update)
@@ -786,7 +796,6 @@ def bone_drivers_add(deform_rig, control_rig):
     print("Info: bone constraint drivers set")
 
 
-    
 def wiggle_spring_drivers_add(control_rig):
     for obj in control_rig.data.ragdoll.wiggle_constraints.objects:
         if obj.rigid_body_constraint and obj.rigid_body_constraint.type == 'GENERIC_SPRING':

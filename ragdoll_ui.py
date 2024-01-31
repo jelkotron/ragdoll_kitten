@@ -386,7 +386,16 @@ class RagDollPanel(bpy.types.Panel):
                             wiggle_falloff_settings_row_0.prop(context.object.data.ragdoll, "wiggle_falloff_factor", text="Factor")
 
                             wiggle_falloff_settings_row_1 = wiggle_falloff_col_1.row()
-                            wiggle_falloff_settings_row_1.prop(context.object.data.ragdoll, "wiggle_falloff_invert", text="Invert Chain")
+                            split = wiggle_falloff_settings_row_1.split(factor=0.5)
+                            col_0 = split.column()
+                            col_1 = split.column()
+                            wiggle_falloff_settings_row_0b = col_0.row()
+                            wiggle_falloff_settings_row_0b.prop(context.object.data.ragdoll, "wiggle_falloff_invert", text="Invert")
+                            wiggle_falloff_settings_row_0b.prop(context.object.data.ragdoll, "wiggle_falloff_chain_ends", text="Ends")
+
+
+
+                            wiggle_falloff_settings_row_1 = col_1.row()
                             wiggle_falloff_settings_row_1.prop(context.object.data.ragdoll, "wiggle_falloff_offset", text="Offset")
 
                             #-------- UI States --------
@@ -398,6 +407,7 @@ class RagDollPanel(bpy.types.Panel):
                             wiggle_limit_ang_row.enabled = context.object.data.ragdoll.wiggle_restrict_angular
                             wiggle_falloff_settings_row_0.enabled = context.object.data.ragdoll.wiggle_use_falloff
                             wiggle_falloff_settings_row_1.enabled = context.object.data.ragdoll.wiggle_use_falloff
+                            wiggle_falloff_settings_row_0b.enabled = context.object.data.ragdoll.wiggle_use_falloff
                             wiggle_spring_row_right_0.enabled = context.object.data.ragdoll.wiggle_use_springs
                             wiggle_spring_row_right_1.enabled = context.object.data.ragdoll.wiggle_use_springs
                             anim_override_row.enabled = not context.object.data.ragdoll.kinematic

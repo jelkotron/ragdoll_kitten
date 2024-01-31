@@ -4,7 +4,7 @@ import sys
 sys.path.append("/home/schnollie/Work/bpy/ragdoll_tools")
 from ragdoll_aux import rb_constraint_collection_set, load_text
 
-from ragdoll import rag_doll_create, rag_doll_remove, rag_doll_update, wiggle_update, force_update_drivers, wiggle_drivers_add, wiggle_drivers_remove
+from ragdoll import rag_doll_create, rag_doll_remove, rag_doll_update, wiggle_update, force_update_drivers, wiggle_distance_keyframe_insert, wiggle_drivers_add, wiggle_drivers_remove
 from bpy_extras.io_utils import ImportHelper
 import os
 
@@ -131,7 +131,7 @@ class AddWiggleDriversOperator(bpy.types.Operator):
         return True
 
     def execute(self, context):
-        wiggle_drivers_add(context.object)
+        wiggle_distance_keyframe_insert(context.object)
         context.object.data.ragdoll.wiggle_drivers = True
         print("Drivers added!")
         return {'FINISHED'}
@@ -374,9 +374,9 @@ class RagDollPanel(bpy.types.Panel):
                        
                             if context.object.data.ragdoll.wiggle_drivers == True:
                                 remove_drivers_row.enabled = True
-                                add_drivers_row.enabled = False
+                                add_drivers_row.enabled = True
                             else:
-                                remove_drivers_row.enabled = False
+                                remove_drivers_row.enabled = True
                                 add_drivers_row.enabled = True
 
 

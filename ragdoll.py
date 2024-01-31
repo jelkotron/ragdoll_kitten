@@ -754,6 +754,27 @@ def bone_drivers_add(deform_rig, control_rig):
     print("Info: bone constraint drivers set")
 
 
+
+def wiggle_distance_keyframe_insert(control_rig):
+    for obj in control_rig.data.ragdoll.wiggle_constraints.objects:
+        if obj.rigid_body_constraint:
+            if obj.rigid_body_constraint.object1:
+                parent_bone_name = obj.rigid_body_constraint.object1.parent_bone
+                if parent_bone_name:
+                    translation = [
+                        "limit_lin_x_lower",
+                        "limit_lin_x_upper",
+                        "limit_lin_y_lower",
+                        "limit_lin_y_upper",
+                        "limit_lin_z_lower",
+                        "limit_lin_z_upper",
+                    ]
+        
+                    for direction in translation:
+                        obj.rigid_body_constraint.keyframe_insert(direction)
+    
+
+
 def wiggle_drivers_add(control_rig):
     for obj in control_rig.data.ragdoll.wiggle_constraints.objects:
         if obj.rigid_body_constraint:

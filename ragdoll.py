@@ -18,11 +18,11 @@ def empty_poll(self, object):
 
 class RagDollBonePropGroup(bpy.types.PropertyGroup):
     tree_level: bpy.props.IntProperty(name="tree_level", min=0, default =0)
-    rigid_body: bpy.props.PointerProperty(type=bpy.types.Object, name="rigid_body", poll=mesh_poll)
-    constraint: bpy.props.PointerProperty(type=bpy.types.Object, name="constraint", poll=empty_poll)
-    connector: bpy.props.PointerProperty(type=bpy.types.Object, name="connector", poll=empty_poll)
-    wiggle: bpy.props.PointerProperty(type=bpy.types.Object, name="wiggle", poll=mesh_poll)
-    wiggle_constraint: bpy.props.PointerProperty(type=bpy.types.Object, name="wiggle_constraint", poll=empty_poll)
+    rigid_body: bpy.props.PointerProperty(type=bpy.types.Object, name="Rigid Body", poll=mesh_poll)
+    constraint: bpy.props.PointerProperty(type=bpy.types.Object, name="Rigid Body Constraint", poll=empty_poll)
+    connector: bpy.props.PointerProperty(type=bpy.types.Object, name="Rigid Body Connector", poll=empty_poll)
+    wiggle: bpy.props.PointerProperty(type=bpy.types.Object, name="Wiggle", poll=mesh_poll)
+    wiggle_constraint: bpy.props.PointerProperty(type=bpy.types.Object, name="Wiggle Constraint", poll=empty_poll)
 
 
 
@@ -60,22 +60,22 @@ class RagDollPropGroup(bpy.types.PropertyGroup):
     rb_bone_width_relative: bpy.props.FloatProperty(name="Relative Rigid Body Geo Width", default=0.1)
 
     # -------- Channels --------
-    kinematic: bpy.props.BoolProperty(name="is_animated", default=True)
-    kinematic_influence: bpy.props.FloatProperty(name="rigid_body_influence",min=0.0, max=1.0, default=1.0)
-    wiggle: bpy.props.BoolProperty(name="is_wiggley", default=False)
-    wiggle_distance: bpy.props.FloatProperty(name="wiggle_distance_max",min=0.0, max=16.0, default=0.2)
-    wiggle_rotation: bpy.props.FloatProperty(name="wiggle_rotation_max", subtype="ANGLE", min=0.0, max=math.radians(360.0), default=math.radians(22.5))
-    wiggle_restrict_linear: bpy.props.BoolProperty(name="wiggle_restrict_linear", default=True)
-    wiggle_restrict_angular: bpy.props.BoolProperty(name="wiggle_restrict_angular", default=False)
+    kinematic: bpy.props.BoolProperty(name="Animated", default=True)
+    kinematic_influence: bpy.props.FloatProperty(name="Rigid Body_Influence",min=0.0, max=1.0, default=1.0)
+    wiggle: bpy.props.BoolProperty(name="Use Wiggle", default=False)
+    wiggle_distance: bpy.props.FloatProperty(name="Maximum Wiggle Translation",min=0.0, max=16.0, default=0.2)
+    wiggle_rotation: bpy.props.FloatProperty(name="Maximum Wiggle Rotation", subtype="ANGLE", min=0.0, max=math.radians(360.0), default=math.radians(22.5))
+    wiggle_restrict_linear: bpy.props.BoolProperty(name="Limit Wiggle Translation", default=True)
+    wiggle_restrict_angular: bpy.props.BoolProperty(name="Limit Wiggle Rotation", default=False)
 
-    wiggle_use_falloff: bpy.props.BoolProperty(name="wiggle_use_falloff", default=False)
-    wiggle_falloff_invert: bpy.props.BoolProperty(name="wiggle_invert_falloff", default=False)
+    wiggle_use_falloff: bpy.props.BoolProperty(name="Use Wiggle Falloff", default=False)
+    wiggle_falloff_invert: bpy.props.BoolProperty(name="Invert Falloff", default=False)
     wiggle_falloff_mode: bpy.props.EnumProperty(items=[
                                                             ('LINEAR', "Linear", "Linear bone chain based falloff in wiggle"),
                                                             ('QUADRATIC', "Quadratic", "Quadratic bone chain based falloff in wiggle")                          
-                                                            ], default='LINEAR')
+                                                            ], default='LINEAR', name="Falloff Mode")
     
-    wiggle_falloff_factor: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=0.0, max=10.0)
+    wiggle_falloff_factor: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=0.0, max=10.0, default=1.0)
     wiggle_falloff_offset: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=-10.0, max=10.0)
 
     bone_level_max: bpy.props.IntProperty(name="bone_level_max", min=0, default=0)
@@ -242,7 +242,7 @@ def rb_cubes_add(pbones, mode='PRIMARY'):
             geo_name = deform_rig.name + "." + pb.name + suffix
             # add and scale box geometry per bone
             new_cube = ragdoll_aux.cube(1, geo_name)
-            # new_cube.display_type = 'WIRE'
+            new_cube.display_type = 'WIRE'
 
             for vert in new_cube.data.vertices:
                 vert.co[0] *= 1 / new_cube.dimensions[1] * pb.length * deform_rig.data.ragdoll.rb_bone_width_relative
@@ -259,11 +259,7 @@ def rb_cubes_add(pbones, mode='PRIMARY'):
             vector = (pb.head - pb.tail) / 2
             translate = mathutils.Matrix.Translation(vector)
             new_cube.matrix_parent_inverse = pb.matrix.inverted() @ translate
-            
-            # # TODO: add rigid body world
-            # if bpy.context.scene.rigidbody_world.collection == None:
-            #     bpy.context.scene.rigidbody_world.collection = bpy.data.collections.new("RigidBodyWorld")
-            
+          
             # add cube to rigid body collection & set collision shape 
             bpy.context.scene.rigidbody_world.collection.objects.link(new_cube)
             new_cube.rigid_body.collision_shape = 'BOX'
@@ -737,10 +733,13 @@ def wiggles_update(context):
                             if falloff_invert:
                                 tree_level = control_rig.data.ragdoll.bone_level_max - pbone.ragdoll.tree_level
 
+                            # define step size, cap at user set wiggle value using max
                             if falloff_mode == 'QUADRATIC':
-                                max_lin = min(global_max_lin ** (tree_level+1) + falloff_offset, global_max_lin)
+                                max_lin = min(falloff_factor * global_max_lin ** (tree_level+1) + falloff_offset, global_max_lin)
                             else:
-                                max_lin = min(global_max_lin - ((global_max_lin / bone_level_max ) * tree_level ) + falloff_offset, max_lin) 
+                                # step size is divided falloff factor to be consistent w/ control of quadratic function
+                                max_lin = min(global_max_lin - ((global_max_lin / bone_level_max / falloff_factor) * tree_level ) + falloff_offset, max_lin) 
+                        
                         # modify constraints
                         if wiggle_const.type == 'GENERIC' or wiggle_const.type == 'GENERIC_SPRING':
                             wiggle_const.use_limit_ang_x, wiggle_const.use_limit_ang_y, wiggle_const.use_limit_ang_z = limit_ang, limit_ang, limit_ang
@@ -756,30 +755,4 @@ def wiggles_update(context):
 
 
 
-
-        # wiggle_constraints = control_rig.data.ragdoll.wiggle_constraints.objects
-        # wiggle = control_rig.data.ragdoll.wiggle
-        # limit_lin = control_rig.data.ragdoll.wiggle_restrict_linear
-        # limit_ang = control_rig.data.ragdoll.wiggle_restrict_angular
-        # max_lin = control_rig.data.ragdoll.wiggle_distance
-        # max_ang = control_rig.data.ragdoll.wiggle_rotation
-        
-        # for obj in wiggle_constraints:
-        #     const = obj.rigid_body_constraint
-        #     if const:
-        #         if not wiggle:
-        #             const.enabled = False
-        #         else:
-        #             const.enabled = True
-        #             if const.type == 'GENERIC' or const.type == 'GENERIC_SPRING':
-        #                 const.use_limit_ang_x, const.use_limit_ang_y, const.use_limit_ang_z = limit_ang, limit_ang, limit_ang
-        #                 const.use_limit_lin_x, const.use_limit_lin_y, const.use_limit_lin_z = limit_lin, limit_lin, limit_lin
-                        
-        #                 const.limit_lin_x_lower, const.limit_lin_x_upper = - max_lin, max_lin
-        #                 const.limit_lin_y_lower, const.limit_lin_y_upper = - max_lin, max_lin
-        #                 const.limit_lin_z_lower, const.limit_lin_z_upper = - max_lin, max_lin 
-
-        #                 const.limit_ang_x_lower, const.limit_ang_x_upper = math.degrees(- max_ang), math.degrees(max_ang)
-        #                 const.limit_ang_y_lower, const.limit_ang_y_upper = math.degrees(- max_ang), math.degrees(max_ang)
-        #                 const.limit_ang_z_lower, const.limit_ang_z_upper = math.degrees(- max_ang), math.degrees(max_ang)
                     

@@ -5,6 +5,8 @@ import ragdoll_aux
 
 
 
+#  polls
+
 
 def armature_poll(self, object):
     return object.type == 'ARMATURE'
@@ -12,9 +14,68 @@ def armature_poll(self, object):
 def mesh_poll(self, object):
      return object.type == 'MESH'
  
- 
 def empty_poll(self, object):
     return object.type == 'EMPTY'
+
+
+#  property update callback functions 
+def wiggle_update(self, context):
+    control_rig = ragdoll_aux.validate_selection(context.object)
+    if control_rig.data.ragdoll.type == 'DEFORM':
+        control_rig = control_rig.data.ragdoll.control_rig
+    if control_rig:
+        # limits
+        limit_lin = control_rig.data.ragdoll.wiggle_restrict_linear
+        limit_ang = control_rig.data.ragdoll.wiggle_restrict_angular
+        global_max_lin = control_rig.data.ragdoll.wiggle_distance
+        global_max_ang = control_rig.data.ragdoll.wiggle_rotation
+        # settings
+        use_wiggle = control_rig.data.ragdoll.wiggle
+        use_falloff = control_rig.data.ragdoll.wiggle_use_falloff
+        falloff_mode = control_rig.data.ragdoll.wiggle_falloff_mode
+        falloff_factor = control_rig.data.ragdoll.wiggle_falloff_factor
+        falloff_offset = control_rig.data.ragdoll.wiggle_falloff_offset
+        falloff_invert = control_rig.data.ragdoll.wiggle_falloff_invert
+        bone_level_max = control_rig.data.ragdoll.bone_level_max
+
+        for i in range(len(control_rig.pose.bones)):
+            pbone = control_rig.pose.bones[i]
+            max_lin = global_max_lin
+            max_ang = global_max_ang
+            
+            if pbone.ragdoll.wiggle_constraint != None:
+                wiggle_const = pbone.ragdoll.wiggle_constraint.rigid_body_constraint
+                if wiggle_const:
+                    if not use_wiggle:
+                        wiggle_const.enabled = False
+                    else:
+                        wiggle_const.enabled = True
+                        if use_falloff:
+                            tree_level = pbone.ragdoll.tree_level
+                            if falloff_invert:
+                                tree_level = control_rig.data.ragdoll.bone_level_max - pbone.ragdoll.tree_level
+
+                            # define step size, cap at user set wiggle value using max
+                            if falloff_mode == 'QUADRATIC':
+                                max_lin = min(falloff_factor * global_max_lin ** (tree_level+1) + falloff_offset, global_max_lin)
+                            else:
+                                # step size is divided falloff factor to be consistent w/ control of quadratic function
+                                max_lin = min(global_max_lin - ((global_max_lin / bone_level_max / falloff_factor) * tree_level ) + falloff_offset, max_lin) 
+                        
+
+                        # modify constraints
+                        if wiggle_const.type == 'GENERIC' or wiggle_const.type == 'GENERIC_SPRING':
+                            wiggle_const.use_limit_ang_x, wiggle_const.use_limit_ang_y, wiggle_const.use_limit_ang_z = limit_ang, limit_ang, limit_ang
+                            wiggle_const.use_limit_lin_x, wiggle_const.use_limit_lin_y, wiggle_const.use_limit_lin_z = limit_lin, limit_lin, limit_lin
+                            
+                            wiggle_const.limit_lin_x_lower, wiggle_const.limit_lin_x_upper = - max_lin, max_lin
+                            wiggle_const.limit_lin_y_lower, wiggle_const.limit_lin_y_upper = - max_lin, max_lin
+                            wiggle_const.limit_lin_z_lower, wiggle_const.limit_lin_z_upper = - max_lin, max_lin 
+
+                            wiggle_const.limit_ang_x_lower, wiggle_const.limit_ang_x_upper = math.degrees(- max_ang), math.degrees(max_ang)
+                            wiggle_const.limit_ang_y_lower, wiggle_const.limit_ang_y_upper = math.degrees(- max_ang), math.degrees(max_ang)
+                            wiggle_const.limit_ang_z_lower, wiggle_const.limit_ang_z_upper = math.degrees(- max_ang), math.degrees(max_ang)
+
 
 class RagDollBonePropGroup(bpy.types.PropertyGroup):
     tree_level: bpy.props.IntProperty(name="tree_level", min=0, default =0)
@@ -23,7 +84,6 @@ class RagDollBonePropGroup(bpy.types.PropertyGroup):
     connector: bpy.props.PointerProperty(type=bpy.types.Object, name="Rigid Body Connector", poll=empty_poll)
     wiggle: bpy.props.PointerProperty(type=bpy.types.Object, name="Wiggle", poll=mesh_poll)
     wiggle_constraint: bpy.props.PointerProperty(type=bpy.types.Object, name="Wiggle Constraint", poll=empty_poll)
-
 
 
 class RagDollPropGroup(bpy.types.PropertyGroup):
@@ -61,22 +121,25 @@ class RagDollPropGroup(bpy.types.PropertyGroup):
 
     # -------- Channels --------
     kinematic: bpy.props.BoolProperty(name="Animated", default=True)
-    kinematic_influence: bpy.props.FloatProperty(name="Rigid Body_Influence",min=0.0, max=1.0, default=1.0)
-    wiggle: bpy.props.BoolProperty(name="Use Wiggle", default=False)
-    wiggle_distance: bpy.props.FloatProperty(name="Maximum Wiggle Translation",min=0.0, max=16.0, default=0.2)
-    wiggle_rotation: bpy.props.FloatProperty(name="Maximum Wiggle Rotation", subtype="ANGLE", min=0.0, max=math.radians(360.0), default=math.radians(22.5))
-    wiggle_restrict_linear: bpy.props.BoolProperty(name="Limit Wiggle Translation", default=True)
-    wiggle_restrict_angular: bpy.props.BoolProperty(name="Limit Wiggle Rotation", default=False)
+    simulation_influence: bpy.props.FloatProperty(name="Rigid Body_Influence",min=0.0, max=1.0, default=0.0)
+    
+    wiggle: bpy.props.BoolProperty(name="Use Wiggle", default=False, update=wiggle_update)
+    wiggle_distance: bpy.props.FloatProperty(name="Maximum Wiggle Translation",min=0.0, max=16.0, default=0.2, update=wiggle_update)
+    wiggle_rotation: bpy.props.FloatProperty(name="Maximum Wiggle Rotation", subtype="ANGLE", min=0.0, max=math.radians(360.0), default=math.radians(22.5), update=wiggle_update)
+    wiggle_restrict_linear: bpy.props.BoolProperty(name="Limit Wiggle Translation", default=True, update=wiggle_update)
+    wiggle_restrict_angular: bpy.props.BoolProperty(name="Limit Wiggle Rotation", default=False, update=wiggle_update)
 
-    wiggle_use_falloff: bpy.props.BoolProperty(name="Use Wiggle Falloff", default=False)
-    wiggle_falloff_invert: bpy.props.BoolProperty(name="Invert Falloff", default=False)
+    wiggle_use_falloff: bpy.props.BoolProperty(name="Use Wiggle Falloff", default=False, update=wiggle_update)
+    wiggle_falloff_invert: bpy.props.BoolProperty(name="Invert Falloff", default=False, update=wiggle_update)
     wiggle_falloff_mode: bpy.props.EnumProperty(items=[
                                                             ('LINEAR', "Linear", "Linear bone chain based falloff in wiggle"),
                                                             ('QUADRATIC', "Quadratic", "Quadratic bone chain based falloff in wiggle")                          
-                                                            ], default='LINEAR', name="Falloff Mode")
+                                                            ], default='LINEAR', name="Falloff Mode", update=wiggle_update)
     
-    wiggle_falloff_factor: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=0.0, max=10.0, default=1.0)
-    wiggle_falloff_offset: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=-10.0, max=10.0)
+    wiggle_falloff_factor: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=0.0, max=10.0, default=1.0, update=wiggle_update)
+    wiggle_falloff_offset: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=-10.0, max=10.0, update=wiggle_update)
+    wiggle_drivers: bpy.props.BoolProperty(name="Wiggle has Drivers", default=False)
+
 
     bone_level_max: bpy.props.IntProperty(name="bone_level_max", min=0, default=0)
 
@@ -677,81 +740,121 @@ def bone_drivers_add(deform_rig, control_rig):
                 rd_influence = const.driver_add("influence")
                 rd_influence.driver.type = 'SCRIPTED'
                 var = rd_influence.driver.variables.new()
-                var.name = "kinematic_influence"
+                var.name = "simulation_influence"
                 var.type = 'SINGLE_PROP'
                 target = var.targets[0]
                 target.id_type = 'ARMATURE'
                 target.id = control_rig.data
-                target.data_path = 'ragdoll.kinematic_influence'
-                rd_influence.driver.expression = "kinematic_influence"
+                target.data_path = 'ragdoll.simulation_influence'
+                rd_influence.driver.expression = "1-simulation_influence"
 
                 if 'CTRL' in const.name:
-                    rd_influence.driver.expression = "1 - kinematic_influence"
+                    rd_influence.driver.expression = "simulation_influence"
 
     print("Info: bone constraint drivers set")
 
 
+def wiggle_drivers_add(control_rig):
+    for obj in control_rig.data.ragdoll.wiggle_constraints.objects:
+        if obj.rigid_body_constraint:
+            if obj.rigid_body_constraint.object1:
+                parent_bone_name = obj.rigid_body_constraint.object1.parent_bone
+                if parent_bone_name:
+                    translation = [
+                        "limit_lin_x_lower",
+                        "limit_lin_x_upper",
+                        "limit_lin_y_lower",
+                        "limit_lin_y_upper",
+                        "limit_lin_z_lower",
+                        "limit_lin_z_upper",
+                    ]
+                    for direction in translation:
+                        if control_rig.data.ragdoll.wiggle_use_falloff:
+                            fcurve = obj.rigid_body_constraint.driver_add(direction)
+                            
+                            invert = fcurve.driver.variables.new()
+                            invert.name = "invert"
+                            invert.type = 'SINGLE_PROP'
+                            target = invert.targets[0]
+                            target.id_type = 'ARMATURE'
+                            target.id = control_rig.data
+                            target.data_path = 'ragdoll.wiggle_falloff_invert'
+
+                            distance = fcurve.driver.variables.new()
+                            distance.name = "distance"
+                            distance.type = 'SINGLE_PROP'
+                            target = distance.targets[0]
+                            target.id_type = 'ARMATURE'
+                            target.id = control_rig.data
+                            target.data_path = 'ragdoll.wiggle_distance'
+                            
+                            lvl = fcurve.driver.variables.new()
+                            lvl.name = "lvl"
+                            lvl.type = 'SINGLE_PROP'
+                            target = lvl.targets[0]
+                            target.id_type = 'OBJECT'
+                            target.id = control_rig
+                            target.data_path = 'pose.bones["%s"].ragdoll.tree_level'%parent_bone_name
+                            
+                            lvl_max = fcurve.driver.variables.new()
+                            lvl_max.name = "lvl_max"
+                            lvl_max.type = 'SINGLE_PROP'
+                            target = lvl_max.targets[0]
+                            target.id_type = 'ARMATURE'
+                            target.id = control_rig.data
+                            target.data_path = 'ragdoll.bone_level_max'
+                            
+                            factor = fcurve.driver.variables.new()
+                            factor.name = "factor"
+                            factor.type = 'SINGLE_PROP'
+                            target = factor.targets[0]
+                            target.id_type = 'ARMATURE'
+                            target.id = control_rig.data
+                            target.data_path = 'ragdoll.wiggle_falloff_factor'
+                            
+                            offset = fcurve.driver.variables.new()
+                            offset.name = "offset"
+                            offset.type = 'SINGLE_PROP'
+                            target = offset.targets[0]
+                            target.id_type = 'ARMATURE'
+                            target.id = control_rig.data
+                            target.data_path = 'ragdoll.wiggle_falloff_offset'
+                        
+                            if control_rig.data.ragdoll.wiggle_falloff_mode == "QUADRATIC":
+                                fcurve.driver.expression = "(factor*distance)**( (invert==0) * (lvl+1)  + ((invert==1) * (lvl_max-lvl + 1)  ) + offset)"
+                                # simplified: factor * distance **(level+1) + offset
+                            else:
+                                # simplified: distance / lvl_max / factor * level + offset
+                                fcurve.driver.expression = "offset + distance / lvl_max / factor * (lvl * (invert==0) + ( (lvl_max-lvl) * (invert==1) ) )"
+                                # multiplication w/ booleans used to invert if required
+
+                        else:
+                            fcurve = obj.rigid_body_constraint.driver_add(direction)
+                            distance = fcurve.driver.variables.new()
+                            distance.name = "distance"
+                            distance.type = 'SINGLE_PROP'
+                            target = distance.targets[0]
+                            target.id_type = 'ARMATURE'
+                            target.id = control_rig.data
+                            target.data_path = 'ragdoll.wiggle_distance'
+                            fcurve.driver.expression = 'distance'
+
+
+
+
+def wiggle_drivers_remove(control_rig):
+    wiggle_constraints = control_rig.data.ragdoll.wiggle_constraints.objects
+    for obj in wiggle_constraints:
+        for d in obj.animation_data.drivers:
+            obj.animation_data.drivers.remove(d)
+
+
+
 def drivers_remove_invalid(object):
     for d in object.animation_data.drivers:
-        if 'kinematic_influence' in d.driver.expression:
+        if 'simulation_influence' in d.driver.expression:
             object.animation_data.drivers.remove(d)
 
-
-def wiggles_update(context):
-    control_rig = ragdoll_aux.validate_selection(context.object)
-    if control_rig.data.ragdoll.type == 'DEFORM':
-        control_rig = control_rig.data.ragdoll.control_rig
-    if control_rig:
-        # limits
-        limit_lin = control_rig.data.ragdoll.wiggle_restrict_linear
-        limit_ang = control_rig.data.ragdoll.wiggle_restrict_angular
-        global_max_lin = control_rig.data.ragdoll.wiggle_distance
-        global_max_ang = control_rig.data.ragdoll.wiggle_rotation
-        # settings
-        use_wiggle = control_rig.data.ragdoll.wiggle
-        use_falloff = control_rig.data.ragdoll.wiggle_use_falloff
-        falloff_mode = control_rig.data.ragdoll.wiggle_falloff_mode
-        falloff_factor = control_rig.data.ragdoll.wiggle_falloff_factor
-        falloff_offset = control_rig.data.ragdoll.wiggle_falloff_offset
-        falloff_invert = control_rig.data.ragdoll.wiggle_falloff_invert
-        bone_level_max = control_rig.data.ragdoll.bone_level_max
-
-        for i in range(len(control_rig.pose.bones)):
-            pbone = control_rig.pose.bones[i]
-            max_lin = global_max_lin
-            max_ang = global_max_ang
-            
-            if pbone.ragdoll.wiggle_constraint != None:
-                wiggle_const = pbone.ragdoll.wiggle_constraint.rigid_body_constraint
-                if wiggle_const:
-                    if not use_wiggle:
-                        wiggle_const.enabled = False
-                    else:
-                        wiggle_const.enabled = True
-                        if use_falloff:
-                            tree_level = pbone.ragdoll.tree_level
-                            if falloff_invert:
-                                tree_level = control_rig.data.ragdoll.bone_level_max - pbone.ragdoll.tree_level
-
-                            # define step size, cap at user set wiggle value using max
-                            if falloff_mode == 'QUADRATIC':
-                                max_lin = min(falloff_factor * global_max_lin ** (tree_level+1) + falloff_offset, global_max_lin)
-                            else:
-                                # step size is divided falloff factor to be consistent w/ control of quadratic function
-                                max_lin = min(global_max_lin - ((global_max_lin / bone_level_max / falloff_factor) * tree_level ) + falloff_offset, max_lin) 
-                        
-                        # modify constraints
-                        if wiggle_const.type == 'GENERIC' or wiggle_const.type == 'GENERIC_SPRING':
-                            wiggle_const.use_limit_ang_x, wiggle_const.use_limit_ang_y, wiggle_const.use_limit_ang_z = limit_ang, limit_ang, limit_ang
-                            wiggle_const.use_limit_lin_x, wiggle_const.use_limit_lin_y, wiggle_const.use_limit_lin_z = limit_lin, limit_lin, limit_lin
-                            
-                            wiggle_const.limit_lin_x_lower, wiggle_const.limit_lin_x_upper = - max_lin, max_lin
-                            wiggle_const.limit_lin_y_lower, wiggle_const.limit_lin_y_upper = - max_lin, max_lin
-                            wiggle_const.limit_lin_z_lower, wiggle_const.limit_lin_z_upper = - max_lin, max_lin 
-
-                            wiggle_const.limit_ang_x_lower, wiggle_const.limit_ang_x_upper = math.degrees(- max_ang), math.degrees(max_ang)
-                            wiggle_const.limit_ang_y_lower, wiggle_const.limit_ang_y_upper = math.degrees(- max_ang), math.degrees(max_ang)
-                            wiggle_const.limit_ang_z_lower, wiggle_const.limit_ang_z_upper = math.degrees(- max_ang), math.degrees(max_ang)
 
 
 

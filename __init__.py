@@ -16,19 +16,23 @@ def register():
     #-------- register custom properties --------
     bpy.utils.register_class(ragdoll.RagDollPropGroup)
     bpy.utils.register_class(ragdoll.RagDollBonePropGroup)
+
+    #-------- set custom properties --------
     bpy.types.Armature.ragdoll = bpy.props.PointerProperty(type=ragdoll.RagDollPropGroup)
     bpy.types.PoseBone.ragdoll = bpy.props.PointerProperty(type=ragdoll.RagDollBonePropGroup)
+   
     #-------- register UI elements --------
     bpy.utils.register_class(ragdoll_ui.RagDollPanel)
     bpy.utils.register_class(ragdoll_ui.RagDollCollectionsPanel)
     bpy.utils.register_class(ragdoll_ui.RagDollSuffixesPanel)
-
     bpy.utils.register_class(ragdoll_ui.AddRigidBodyConstraintsOperator)
     bpy.utils.register_class(ragdoll_ui.AddRagDollOperator)
     bpy.utils.register_class(ragdoll_ui.RemoveRagDollOperator)
     bpy.utils.register_class(ragdoll_ui.UpdateRagDollOperator)
     bpy.utils.register_class(ragdoll_ui.UpdateWigglesOperator)
     bpy.utils.register_class(ragdoll_ui.UpdateDriversOperator)
+    bpy.utils.register_class(ragdoll_ui.AddWiggleDriversOperator)
+    bpy.utils.register_class(ragdoll_ui.RemoveWiggleDriversOperator)
     bpy.utils.register_class(ragdoll_ui.OT_TextBrowse)
 
     
@@ -48,6 +52,8 @@ def unregister():
     bpy.utils.unregister_class(ragdoll_ui.UpdateRagDollOperator)
     bpy.utils.unregister_class(ragdoll_ui.UpdateWigglesOperator)
     bpy.utils.unregister_class(ragdoll_ui.UpdateDriversOperator)
+    bpy.utils.unregister_class(ragdoll_ui.AddWiggleDriversOperator)
+    bpy.utils.unregister_class(ragdoll_ui.RemoveWiggleDriversOperator)
     bpy.utils.unregister_class(ragdoll_ui.OT_TextBrowse)
     
 if "bpy" in locals():

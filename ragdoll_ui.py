@@ -4,7 +4,7 @@ import sys
 sys.path.append("/home/schnollie/Work/bpy/ragdoll_tools")
 from ragdoll_aux import rb_constraint_collection_set, load_text
 
-from ragdoll import rag_doll_create, rag_doll_remove, rag_doll_update, wiggles_update, force_update_drivers
+from ragdoll import rag_doll_create, rag_doll_remove, rag_doll_update, wiggle_update, force_update_drivers, wiggle_drivers_add, wiggle_drivers_remove
 from bpy_extras.io_utils import ImportHelper
 import os
 
@@ -108,7 +108,7 @@ class UpdateDriversOperator(bpy.types.Operator):
 
 class UpdateWigglesOperator(bpy.types.Operator):
     """Update selected Armature's RagDoll"""
-    bl_idname = "armature.wiggles_update"
+    bl_idname = "armature.wiggle_update"
     bl_label = "Update Wiggles"
     bl_options = {'UNDO'}
 
@@ -117,10 +117,41 @@ class UpdateWigglesOperator(bpy.types.Operator):
         return True
 
     def execute(self, context):
-        wiggles_update(context)
+        wiggle_update(context)
         return {'FINISHED'}
 
+class AddWiggleDriversOperator(bpy.types.Operator):
+    """Add drivers to wiggle constraints"""
+    bl_idname = "armature.wiggle_drivers_add"
+    bl_label = "Add Drivers"
+    bl_options = {'UNDO'}
 
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+        wiggle_drivers_add(context.object)
+        context.object.data.ragdoll.wiggle_drivers = True
+        print("Drivers added!")
+        return {'FINISHED'}
+
+class RemoveWiggleDriversOperator(bpy.types.Operator):
+    """Add drivers to wiggle constraints"""
+    bl_idname = "armature.wiggle_drivers_remove"
+    bl_label = "Add Drivers"
+    bl_options = {'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+        wiggle_drivers_remove(context.object)
+        context.object.data.ragdoll.wiggle_drivers = False
+        
+        print("Drivers added!")
+        return {'FINISHED'}
 
 
 class RagDollCollectionsPanel(bpy.types.Panel):
@@ -282,25 +313,28 @@ class RagDollPanel(bpy.types.Panel):
                             split = animated_box.split(factor=0.33)
                             col_1 = split.column()
                             col_2 = split.column()
-                            col_1_row_0 = col_1.row()
-                            col_1_row_0.prop(context.object.data.ragdoll, "kinematic", text="Animated")
-                            col_2_row_0 = col_2.row()
-                            col_2_row_0.prop(context.object.data.ragdoll, "kinematic_influence", text="Override")
+                            kinematic_row = col_1.row()
+                            kinematic_row.prop(context.object.data.ragdoll, "kinematic", text="Animated")
+                            anim_override_row = col_2.row()
+                            anim_override_row.prop(context.object.data.ragdoll, "simulation_influence", text="Override")
 
                             
                             wiggle_box = layout.box()
-                            row = wiggle_box.row()
-                            row.label(text="Wiggle")
+                            wiggle_label_row = wiggle_box.row()
+                            wiggle_label_row.label(text="Wiggle")
                             row = wiggle_box.row()
                             split = row.split(factor=0.33)
                             col_0 = split.row()
                             col_1 = split.row()
                             row = col_0.row()
                             row.prop(context.object.data.ragdoll, "wiggle", text="Use")
-                            update_wiggle_row = col_1.row()
-                            update_wiggle_row.operator("armature.wiggles_update", text="Update Wiggle")
-                            
-                            
+                            row = col_1.row()
+                            split = row.split(factor=0.5)
+                            add_drivers_row = split.column().row()
+                            remove_drivers_row = split.column().row()
+                            add_drivers_row.operator("armature.wiggle_drivers_add", text="Add Drivers")
+                            remove_drivers_row.operator("armature.wiggle_drivers_remove", text="Remove Drivers")
+
                             split = wiggle_box.split(factor=0.33)
                             col_1 = split.column()
                             col_2 = split.column()
@@ -337,19 +371,31 @@ class RagDollPanel(bpy.types.Panel):
                             subcol_0.prop(context.object.data.ragdoll, "wiggle_falloff_factor", text="Factor")
                             subcol_1.prop(context.object.data.ragdoll, "wiggle_falloff_offset", text="Offset")
 
-                            # col_2_row_3.operator("armature.wiggles_update", text="Update Wiggle")
+                       
+                            if context.object.data.ragdoll.wiggle_drivers == True:
+                                remove_drivers_row.enabled = True
+                                add_drivers_row.enabled = False
+                            else:
+                                remove_drivers_row.enabled = False
+                                add_drivers_row.enabled = True
 
-                            
-                            
+
+
+                            if context.object.data.ragdoll.kinematic == True:
+                                anim_override_row.enabled = False
+
+                            else:
+                                anim_override_row.enabled = True
 
                             if context.object.data.ragdoll.wiggle == False:
                                 col_1.enabled = False
                                 col_2.enabled = False
-                                update_wiggle_row.enabled = False
+                                wiggle_label_row.enabled = False
+                               
                             else:
                                 col_1.enabled = True
                                 col_2.enabled = True
-                                update_wiggle_row.enabled = True
+                                wiggle_label_row.enabled = True
 
                             if context.object.data.ragdoll.wiggle_restrict_linear == False:
                                 col_2_row_1.enabled = False
@@ -360,29 +406,6 @@ class RagDollPanel(bpy.types.Panel):
                                 col_2_row_2.enabled = False
                             else:
                                 col_2_row_2.enabled = True
-                            
-                            
-                            
-                            # row2 = col_2.row()
-                            # row2.prop(context.armature.ragdoll, "kinematic_influence", text="Override")
-                            # row3 = col_2.row()
-                            # row3.prop(context.armature.ragdoll, "wiggle_restrict_linear", text="")
-                            # row3.prop(context.armature.ragdoll, "wiggle_distance", text="Distance")
-                            # row4 = col_2.row()
-                            # row4.prop(context.armature.ragdoll, "wiggle_restrict_angular", text="")
-                            # row4.prop(context.armature.ragdoll, "wiggle_rotation", text="Rotation")
-
-                            
-                            # row1.enabled = not context.armature.ragdoll.kinematic
-                                
-
-                            # if context.armature.ragdoll.wiggle == False:
-                            #     row2.enabled = False
-                            #     row3.enabled = False
-                            # else:
-                            #     row2.enabled = True
-                            #     row3.enabled = True
-
 
                             row = layout.row()
                             row.operator("armature.ragdoll_update", text="Update Ragdoll")

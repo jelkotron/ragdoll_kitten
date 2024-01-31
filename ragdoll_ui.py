@@ -4,7 +4,7 @@ import sys
 sys.path.append("/home/schnollie/Work/bpy/ragdoll_tools")
 from ragdoll_aux import rb_constraint_collection_set, load_text
 
-from ragdoll import rag_doll_create, rag_doll_remove, rag_doll_update, wiggle_update, force_update_drivers, wiggle_distance_keyframe_insert, wiggle_drivers_add, wiggle_drivers_remove
+from ragdoll import rag_doll_create, rag_doll_remove, rag_doll_update, wiggle_update, force_update_drivers, wiggle_spring_drivers_add, wiggle_spring_drivers_remove 
 from bpy_extras.io_utils import ImportHelper
 import os
 
@@ -131,9 +131,9 @@ class AddWiggleDriversOperator(bpy.types.Operator):
         return True
 
     def execute(self, context):
-        wiggle_distance_keyframe_insert(context.object)
+        wiggle_spring_drivers_add(context.object)
         context.object.data.ragdoll.wiggle_drivers = True
-        print("Drivers added!")
+        print("Info: Added Drivers to Rigid Body Constraints' Spring Settings.")
         return {'FINISHED'}
 
 class RemoveWiggleDriversOperator(bpy.types.Operator):
@@ -147,10 +147,10 @@ class RemoveWiggleDriversOperator(bpy.types.Operator):
         return True
 
     def execute(self, context):
-        wiggle_drivers_remove(context.object)
+        wiggle_spring_drivers_remove(context.object)
         context.object.data.ragdoll.wiggle_drivers = False
         
-        print("Drivers added!")
+        print("Info: Removed Drivers from Rigid Body Constraints' Spring Settings.")
         return {'FINISHED'}
 
 
@@ -289,6 +289,12 @@ class RagDollPanel(bpy.types.Panel):
                             col_2.prop(context.object.data.ragdoll.control_rig.data.ragdoll,"config", text="")
 
                         row.operator("text.open_filebrowser", text="", icon='FILEBROWSER')
+
+                        row = box.row()
+                        row.operator("armature.ragdoll_update", text="Update Ragdoll")
+                        row.operator("armature.ragdoll_remove", text="Remove Ragdoll")
+                        row.operator("armature.update_drivers", text="Update Drivers")
+
                         
                         box = layout.box()
                         row = box.row()
@@ -307,6 +313,7 @@ class RagDollPanel(bpy.types.Panel):
                             row = layout.row()
                             row.operator("armature.ragdoll_add", text="Create Ragdoll")
                         else:
+                            #-------- Animation --------
                             animated_box = layout.box()
                             row = animated_box.row()
                             row.label(text="Animation")
@@ -318,97 +325,82 @@ class RagDollPanel(bpy.types.Panel):
                             anim_override_row = col_2.row()
                             anim_override_row.prop(context.object.data.ragdoll, "simulation_influence", text="Override")
 
-                            
+                            #-------- Wiggle --------
                             wiggle_box = layout.box()
                             wiggle_label_row = wiggle_box.row()
                             wiggle_label_row.label(text="Wiggle")
-                            row = wiggle_box.row()
-                            split = row.split(factor=0.33)
-                            col_0 = split.row()
-                            col_1 = split.row()
-                            row = col_0.row()
-                            row.prop(context.object.data.ragdoll, "wiggle", text="Use")
-                            row = col_1.row()
-                            split = row.split(factor=0.5)
-                            add_drivers_row = split.column().row()
-                            remove_drivers_row = split.column().row()
-                            add_drivers_row.operator("armature.wiggle_drivers_add", text="Add Drivers")
-                            remove_drivers_row.operator("armature.wiggle_drivers_remove", text="Remove Drivers")
-
-                            split = wiggle_box.split(factor=0.33)
-                            col_1 = split.column()
-                            col_2 = split.column()
+                            wiggle_checkbox_row = wiggle_box.row()
+                            wiggle_checkbox_row.prop(context.object.data.ragdoll, "wiggle", text="Use")
                             
-                            col_1_row_2 = col_1.row()
-                            col_1_row_2.prop(context.object.data.ragdoll, "wiggle_restrict_linear", text="Limit Linear")
-
-                            col_1_row_3 = col_1.row()
-                            col_1_row_3.prop(context.object.data.ragdoll, "wiggle_restrict_angular", text="Limit Angular")
-
-                            col_1_row_4 = col_1.row()
-                            col_1_row_4.prop(context.object.data.ragdoll, "wiggle_use_falloff", text="Falloff")
-
-
-                            col_2_row_0 = col_2.row()
-                            col_2_row_1 = col_2.row()
-                            col_2_row_1.prop(context.object.data.ragdoll, "wiggle_distance", text="Distance")
-
-                            col_2_row_2 = col_2.row()
-                            col_2_row_2.prop(context.object.data.ragdoll, "wiggle_rotation", text="Rotation")
-
-
-                            col_2_row_3 = col_2.row()
-                            split = col_2_row_3.split(factor=0.5)
-                            subcol_0 = split.column()
-                            subcol_1 = split.column()
-                            subcol_0.prop(context.object.data.ragdoll, "wiggle_falloff_mode", text="")
-                            subcol_1.prop(context.object.data.ragdoll, "wiggle_falloff_invert", text="Invert")
+                            #------------------------ Constraint Limits ------------------------
+                            wiggle_limit_row = wiggle_box.row()
+                            split = wiggle_limit_row.split(factor=0.33)
+                            wiggle_limit_col_0 = split.column()
+                            wiggle_limit_col_1 = split.column()
                             
-                            col_2_row_4 = col_2.row()
-                            split = col_2_row_4.split(factor=0.5)
-                            subcol_0 = split.column()
-                            subcol_1 = split.column()
-                            subcol_0.prop(context.object.data.ragdoll, "wiggle_falloff_factor", text="Factor")
-                            subcol_1.prop(context.object.data.ragdoll, "wiggle_falloff_offset", text="Offset")
+                            wiggle_restric_lin_row = wiggle_limit_col_0.row()
+                            wiggle_restric_lin_row.prop(context.object.data.ragdoll, "wiggle_restrict_linear", text="Limit Linear")
 
-                       
-                            if context.object.data.ragdoll.wiggle_drivers == True:
-                                remove_drivers_row.enabled = True
-                                add_drivers_row.enabled = True
-                            else:
-                                remove_drivers_row.enabled = True
-                                add_drivers_row.enabled = True
+                            wiggle_restric_ang_row = wiggle_limit_col_0.row()
+                            wiggle_restric_ang_row.prop(context.object.data.ragdoll, "wiggle_restrict_angular", text="Limit Angular")
 
+                            wiggle_limits_row = wiggle_limit_col_1.row()
+                            wiggle_limit_lin_row = wiggle_limits_row.row()
+                            wiggle_limit_lin_row.prop(context.object.data.ragdoll, "wiggle_distance", text="Distance")
 
-
-                            if context.object.data.ragdoll.kinematic == True:
-                                anim_override_row.enabled = False
-
-                            else:
-                                anim_override_row.enabled = True
-
-                            if context.object.data.ragdoll.wiggle == False:
-                                col_1.enabled = False
-                                col_2.enabled = False
-                                wiggle_label_row.enabled = False
-                               
-                            else:
-                                col_1.enabled = True
-                                col_2.enabled = True
-                                wiggle_label_row.enabled = True
-
-                            if context.object.data.ragdoll.wiggle_restrict_linear == False:
-                                col_2_row_1.enabled = False
-                            else:
-                                col_2_row_1.enabled = True
+                            wiggle_limits_row = wiggle_limit_col_1.row()
+                            wiggle_limit_ang_row = wiggle_limits_row.row()
+                            wiggle_limit_ang_row.prop(context.object.data.ragdoll, "wiggle_rotation", text="Rotation")
                             
-                            if context.object.data.ragdoll.wiggle_restrict_angular == False:
-                                col_2_row_2.enabled = False
-                            else:
-                                col_2_row_2.enabled = True
+                            #------------------------ Constraint Springs ------------------------
+                            wiggle_spring_row = wiggle_box.row()
+                            split = wiggle_spring_row.split(factor=0.33)
+                            wiggle_spring_col_0 = split.column()
+                            wiggle_spring_col_1 = split.column()
+                            wiggle_spring_row_left_0 = wiggle_spring_col_0.row()
+                            wiggle_spring_row_right_0 = wiggle_spring_col_1.row()
+                            wiggle_spring_row_left_0.prop(context.object.data.ragdoll, "wiggle_use_springs", text="Springs")
+                            wiggle_spring_row_right_0.prop(context.object.data.ragdoll, "wiggle_stiffness", text="Stiffness")
+                            wiggle_spring_row_right_0.prop(context.object.data.ragdoll, "wiggle_damping", text="Damping")
+                            
+                            wiggle_spring_row_right_1 = wiggle_spring_col_1.row()
+                            split = wiggle_spring_row_right_1.split(factor=0.5)
+                            wiggle_spring_col_0 = split.column()
+                            wiggle_spring_col_1 = split.column()
+                            wiggle_spring_add_drivers = wiggle_spring_col_0.row()
+                            wiggle_spring_remove_drivers = wiggle_spring_col_1.row()
+                            wiggle_spring_add_drivers.operator("armature.wiggle_drivers_add", text="Add Drivers", icon='DECORATE_DRIVER')
+                            wiggle_spring_remove_drivers.operator("armature.wiggle_drivers_remove", text="Remove Drivers", icon='PANEL_CLOSE')
 
-                            row = layout.row()
-                            row.operator("armature.ragdoll_update", text="Update Ragdoll")
-                            row.operator("armature.ragdoll_remove", text="Remove Ragdoll")
-                            row.operator("armature.update_drivers", text="Update Drivers")
+                            #------------------------ Falloff ------------------------
+                            wiggle_falloff_row = wiggle_box.row()
+                            split = wiggle_falloff_row.split(factor=0.33)
+                            wiggle_falloff_col_0 = split.column()
+                            wiggle_falloff_col_1 = split.column()
+
+                            wiggle_falloff_checkbox_row = wiggle_falloff_col_0.row()
+                            wiggle_falloff_checkbox_row.prop(context.object.data.ragdoll, "wiggle_use_falloff", text="Falloff")
+
+                            wiggle_falloff_settings_row_0 = wiggle_falloff_col_1.row()
+                            wiggle_falloff_settings_row_0.prop(context.object.data.ragdoll, "wiggle_falloff_mode", text="")
+                            wiggle_falloff_settings_row_0.prop(context.object.data.ragdoll, "wiggle_falloff_factor", text="Factor")
+
+                            wiggle_falloff_settings_row_1 = wiggle_falloff_col_1.row()
+                            wiggle_falloff_settings_row_1.prop(context.object.data.ragdoll, "wiggle_falloff_invert", text="Invert Chain")
+                            wiggle_falloff_settings_row_1.prop(context.object.data.ragdoll, "wiggle_falloff_offset", text="Offset")
+
+                            #-------- UI States --------
+                            wiggle_limit_row.enabled = context.object.data.ragdoll.wiggle
+                            wiggle_spring_row.enabled = context.object.data.ragdoll.wiggle
+                            wiggle_falloff_row.enabled = context.object.data.ragdoll.wiggle
+                            
+                            wiggle_limit_lin_row.enabled = context.object.data.ragdoll.wiggle_restrict_linear
+                            wiggle_limit_ang_row.enabled = context.object.data.ragdoll.wiggle_restrict_angular
+                            wiggle_falloff_settings_row_0.enabled = context.object.data.ragdoll.wiggle_use_falloff
+                            wiggle_falloff_settings_row_1.enabled = context.object.data.ragdoll.wiggle_use_falloff
+                            wiggle_spring_row_right_0.enabled = context.object.data.ragdoll.wiggle_use_springs
+                            wiggle_spring_row_right_1.enabled = context.object.data.ragdoll.wiggle_use_springs
+                            anim_override_row.enabled = not context.object.data.ragdoll.kinematic
+                            wiggle_spring_add_drivers.enabled = not context.object.data.ragdoll.wiggle_drivers
+                            wiggle_spring_remove_drivers.enabled = context.object.data.ragdoll.wiggle_drivers
                     

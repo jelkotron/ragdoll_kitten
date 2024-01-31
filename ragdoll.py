@@ -140,6 +140,9 @@ class RagDollPropGroup(bpy.types.PropertyGroup):
     wiggle_falloff_offset: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=-10.0, max=10.0, update=wiggle_update)
     wiggle_drivers: bpy.props.BoolProperty(name="Wiggle has Drivers", default=False)
 
+    wiggle_use_springs: bpy.props.BoolProperty(name="Use Springs", default=True, update=wiggle_update)
+    wiggle_stiffness: bpy.props.FloatProperty(name="Stiffnesss", min=0, max=100)
+    wiggle_damping: bpy.props.FloatProperty(name="Stiffnesss", min=0, max=100)
 
     bone_level_max: bpy.props.IntProperty(name="bone_level_max", min=0, default=0)
 
@@ -510,7 +513,7 @@ def rb_constraints_add(deform_rig, mode='PRIMARY'):
                         bpy.context.collection.objects.link(empty)
                         empty.empty_display_size = 0.15
                         bpy.context.scene.rigidbody_world.constraints.objects.link(empty)
-                        empty.rigid_body_constraint.type = 'GENERIC'
+                        empty.rigid_body_constraint.type = 'GENERIC_SPRING'
                         
                         vec = (child.head - child.tail)
                         trans = mathutils.Matrix.Translation(vec)
@@ -537,7 +540,7 @@ def rb_constraints_add(deform_rig, mode='PRIMARY'):
                 bpy.context.collection.objects.link(empty)
                 empty.empty_display_size = 0.15
                 bpy.context.scene.rigidbody_world.constraints.objects.link(empty)
-                empty.rigid_body_constraint.type = 'GENERIC'
+                empty.rigid_body_constraint.type = 'GENERIC_SPRING'
                 
                 vec = (bone.head - bone.tail)
                 trans = mathutils.Matrix.Translation(vec)
@@ -773,6 +776,48 @@ def wiggle_distance_keyframe_insert(control_rig):
                     for direction in translation:
                         obj.rigid_body_constraint.keyframe_insert(direction)
     
+def wiggle_spring_drivers_add(control_rig):
+    for obj in control_rig.data.ragdoll.wiggle_constraints.objects:
+        if obj.rigid_body_constraint and obj.rigid_body_constraint.type == 'GENERIC_SPRING':
+            obj.rigid_body_constraint.use_spring_x = True
+            obj.rigid_body_constraint.use_spring_y = True
+            obj.rigid_body_constraint.use_spring_z = True
+
+            properties = {
+                "stiffness": [
+                    "spring_stiffness_x",
+                    "spring_stiffness_y",
+                    "spring_stiffness_z",
+                    ],
+                "damping": [
+                    "spring_damping_x",
+                    "spring_damping_y",
+                    "spring_damping_z",
+                ]
+  
+            }
+  
+            for key, value in properties.items():
+                for prop in value:
+                    fcurve = obj.rigid_body_constraint.driver_add(prop)
+                    var = fcurve.driver.variables.new()
+                    var.name = key
+                    var.type = 'SINGLE_PROP'
+                    target = var.targets[0]
+                    target.id_type = 'ARMATURE'
+                    target.id = control_rig.data
+                    target.data_path = 'ragdoll.wiggle_%s'%key
+                    fcurve.driver.expression = key
+
+        else:
+            print("Error: Wrong Rigid Body Constraint Type: %s"%obj.rigid_body_constraint.type)
+    
+
+def wiggle_spring_drivers_remove(control_rig):
+    wiggle_constraints = control_rig.data.ragdoll.wiggle_constraints.objects
+    for obj in wiggle_constraints:
+        for d in obj.animation_data.drivers:
+            obj.animation_data.drivers.remove(d)
 
 
 def wiggle_drivers_add(control_rig):
@@ -781,15 +826,7 @@ def wiggle_drivers_add(control_rig):
             if obj.rigid_body_constraint.object1:
                 parent_bone_name = obj.rigid_body_constraint.object1.parent_bone
                 if parent_bone_name:
-                    translation = [
-                        "limit_lin_x_lower",
-                        "limit_lin_x_upper",
-                        "limit_lin_y_lower",
-                        "limit_lin_y_upper",
-                        "limit_lin_z_lower",
-                        "limit_lin_z_upper",
-                    ]
-                    for direction in translation:
+
                         if control_rig.data.ragdoll.wiggle_use_falloff:
                             fcurve = obj.rigid_body_constraint.driver_add(direction)
                             
@@ -863,11 +900,7 @@ def wiggle_drivers_add(control_rig):
 
 
 
-def wiggle_drivers_remove(control_rig):
-    wiggle_constraints = control_rig.data.ragdoll.wiggle_constraints.objects
-    for obj in wiggle_constraints:
-        for d in obj.animation_data.drivers:
-            obj.animation_data.drivers.remove(d)
+
 
 
 

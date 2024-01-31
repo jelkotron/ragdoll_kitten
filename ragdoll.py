@@ -54,15 +54,27 @@ def wiggle_update(self, context):
                         if use_falloff:
                             tree_level = pbone.ragdoll.tree_level
                             if falloff_invert:
+                                # reverse falloff direction / bone chain hierarchy if desired
                                 tree_level = control_rig.data.ragdoll.bone_level_max - pbone.ragdoll.tree_level
-
-                            # define step size, cap at user set wiggle value using max
+                            
+                            # define step size
                             if falloff_mode == 'QUADRATIC':
-                                max_lin = min(falloff_factor * global_max_lin ** (tree_level+1) + falloff_offset, global_max_lin)
+                                if tree_level == 0:
+                                    max_lin = global_max_lin
+                                else:
+                                    # base quadratic function
+                                    max_lin = global_max_lin * falloff_factor * tree_level**2  + falloff_offset
+                                    # inverse value
+                                    max_lin = 1/max_lin
+                                    # scale to stepsize
+                                    max_lin = max_lin * global_max_lin
+                                    # clamp
+                                    max_lin = min(max_lin, global_max_lin)
                             else:
-                                # step size is divided falloff factor to be consistent w/ control of quadratic function
-                                max_lin = min(global_max_lin - ((global_max_lin / bone_level_max / falloff_factor) * tree_level ) + falloff_offset, max_lin) 
-                        
+                                # step size is divided by falloff factor to be consistent w/ control of quadratic function
+                                max_lin = global_max_lin - ((global_max_lin / bone_level_max / falloff_factor) * tree_level ) + falloff_offset 
+                                #clamp
+                                max_lin = min(max_lin, global_max_lin)
 
                         # modify constraints
                         if wiggle_const.type == 'GENERIC_SPRING':
@@ -89,7 +101,7 @@ def wiggle_update(self, context):
                                 wiggle_const.spring_damping_x = control_rig.data.ragdoll.wiggle_damping
                                 wiggle_const.spring_damping_y = control_rig.data.ragdoll.wiggle_damping
                                 wiggle_const.spring_damping_z = control_rig.data.ragdoll.wiggle_damping
-                                
+        print("Info: Wiggle updated")
 
                 
 

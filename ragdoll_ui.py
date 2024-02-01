@@ -330,12 +330,12 @@ class OBJECT_PT_RagDoll(bpy.types.Panel):
                         row.prop(context.object.data.ragdoll, "rb_bone_width_relative", text="Relative Bone Width")
                         row = geo_box.row()
                         row.prop(context.object.data.ragdoll, "rb_bone_width_min", text="Minimum Width")
-                        row.enabled = False
+                        # row.enabled = False
 
                         row = geo_box.row()
                         row.prop(context.object.data.ragdoll, "rb_bone_width_max", text="Maximum Width")
-                        row.enabled = False
-                        
+                        # row.enabled = False
+
                         if context.object.data.ragdoll.initialized == True:
                             #-------- Animation --------
                             animated_box = layout.box()

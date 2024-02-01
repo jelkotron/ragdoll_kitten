@@ -115,6 +115,12 @@ def wiggle_update(self, context):
         print("Info: Wiggle updated")
 
 
+def meshes_update(self, context):
+    control_rig = ragdoll_aux.validate_selection(context.object)
+    rb_cubes_scale(control_rig, 'RIGID_BODIES')
+    rb_cubes_scale(control_rig, 'WIGGLE')
+
+
 #---- additional properties definition ----
 class RagDollBonePropGroup(bpy.types.PropertyGroup):
     is_ragdoll: bpy.props.BoolProperty(name="Part of a Ragdoll", default=False)
@@ -155,9 +161,9 @@ class RagDollPropGroup(bpy.types.PropertyGroup):
     initialized: bpy.props.BoolProperty(name="RagDoll initialized", default=False)
     
     # -------- Geometry Settings
-    rb_bone_width_min: bpy.props.FloatProperty(name="Minimum Rigid Body Geo Width", default=0.1)
-    rb_bone_width_max: bpy.props.FloatProperty(name="Minimum Rigid Body Geo Width", default=0.1)
-    rb_bone_width_relative: bpy.props.FloatProperty(name="Relative Rigid Body Geo Width", default=0.1)
+    rb_bone_width_min: bpy.props.FloatProperty(name="Minimum Rigid Body Geo Width", default=0.1, min=0.0, update=meshes_update)
+    rb_bone_width_max: bpy.props.FloatProperty(name="Minimum Rigid Body Geo Width", default=0.1, min=0.0, update=meshes_update)
+    rb_bone_width_relative: bpy.props.FloatProperty(name="Relative Rigid Body Geo Width", default=0.1, min=0.0, update=meshes_update)
 
     # -------- Channels --------
     kinematic: bpy.props.BoolProperty(name="Animated", default=True)
@@ -284,40 +290,46 @@ def secondary_rig_add(armature_object):
         return None
         
 
-def rb_cubes_scale(control_rig):
-    meshes = control_rig.data.ragdoll.rigid_bodies.objects
-    bones = control_rig.pose.bones
+def rb_cubes_scale(control_rig, mode='RIGID_BODIES'):
     width_relative = control_rig.data.ragdoll.rb_bone_width_relative
     width_min = control_rig.data.ragdoll.rb_bone_width_min
     width_max = control_rig.data.ragdoll.rb_bone_width_max
-   
-   
-    deform_rig_name = control_rig.data.ragdoll.deform_rig.name
-    rb_suffix = control_rig.data.ragdoll.rb_suffix
 
-    for mesh in meshes:
-        bone = bones.get(mesh.name.replace(deform_rig_name,"").replace(rb_suffix,"").strip("."))
-        if bone:
-            dimensions = mesh.dimensions
-            for vert in mesh.data.vertices:
-                for i in range(3):
-                    # reset cube to dimensions = [1,1,1] 
-                    vert.co[i] *= abs(0.5 / vert.co[i])
-                    # apply new transform
-                    if i!=1:
-                        maximum = (vert.co[i] / abs(vert.co[i]) * width_max) / 2
-                        minimum = (vert.co[i] / abs(vert.co[i]) * width_min) / 2
-                        vert.co[i] *= bone.length * width_relative
-                        # problematic :/
-                        # vert.co[i] = min(vert.co[i], maximum)
-                        # vert.co[i] = max(vert.co[i], minimum)
+    if width_min + width_max + width_relative > 0:
+        for bone in control_rig.pose.bones:
+            mesh = None
+            if mode == 'RIGID_BODIES':
+                if bone.ragdoll.rigid_body:
+                    mesh = bone.ragdoll.rigid_body
+            elif mode == 'WIGGLES':
+                if bone.ragdoll.wiggle:
+                    mesh = bone.ragdoll.wiggle
+            if mesh:
+                print(mesh)
+                for vert in mesh.data.vertices:
+                    for i in range(3):
+                        # reset cube to dimensions = [1,1,1] 
+                        vert.co[i] *= abs(0.5 / vert.co[i])
+                        if i == 1:
+                            vert.co[i] *= bone.length
+                        else:
+                            # clamp values to min/max
+                            width_factor = width_relative * bone.length
 
-                    else:
-                        vert.co[i] *= 1 / 1 * bone.length
-                    # apply relative value to x, z axis
-        mesh.data.update()
+                            if width_max != 0:
+                                width_factor = min(width_max, width_relative)
+                            
+                            if width_min != 0:
+                                width_factor = max(width_factor, width_min)
+        
+                            # apply new transform
+                            vert.co[i] *= width_factor
 
-    bpy.context.view_layer.update()
+                mesh.data.update()
+                bpy.context.view_layer.update()
+
+    else:
+        print("Error: Cannot create mesh with width of 0")
         
 
 def rb_cubes_add(pbones, mode='PRIMARY'):
@@ -493,6 +505,7 @@ def object_remove_from_collection(collection, objects):
     
 
 def rag_doll_update(context):
+
     rig = context.object
     if ragdoll_aux.validate_selection(rig):
         control_rig = rig

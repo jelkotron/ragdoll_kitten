@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Ragdoll",
     "blender": (4, 0, 1),
-    "category": "Object",
+    "category": "Physics",
 }
 
 import bpy
@@ -22,40 +22,41 @@ def register():
     bpy.types.PoseBone.ragdoll = bpy.props.PointerProperty(type=ragdoll.RagDollBonePropGroup)
    
     #-------- register UI elements --------
-    bpy.utils.register_class(ragdoll_ui.RagDollPanel)
-    bpy.utils.register_class(ragdoll_ui.RagDollCollectionsPanel)
-    bpy.utils.register_class(ragdoll_ui.RagDollSuffixesPanel)
-    bpy.utils.register_class(ragdoll_ui.AddRigidBodyConstraintsOperator)
-    bpy.utils.register_class(ragdoll_ui.AddRagDollOperator)
-    bpy.utils.register_class(ragdoll_ui.RemoveRagDollOperator)
-    bpy.utils.register_class(ragdoll_ui.UpdateRagDollOperator)
-    bpy.utils.register_class(ragdoll_ui.UpdateWigglesOperator)
-    bpy.utils.register_class(ragdoll_ui.UpdateDriversOperator)
-    bpy.utils.register_class(ragdoll_ui.AddWiggleDriversOperator)
-    bpy.utils.register_class(ragdoll_ui.RemoveWiggleDriversOperator)
-    bpy.utils.register_class(ragdoll_ui.OT_TextBrowse)
-
+    bpy.utils.register_class(ragdoll_ui.OBJECT_PT_RagDoll)
+    bpy.utils.register_class(ragdoll_ui.OBJECT_PT_RagDollCollections)
+    bpy.utils.register_class(ragdoll_ui.OBJECT_PT_RagDollSuffixes)
+    bpy.utils.register_class(ragdoll_ui.OBJECT_OT_AddRigidBodyConstraints)
+    bpy.utils.register_class(ragdoll_ui.OBJECT_OT_AddRagDoll)
+    bpy.utils.register_class(ragdoll_ui.OBJECT_OT_RemoveRagDoll)
+    bpy.utils.register_class(ragdoll_ui.OBJECT_OT_UpdateRagDoll)
+    bpy.utils.register_class(ragdoll_ui.OBJECT_OT_UpdateWiggles)
+    bpy.utils.register_class(ragdoll_ui.OBJECT_OT_UpdateDrivers)
+    bpy.utils.register_class(ragdoll_ui.OBJECT_OT_AddWiggleDrivers)
+    bpy.utils.register_class(ragdoll_ui.OBJECT_OT_RemoveWiggleDrivers)
+    bpy.utils.register_class(ragdoll_ui.OBJECT_OT_TextBrowseImport)
+    bpy.utils.register_class(ragdoll_ui.OBJECT_OT_RagdollJsonAdd)
     
 def unregister():
-    # del bpy.types.Armature.ragdoll
-    # del bpy.types.Bone.ragdoll
+    if bpy.types.Armature.ragdoll: del bpy.types.Armature.ragdoll
+    if bpy.types.Bone.ragdoll: del bpy.types.Bone.ragdoll
     bpy.utils.unregister_class(ragdoll.RagDollPropGroup)
     bpy.utils.unregister_class(ragdoll.RagDollBonePropGroup)
 
-    bpy.utils.unregister_class(ragdoll_ui.RagDollPanel)
-    bpy.utils.unregister_class(ragdoll_ui.RagDollCollectionsPanel)
-    bpy.utils.unregister_class(ragdoll_ui.RagDollSuffixesPanel)
+    bpy.utils.unregister_class(ragdoll_ui.OBJECT_PT_RagDoll)
+    bpy.utils.unregister_class(ragdoll_ui.OBJECT_PT_RagDollCollections)
+    bpy.utils.unregister_class(ragdoll_ui.OBJECT_PT_RagDollSuffixes)
     
-    bpy.utils.unregister_class(ragdoll_ui.AddRigidBodyConstraintsOperator)
-    bpy.utils.unregister_class(ragdoll_ui.AddRagDollOperator)
-    bpy.utils.unregister_class(ragdoll_ui.RemoveRagDollOperator)
-    bpy.utils.unregister_class(ragdoll_ui.UpdateRagDollOperator)
-    bpy.utils.unregister_class(ragdoll_ui.UpdateWigglesOperator)
-    bpy.utils.unregister_class(ragdoll_ui.UpdateDriversOperator)
-    bpy.utils.unregister_class(ragdoll_ui.AddWiggleDriversOperator)
-    bpy.utils.unregister_class(ragdoll_ui.RemoveWiggleDriversOperator)
-    bpy.utils.unregister_class(ragdoll_ui.OT_TextBrowse)
-    
+    bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_AddRigidBodyConstraints)
+    bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_AddRagDoll)
+    bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_RemoveRagDoll)
+    bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_UpdateRagDoll)
+    bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_UpdateWiggles)
+    bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_UpdateDrivers)
+    bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_AddWiggleDrivers)
+    bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_RemoveWiggleDrivers)
+    bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_TextBrowseImport)
+    bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_RagdollJsonAdd)
+
 if "bpy" in locals():
     import importlib
     importlib.reload(ragdoll)

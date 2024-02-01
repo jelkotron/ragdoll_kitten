@@ -2,15 +2,16 @@
 import bpy
 import sys
 sys.path.append("/home/schnollie/Work/bpy/ragdoll_tools")
-from ragdoll_aux import rb_constraint_collection_set, load_text
+from ragdoll_aux import rb_constraint_collection_set, load_text, config_create
 
-from ragdoll import rag_doll_create, rag_doll_remove, rag_doll_update, wiggle_update, force_update_drivers, wiggle_spring_drivers_add, wiggle_spring_drivers_remove 
-from bpy_extras.io_utils import ImportHelper
+from ragdoll import rag_doll_create, rag_doll_remove, rag_doll_update, wiggle_update
+from ragdoll import force_update_drivers, wiggle_spring_drivers_add, wiggle_spring_drivers_remove
+from bpy_extras.io_utils import ImportHelper, ExportHelper
 import os
 
 
-class OT_TextBrowse(bpy.types.Operator, ImportHelper): 
-    bl_idname = "text.open_filebrowser" 
+class OBJECT_OT_TextBrowseImport(bpy.types.Operator, ImportHelper): 
+    bl_idname = "text.import_filebrowser" 
     bl_label = "Open the file browser to open config" 
     filter_glob: bpy.props.StringProperty( 
         default='*.json;', 
@@ -18,17 +19,27 @@ class OT_TextBrowse(bpy.types.Operator, ImportHelper):
         ) 
     
     def execute(self, context): 
-        load_text(context, self.filepath)
+        load_text(context, self.filepath, None)
         context.view_layer.update()
         return {'FINISHED'}
     
     def invoke(self, context, event):
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}
+    
 
+class OBJECT_OT_RagdollJsonAdd(bpy.types.Operator): 
+    bl_idname = "text.json_create" 
+    bl_label = "New Text"
+    bl_options = {'UNDO'}
+      
+    def execute(self, context): 
+        config = config_create(context.object)
+        load_text(context, None, config)
+        return {'FINISHED'}
+    
 
-
-class AddRigidBodyConstraintsOperator(bpy.types.Operator):
+class OBJECT_OT_AddRigidBodyConstraints(bpy.types.Operator):
     """Creates an Operator to add Rigid Body Constraint Group"""
     bl_idname = "scene.rbconstraints"
     bl_label = "Add Rigid Body Constraints"
@@ -43,7 +54,7 @@ class AddRigidBodyConstraintsOperator(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class AddRagDollOperator(bpy.types.Operator):
+class OBJECT_OT_AddRagDoll(bpy.types.Operator):
     """Creates Ragdoll objects for selected Armature"""
     bl_idname = "armature.ragdoll_add"
     bl_label = "Add Ragdoll"
@@ -60,7 +71,7 @@ class AddRagDollOperator(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class RemoveRagDollOperator(bpy.types.Operator):
+class OBJECT_OT_RemoveRagDoll(bpy.types.Operator):
     """Removes Ragdoll from selected Armature"""
     bl_idname = "armature.ragdoll_remove"
     bl_label = "Remove Ragdoll"
@@ -76,7 +87,7 @@ class RemoveRagDollOperator(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class UpdateRagDollOperator(bpy.types.Operator):
+class OBJECT_OT_UpdateRagDoll(bpy.types.Operator):
     """Update selected Armature's RagDoll"""
     bl_idname = "armature.ragdoll_update"
     bl_label = "Update Ragdoll"
@@ -91,7 +102,7 @@ class UpdateRagDollOperator(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class UpdateDriversOperator(bpy.types.Operator):
+class OBJECT_OT_UpdateDrivers(bpy.types.Operator):
     """Update all armatures Drivers"""
     bl_idname = "armature.update_drivers"
     bl_label = "Update Drivers"
@@ -106,7 +117,7 @@ class UpdateDriversOperator(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class UpdateWigglesOperator(bpy.types.Operator):
+class OBJECT_OT_UpdateWiggles(bpy.types.Operator):
     """Update selected Armature's RagDoll"""
     bl_idname = "armature.wiggle_update"
     bl_label = "Update Wiggles"
@@ -120,7 +131,7 @@ class UpdateWigglesOperator(bpy.types.Operator):
         wiggle_update(context)
         return {'FINISHED'}
 
-class AddWiggleDriversOperator(bpy.types.Operator):
+class OBJECT_OT_AddWiggleDrivers(bpy.types.Operator):
     """Add drivers to wiggle constraints"""
     bl_idname = "armature.wiggle_drivers_add"
     bl_label = "Add Drivers"
@@ -136,7 +147,7 @@ class AddWiggleDriversOperator(bpy.types.Operator):
         print("Info: Added Drivers to Rigid Body Constraints' Spring Settings.")
         return {'FINISHED'}
 
-class RemoveWiggleDriversOperator(bpy.types.Operator):
+class OBJECT_OT_RemoveWiggleDrivers(bpy.types.Operator):
     """Add drivers to wiggle constraints"""
     bl_idname = "armature.wiggle_drivers_remove"
     bl_label = "Add Drivers"
@@ -154,7 +165,7 @@ class RemoveWiggleDriversOperator(bpy.types.Operator):
         return {'FINISHED'}
 
 
-class RagDollCollectionsPanel(bpy.types.Panel):
+class OBJECT_PT_RagDollCollections(bpy.types.Panel):
     """Subpanel to Ragdoll"""
     bl_label = "Collections"
     bl_idname = "OBJECT_PT_ragdollcollections"
@@ -189,7 +200,7 @@ class RagDollCollectionsPanel(bpy.types.Panel):
             col_5.prop(context.object.data.ragdoll,"connectors", text="")
         
 
-class RagDollSuffixesPanel(bpy.types.Panel):
+class OBJECT_PT_RagDollSuffixes(bpy.types.Panel):
     """Naming Suffixes for Ragdoll"""
     bl_label = "Postifxes"
     bl_idname = "OBJECT_PT_ragdollsuffixes"
@@ -233,8 +244,7 @@ class RagDollSuffixesPanel(bpy.types.Panel):
             col_7.prop(context.object.data.ragdoll,"connect_suffix", text="")
 
 
-
-class RagDollPanel(bpy.types.Panel):
+class OBJECT_PT_RagDoll(bpy.types.Panel):
     """Creates a Panel in the Object Data properties window"""
     bl_label = "Ragdoll"
     bl_idname = "OBJECT_PT_ragdoll"
@@ -265,54 +275,68 @@ class RagDollPanel(bpy.types.Panel):
                 if context.object.type == 'ARMATURE' and context.object.data.ragdoll != None:
                     if context.scene.rigidbody_world and context.scene.rigidbody_world.constraints: 
                         layout = self.layout        
-                        box = layout.box()
 
-                        row = box.row()
-                        split = row.split(factor=0.25)
+                        #-------- Config --------
+                        config_box = layout.box()
+                        config_header_row = config_box.row()
+                        config_header_row.label(text="Configuration")
+                        row = config_box.row()
+                        split = row.split(factor=0.33)
+                        col_0 = split.column()
                         col_1 = split.column()
-                        col_2 = split.column()
-                        col_1.label(text="Rig Type")
-                        if context.object.data.ragdoll.initialized:
-                            col_2.label(text=context.object.data.ragdoll.type)
-                        else:
-                            col_2.prop(context.object.data.ragdoll,"type", text="")
+
+                        row = config_box.row()
+                        split = row.split(factor=0.33)
+                        col_0 = split.column(align=True)
+                        col_1 = split.column()
+                        config_label_row = col_0.row()
+                        config_text_row = col_1.row()
                         
+                        if context.object.data.ragdoll.config and context.object.data.ragdoll.config.is_dirty:
+                            if os.path.exists(context.object.data.ragdoll.config.filepath):
+                                config_label_row.label(text="Text: External, modified")
+                            else:
+                                config_label_row.label(text="Text: Internal")
 
-                        row = box.row()
-                        split = row.split(factor=0.25)
-                        col_1 = split.column()
-                        col_2 = split.column()
-                        col_1.label(text="Config")
+                        else:
+                            config_label_row.label(text="Text: External")
+                        
                         if context.object.data.ragdoll.type == 'CONTROL' or not context.object.data.ragdoll.control_rig:
-                            col_2.prop(context.object.data.ragdoll,"config", text="")
+                            config_text_row.prop(context.object.data.ragdoll,"config", text="")
                         else:
-                            col_2.prop(context.object.data.ragdoll.control_rig.data.ragdoll,"config", text="")
+                            config_text_row.prop(context.object.data.ragdoll.control_rig.data.ragdoll,"config", text="")
 
-                        row.operator("text.open_filebrowser", text="", icon='FILEBROWSER')
+                        config_text_row.operator("text.import_filebrowser", text="", icon='FILEBROWSER')
+                        config_text_row.operator("text.json_create", text="", icon='FILE_NEW')
 
-                        row = box.row()
-                        row.operator("armature.ragdoll_update", text="Update Ragdoll")
-                        row.operator("armature.ragdoll_remove", text="Remove Ragdoll")
-                        row.operator("armature.update_drivers", text="Update Drivers")
+                        text_ops_row = col_1.row()
+                        if context.object.data.ragdoll.initialized == False:
+                            text_ops_row.operator("armature.ragdoll_add", text="Create Ragdoll")
+                        else:
+                            split = text_ops_row.split(factor=0.33)
+                            update_rd_row = split.column().row()
+                            update_drivers_row = split.column().row()
+                            delete_ragdoll_row = split.column().row()
 
-                        
-                        box = layout.box()
-                        row = box.row()
+                            update_rd_row.operator("armature.ragdoll_update", text="Update Ragdoll")
+                            update_drivers_row.operator("armature.update_drivers", text="Update Drivers")
+                            delete_ragdoll_row.operator("armature.ragdoll_remove", text="Remove Ragdoll")
+
+                        #-------- Geometry --------
+                        geo_box = layout.box()
+                        row = geo_box.row()
                         row.label(text="Geometry")
-                        row = box.row()
+                        row = geo_box.row()
                         row.prop(context.object.data.ragdoll, "rb_bone_width_relative", text="Relative Bone Width")
-                        row = box.row()
+                        row = geo_box.row()
                         row.prop(context.object.data.ragdoll, "rb_bone_width_min", text="Minimum Width")
                         row.enabled = False
 
-                        row = box.row()
+                        row = geo_box.row()
                         row.prop(context.object.data.ragdoll, "rb_bone_width_max", text="Maximum Width")
                         row.enabled = False
                         
-                        if context.object.data.ragdoll.initialized == False:
-                            row = layout.row()
-                            row.operator("armature.ragdoll_add", text="Create Ragdoll")
-                        else:
+                        if context.object.data.ragdoll.initialized == True:
                             #-------- Animation --------
                             animated_box = layout.box()
                             row = animated_box.row()

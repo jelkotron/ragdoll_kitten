@@ -54,6 +54,7 @@ def wiggle_update(self, context):
                         if use_falloff:
                             tree_level = pbone.ragdoll.tree_level
                             bone_name = wiggle_const.object1.parent_bone
+                            
                             # TODO: check if this make sense, it's late.
                             if wiggle_falloff_chain_ends == True:
                                 last_in_chain = True
@@ -116,6 +117,7 @@ def wiggle_update(self, context):
 
 #---- additional properties definition ----
 class RagDollBonePropGroup(bpy.types.PropertyGroup):
+    is_ragdoll: bpy.props.BoolProperty(name="Part of a Ragdoll", default=False)
     tree_level: bpy.props.IntProperty(name="tree_level", min=0, default =0)
     rigid_body: bpy.props.PointerProperty(type=bpy.types.Object, name="Rigid Body", poll=mesh_poll)
     constraint: bpy.props.PointerProperty(type=bpy.types.Object, name="Rigid Body Constraint", poll=empty_poll)
@@ -190,6 +192,8 @@ def rag_doll_create(armature_object):
     if armature_object.type == 'ARMATURE':
         # get selected bones that are not hidden
         bones = ragdoll_aux.get_visible_posebones()
+        for b in bones:
+            b.ragdoll.is_ragdoll = True
         deform_rig = armature_object
         # store bones' hierarchy level in bone prop
         deform_rig = ragdoll_aux.bones_tree_levels_set(deform_rig, bones)
@@ -425,6 +429,7 @@ def rag_doll_remove(armature_object):
             deform_rig = armature_object.data.ragdoll.deform_rig
             
         for bone in deform_rig.pose.bones:
+            bone.ragdoll.is_ragdoll = False
             for const in bone.constraints:
                 if const.name == "Copy Transforms RD" or const.name == "Copy Transforms CTRL":
                     bone.constraints.remove(const)
@@ -652,47 +657,49 @@ def rb_constraint_defaults(constraints, max_lin, max_ang):
 def rd_constraint_limit(control_rig):
     config = control_rig.data.ragdoll.config
     if config:
-        config_data = ragdoll_aux.config_load(config.filepath)
-        for obj in control_rig.data.ragdoll.constraints.objects:
-            if obj.rigid_body_constraint:
-                constraint = obj.rigid_body_constraint
-                stripped_name = obj.name.rstrip(control_rig.data.ragdoll.const_suffix)
-                stripped_name = stripped_name.lstrip(control_rig.data.ragdoll.deform_rig.name).strip(".")
-                
-                if "strip" in config_data:
-                    for i in range(len(config_data["strip"])):
-                        stripped_name = stripped_name.replace(config_data["strip"][i],"")
+        config_data = ragdoll_aux.config_load(config)
 
-                bone_data = config_data.get("bones").get(stripped_name)
-                
-                if bone_data:
-                    limit_lin_x_lower = bone_data.get("limit_lin_x_lower")
-                    limit_lin_x_upper = bone_data.get("limit_lin_x_upper")
-                    limit_lin_y_lower = bone_data.get("limit_lin_y_lower")
-                    limit_lin_y_upper = bone_data.get("limit_lin_y_upper")
-                    limit_lin_z_lower = bone_data.get("limit_lin_z_lower")
-                    limit_lin_z_upper = bone_data.get("limit_lin_z_upper")
+        if config_data != None:
+            for obj in control_rig.data.ragdoll.constraints.objects:
+                if obj.rigid_body_constraint:
+                    constraint = obj.rigid_body_constraint
+                    stripped_name = obj.name.rstrip(control_rig.data.ragdoll.const_suffix)
+                    stripped_name = stripped_name.lstrip(control_rig.data.ragdoll.deform_rig.name).strip(".")
+                    
+                    if "strip" in config_data:
+                        for i in range(len(config_data["strip"])):
+                            stripped_name = stripped_name.replace(config_data["strip"][i],"")
 
-                    limit_ang_x_lower = bone_data.get("limit_ang_x_lower")
-                    limit_ang_x_upper = bone_data.get("limit_ang_x_upper")
-                    limit_ang_y_lower = bone_data.get("limit_ang_y_lower")
-                    limit_ang_y_upper = bone_data.get("limit_ang_y_upper")
-                    limit_ang_z_lower = bone_data.get("limit_ang_z_lower")
-                    limit_ang_z_upper = bone_data.get("limit_ang_z_upper")
+                    bone_data = config_data.get("bones").get(stripped_name)
+                    
+                    if bone_data:
+                        limit_lin_x_lower = bone_data.get("limit_lin_x_lower")
+                        limit_lin_x_upper = bone_data.get("limit_lin_x_upper")
+                        limit_lin_y_lower = bone_data.get("limit_lin_y_lower")
+                        limit_lin_y_upper = bone_data.get("limit_lin_y_upper")
+                        limit_lin_z_lower = bone_data.get("limit_lin_z_lower")
+                        limit_lin_z_upper = bone_data.get("limit_lin_z_upper")
 
-                    constraint.limit_lin_x_lower = limit_lin_x_lower if limit_lin_x_lower else constraint.limit_lin_x_lower  
-                    constraint.limit_lin_x_upper = limit_lin_x_upper if limit_lin_x_upper else constraint.limit_lin_x_upper 
-                    constraint.limit_lin_y_lower = limit_lin_y_lower if limit_lin_y_lower else constraint.limit_lin_y_lower 
-                    constraint.limit_lin_y_upper = limit_lin_y_upper if limit_lin_y_upper else constraint.limit_lin_y_upper 
-                    constraint.limit_lin_z_lower = limit_lin_z_lower if limit_lin_z_lower else constraint.limit_lin_z_lower 
-                    constraint.limit_lin_z_upper = limit_lin_z_upper if limit_lin_z_upper else constraint.limit_lin_z_upper 
+                        limit_ang_x_lower = bone_data.get("limit_ang_x_lower")
+                        limit_ang_x_upper = bone_data.get("limit_ang_x_upper")
+                        limit_ang_y_lower = bone_data.get("limit_ang_y_lower")
+                        limit_ang_y_upper = bone_data.get("limit_ang_y_upper")
+                        limit_ang_z_lower = bone_data.get("limit_ang_z_lower")
+                        limit_ang_z_upper = bone_data.get("limit_ang_z_upper")
 
-                    constraint.limit_ang_x_lower = math.radians(limit_ang_x_lower) if limit_ang_x_lower else constraint.limit_ang_x_lower 
-                    constraint.limit_ang_x_upper = math.radians(limit_ang_x_upper) if limit_ang_x_upper else constraint.limit_ang_x_upper 
-                    constraint.limit_ang_y_lower = math.radians(limit_ang_y_lower) if limit_ang_y_lower else constraint.limit_ang_y_lower 
-                    constraint.limit_ang_y_upper = math.radians(limit_ang_y_upper) if limit_ang_y_upper else constraint.limit_ang_y_upper 
-                    constraint.limit_ang_z_lower = math.radians(limit_ang_z_lower) if limit_ang_z_lower else constraint.limit_ang_z_lower 
-                    constraint.limit_ang_z_upper = math.radians(limit_ang_z_upper) if limit_ang_z_upper else constraint.limit_ang_z_upper 
+                        constraint.limit_lin_x_lower = limit_lin_x_lower if limit_lin_x_lower else constraint.limit_lin_x_lower  
+                        constraint.limit_lin_x_upper = limit_lin_x_upper if limit_lin_x_upper else constraint.limit_lin_x_upper 
+                        constraint.limit_lin_y_lower = limit_lin_y_lower if limit_lin_y_lower else constraint.limit_lin_y_lower 
+                        constraint.limit_lin_y_upper = limit_lin_y_upper if limit_lin_y_upper else constraint.limit_lin_y_upper 
+                        constraint.limit_lin_z_lower = limit_lin_z_lower if limit_lin_z_lower else constraint.limit_lin_z_lower 
+                        constraint.limit_lin_z_upper = limit_lin_z_upper if limit_lin_z_upper else constraint.limit_lin_z_upper 
+
+                        constraint.limit_ang_x_lower = math.radians(limit_ang_x_lower) if limit_ang_x_lower else constraint.limit_ang_x_lower 
+                        constraint.limit_ang_x_upper = math.radians(limit_ang_x_upper) if limit_ang_x_upper else constraint.limit_ang_x_upper 
+                        constraint.limit_ang_y_lower = math.radians(limit_ang_y_lower) if limit_ang_y_lower else constraint.limit_ang_y_lower 
+                        constraint.limit_ang_y_upper = math.radians(limit_ang_y_upper) if limit_ang_y_upper else constraint.limit_ang_y_upper 
+                        constraint.limit_ang_z_lower = math.radians(limit_ang_z_lower) if limit_ang_z_lower else constraint.limit_ang_z_lower 
+                        constraint.limit_ang_z_upper = math.radians(limit_ang_z_upper) if limit_ang_z_upper else constraint.limit_ang_z_upper 
 
     else:
         rb_constraint_defaults(control_rig.data.ragdoll.constraints, 0, 22.5)
@@ -844,3 +851,5 @@ def drivers_remove_invalid(object):
     for d in object.animation_data.drivers:
         if not d.is_valid:
             object.animation_data.drivers.remove(d)               
+
+

@@ -1,16 +1,6 @@
 import bpy
 import json
 import os
-
-def load_text(context, filepath):
-    text = bpy.data.texts.load(filepath)
-    if validate_selection(bpy.context.active_object, 'ARMATURE'):
-        context.active_object.data.ragdoll.config = text
-        if context.active_object.data.ragdoll.type == 'DEFORM':
-            control_rig = context.active_object.data.ragdoll.control_rig 
-            if control_rig:
-                control_rig.data.ragdoll.config = text
-
         
 def deselect_all():
     objs = []
@@ -97,18 +87,97 @@ def get_visible_posebones():
         return None
 
 #-------- read config for rigid body constraint limits --------
-def config_load(filepath):
-    data = None
-    filepath = bpy.path.abspath(filepath)
-    if filepath:
-        with open(filepath, 'r') as file:
-            data = json.load(file)
-            # file.close()
-        print("Info: config loaded.")
-    else:
-        data = {}
+def load_text(context, filepath=None, datablock=None):
+    if filepath and not datablock:
+        text = bpy.data.texts.load(filepath)
+    
+    elif datablock and not filepath:
+        text = datablock
 
+    if validate_selection(bpy.context.active_object, 'ARMATURE'):
+        context.active_object.data.ragdoll.config = text
+        if context.active_object.data.ragdoll.type == 'DEFORM':
+            control_rig = context.active_object.data.ragdoll.control_rig 
+            if control_rig:
+                control_rig.data.ragdoll.config = text
+
+
+def config_load(config):
+    data = None
+    filepath = bpy.path.abspath(config.filepath)
+
+    if config.is_dirty:
+        lines = []
+        for line in config.lines:
+            lines.append(line.body)
+        try:
+            data = json.loads("\n".join(lines))
+            print("Info: JSON Data loaded.")
+        except json.decoder.JSONDecodeError as e:
+            print(e)
+            
+    else:
+        if os.path.exists(config.filepath):
+            with open(filepath, 'r') as file:
+                try:
+                    data = json.load(file)
+                    print("Info: JSON Data loaded.")
+                except json.decoder.JSONDecodeError as e:
+                    print(e)
     return data
+
+
+def config_create(armature):
+    deform_rig = None
+    control_rig = None
+
+    if armature.data.ragdoll.type == 'CONTROL':
+        control_rig = armature
+        deform_rig = armature.data.ragdoll.deform_rig if armature.data.ragdoll.deform_rig else None
+    else:
+        control_rig = armature.data.ragdoll.control_rig if armature.data.ragdoll.control_rig else None
+        deform_rig = armature
+
+    if deform_rig == None:
+        deform_rig = armature
+    
+    filename = deform_rig.name
+
+    i = 1
+    while filename + ".json" in bpy.data.texts:
+        filename = deform_rig.name + "_" + str(i).zfill(3)
+        i += 1
+
+    filename += ".json"
+
+    text_data_block = bpy.data.texts.new(filename)
+
+    data = {
+        "strip":[],
+        "bones": {}
+    }
+    for bone in deform_rig.pose.bones:
+        if bone.ragdoll.is_ragdoll:
+            data["bones"][bone.name] = {
+                "limit_ang_x_lower" : -45,
+                "limit_ang_x_upper" : 45,
+                "limit_ang_y_lower" : -45,
+                "limit_ang_y_upper" : 45,
+                "limit_ang_z_lower" : -45,
+                "limit_ang_z_upper" : 45
+            }
+            
+            
+    encoded = json.dumps(data, sort_keys=True, indent=4)
+    
+    text_data_block.write("".join([i for i in encoded]))
+
+    return text_data_block
+
+
+
+
+
 
 #-------- add or set rigid body constraint collection --------
 def rb_constraint_collection_set(collection_name = 'RigidBodyConstraints'):
@@ -142,7 +211,6 @@ def collection_objects_remove(collection, objects=[]):
     for obj in objects:
         if obj.name in collection.objects:
             collection.objects.unlink(obj)
-
 
 
 #-------- add a cube --------

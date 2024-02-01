@@ -3,6 +3,7 @@ import math
 import mathutils
 import ragdoll_aux
 
+
 #---- callback functions ---- 
 def armature_poll(self, object):
     return object.type == 'ARMATURE'
@@ -15,8 +16,8 @@ def mesh_poll(self, object):
 def empty_poll(self, object):
     return object.type == 'EMPTY'
 
- 
-def wiggle_update(self, context):
+
+def wiggle_const_update(self, context):
     control_rig = ragdoll_aux.validate_selection(context.object)
     if control_rig.data.ragdoll.type == 'DEFORM':
         control_rig = control_rig.data.ragdoll.control_rig
@@ -56,17 +57,18 @@ def wiggle_update(self, context):
                             bone_name = wiggle_const.object1.parent_bone
                             
                             # TODO: check if this make sense, it's late.
+                            visible_bones = ragdoll_aux.get_visible_posebones()
                             if wiggle_falloff_chain_ends == True:
                                 last_in_chain = True
                                 for child in control_rig.pose.bones[bone_name].children:
-                                    if child in ragdoll_aux.get_visible_posebones():
+                                    if child in visible_bones:
                                         last_in_chain = False
                                 if last_in_chain:
                                     tree_level = bone_level_max 
                     
                             if falloff_invert:
                                 # reverse falloff direction / bone chain hierarchy if desired
-                                tree_level = control_rig.data.ragdoll.bone_level_max - pbone.ragdoll.tree_level
+                                tree_level = control_rig.data.ragdoll.bone_level_max - tree_level
                             
                             # define step size
                             if falloff_mode == 'QUADRATIC':
@@ -169,27 +171,27 @@ class RagDollPropGroup(bpy.types.PropertyGroup):
     kinematic: bpy.props.BoolProperty(name="Animated", default=True)
     simulation_influence: bpy.props.FloatProperty(name="Rigid Body_Influence",min=0.0, max=1.0, default=0.0)
     
-    wiggle: bpy.props.BoolProperty(name="Use Wiggle", default=False, update=wiggle_update)
-    wiggle_distance: bpy.props.FloatProperty(name="Maximum Wiggle Translation",min=0.0, max=16.0, default=0.2, update=wiggle_update)
-    wiggle_rotation: bpy.props.FloatProperty(name="Maximum Wiggle Rotation", subtype="ANGLE", min=0.0, max=math.radians(360.0), default=math.radians(22.5), update=wiggle_update)
-    wiggle_restrict_linear: bpy.props.BoolProperty(name="Limit Wiggle Translation", default=True, update=wiggle_update)
-    wiggle_restrict_angular: bpy.props.BoolProperty(name="Limit Wiggle Rotation", default=False, update=wiggle_update)
+    wiggle: bpy.props.BoolProperty(name="Use Wiggle", default=False, update=wiggle_const_update)
+    wiggle_distance: bpy.props.FloatProperty(name="Maximum Wiggle Translation",min=0.0, max=16.0, default=0.2, update=wiggle_const_update)
+    wiggle_rotation: bpy.props.FloatProperty(name="Maximum Wiggle Rotation", subtype="ANGLE", min=0.0, max=math.radians(360.0), default=math.radians(22.5), update=wiggle_const_update)
+    wiggle_restrict_linear: bpy.props.BoolProperty(name="Limit Wiggle Translation", default=True, update=wiggle_const_update)
+    wiggle_restrict_angular: bpy.props.BoolProperty(name="Limit Wiggle Rotation", default=False, update=wiggle_const_update)
 
-    wiggle_use_falloff: bpy.props.BoolProperty(name="Use Wiggle Falloff", default=False, update=wiggle_update)
-    wiggle_falloff_invert: bpy.props.BoolProperty(name="Invert Falloff", default=False, update=wiggle_update)
-    wiggle_falloff_chain_ends: bpy.props.BoolProperty(name="Chain Ends", default=True, update=wiggle_update)
+    wiggle_use_falloff: bpy.props.BoolProperty(name="Use Wiggle Falloff", default=False, update=wiggle_const_update)
+    wiggle_falloff_invert: bpy.props.BoolProperty(name="Invert Falloff", default=False, update=wiggle_const_update)
+    wiggle_falloff_chain_ends: bpy.props.BoolProperty(name="Chain Ends", default=True, update=wiggle_const_update)
     wiggle_falloff_mode: bpy.props.EnumProperty(items=[
                                                             ('LINEAR', "Linear", "Linear bone chain based falloff in wiggle"),
                                                             ('QUADRATIC', "Quadratic", "Quadratic bone chain based falloff in wiggle")                          
-                                                            ], default='QUADRATIC', name="Falloff Mode", update=wiggle_update)
+                                                            ], default='QUADRATIC', name="Falloff Mode", update=wiggle_const_update)
     
-    wiggle_falloff_factor: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=0.0, max=10.0, default=1.0, update=wiggle_update)
-    wiggle_falloff_offset: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=-10.0, max=10.0, update=wiggle_update)
+    wiggle_falloff_factor: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=0.0, max=10.0, default=1.0, update=wiggle_const_update)
+    wiggle_falloff_offset: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=-10.0, max=10.0, update=wiggle_const_update)
     wiggle_drivers: bpy.props.BoolProperty(name="Wiggle has Drivers", default=False)
 
-    wiggle_use_springs: bpy.props.BoolProperty(name="Use Springs", default=True, update=wiggle_update)
-    wiggle_stiffness: bpy.props.FloatProperty(name="Stiffnesss", min=0, max=1000, update=wiggle_update)
-    wiggle_damping: bpy.props.FloatProperty(name="Stiffnesss", min=0, max=1000, update=wiggle_update)
+    wiggle_use_springs: bpy.props.BoolProperty(name="Use Springs", default=True, update=wiggle_const_update)
+    wiggle_stiffness: bpy.props.FloatProperty(name="Stiffnesss", min=0, max=1000, update=wiggle_const_update)
+    wiggle_damping: bpy.props.FloatProperty(name="Stiffnesss", min=0, max=1000, update=wiggle_const_update)
 
     bone_level_max: bpy.props.IntProperty(name="bone_level_max", min=0, default=0)
 

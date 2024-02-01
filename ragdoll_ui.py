@@ -4,7 +4,7 @@ import sys
 sys.path.append("/home/schnollie/Work/bpy/ragdoll_tools")
 from ragdoll_aux import rb_constraint_collection_set, load_text, config_create
 
-from ragdoll import rag_doll_create, rag_doll_remove, rag_doll_update, wiggle_update
+from ragdoll import rag_doll_create, rag_doll_remove, rag_doll_update, wiggle_const_update
 from ragdoll import force_update_drivers, wiggle_spring_drivers_add, wiggle_spring_drivers_remove
 from bpy_extras.io_utils import ImportHelper, ExportHelper
 import os

@@ -6,6 +6,8 @@ from ragdoll_aux import rb_constraint_collection_set, load_text, config_create
 
 from ragdoll import rag_doll_create, rag_doll_remove, rag_doll_update, wiggle_const_update
 from ragdoll import force_update_drivers, wiggle_spring_drivers_add, wiggle_spring_drivers_remove
+from ragdoll import RagDollPropGroup
+
 from bpy_extras.io_utils import ImportHelper, ExportHelper
 import os
 
@@ -128,7 +130,7 @@ class OBJECT_OT_UpdateWiggles(bpy.types.Operator):
         return True
 
     def execute(self, context):
-        wiggle_update(context)
+        wiggle_const_update(context)
         return {'FINISHED'}
 
 class OBJECT_OT_AddWiggleDrivers(bpy.types.Operator):
@@ -163,6 +165,51 @@ class OBJECT_OT_RemoveWiggleDrivers(bpy.types.Operator):
         
         print("Info: Removed Drivers from Rigid Body Constraints' Spring Settings.")
         return {'FINISHED'}
+
+
+class OBJECT_OT_HookAdd(bpy.types.Operator):
+    """Add Hook to Control Rig"""
+    bl_idname = "armature.hook_add"
+    bl_label = "Add Hook"
+    bl_options = {'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        if context.object.type == 'ARMATURE':
+            if context.object.data.ragdoll.type == 'CONTROL':
+                if bpy.context.mode == 'POSE':
+                    if len(bpy.context.selected_pose_bones) > 0:
+                        return True
+        return False
+    
+    def execute(self, context):
+        # store current mode
+        mode_init = bpy.context.mode
+        
+        # store selected pose bone to add hook to
+        pose_bone = bpy.context.selected_pose_bones[0]
+
+        # add hook (bone + mesh + rigid body constraint), (bone) edit mode needs to active
+        bpy.ops.object.mode_set(mode='EDIT')
+        hook_bone = RagDollPropGroup.hook_bone_add(self, context, 0.1) # TODO: user input for hook object dimensions
+        bone_name = hook_bone.name
+        # restore previouse mode if possible
+        if mode_init != 'EDIT_ARMATURE':
+            bpy.ops.object.mode_set(mode=mode_init)
+        else:
+            # new (pose)bone is found only after edit mode ends. 
+            # bones.update() or pose.bones.update() do not change this behaviour
+            bpy.ops.object.mode_set(mode='OBJECT')
+
+        hook_pose_bone = context.object.pose.bones[bone_name]
+        
+        # set hook properties to bone
+        hook = RagDollPropGroup.hook_set(self, context, pose_bone, hook_pose_bone)
+
+        print("Info: Hook added")
+        
+        return {'FINISHED'}
+
 
 
 class OBJECT_PT_RagDollCollections(bpy.types.Panel):
@@ -243,6 +290,8 @@ class OBJECT_PT_RagDollSuffixes(bpy.types.Panel):
             col_6.label(text="Connectors")
             col_7.prop(context.object.data.ragdoll,"connect_suffix", text="")
 
+def a_poll():
+    return True
 
 class OBJECT_PT_RagDoll(bpy.types.Panel):
     """Creates a Panel in the Object Data properties window"""
@@ -416,6 +465,27 @@ class OBJECT_PT_RagDoll(bpy.types.Panel):
                             wiggle_falloff_settings_row_0b = col_0.row()
                             wiggle_falloff_settings_row_0b.prop(context.object.data.ragdoll, "wiggle_falloff_invert", text="Invert")
                             wiggle_falloff_settings_row_0b.prop(context.object.data.ragdoll, "wiggle_falloff_chain_ends", text="Ends")
+
+                            #-------- Hooks --------
+                            hook_box = layout.box()
+                            hook_header_row = hook_box.row()
+                            hook_header_row.label(text="Hooks")
+
+                            hook_add_row = hook_box.row()
+                            split = hook_add_row.split(factor=0.33)
+                            hooks_col_0 = split.column()
+                            hooks_col_1 = split.column()
+
+                            # for pose_bone in context.object.pose.bones:
+                            #     if pose_bone.ragdoll.type == 'HOOK':
+                            #         row = hooks_col_1.row()
+                            #         row.label(text=pose_bone.name)
+                            #         row = hooks_col_1.row()
+                            #         row.prop(pose_bone.ragdoll.hook_constraint.rigid_body_constraint, "object1", text="")
+                            #         row.prop(pose_bone.ragdoll.hook_constraint.rigid_body_constraint, "object2", text="")
+                            
+                            row = hooks_col_1.row()
+                            row.operator("armature.hook_add")
 
 
 

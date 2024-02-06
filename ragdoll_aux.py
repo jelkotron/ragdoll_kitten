@@ -57,9 +57,9 @@ def validate_selection(selected_object, mode = 'ARMATURE'):
         return None
 
 #-------- exclude unselected/hidden pose bones and hidden bone collections --------
-def get_visible_posebones():
+def get_visible_posebones(armature_object=None):
     bones = []
-    if bpy.context.active_object.type == 'ARMATURE':
+    if armature_object.type == 'ARMATURE':
         if bpy.context.mode == 'POSE' and len(bpy.context.selected_pose_bones) > 0:
             bones = [i for i in bpy.context.selected_pose_bones]
             
@@ -68,16 +68,16 @@ def get_visible_posebones():
         
         else:
             invisible_groups = []
-            for col in bpy.context.object.data.collections:
+            for col in armature_object.data.collections:
                 if col.is_visible == False:
                     invisible_groups.append(col.name)
-            for bone in bpy.context.object.data.bones:
+            for bone in armature_object.data.bones:
                 visible = not bone.hide
                 for col in invisible_groups:
                     if col in bone.collections:
                         visible = False
                 if visible == True:
-                    bones.append(bpy.context.object.pose.bones[bone.name])
+                    bones.append(armature_object.pose.bones[bone.name])
 
     if(len(bones) > 0):
         return bones
@@ -190,6 +190,9 @@ def rb_constraint_collection_set(collection_name = 'RigidBodyConstraints'):
 #-------- create collection and/or add add objects --------
 def collection_objects_add(collection_name, objects=[]):
     col = None
+    if isinstance(type(objects), bpy.types.Object.__class__):
+        objects = [objects]
+
     if collection_name not in bpy.data.collections:
         col = bpy.data.collections.new(collection_name)
         bpy.context.scene.collection.children.link(col)
@@ -203,11 +206,15 @@ def collection_objects_add(collection_name, objects=[]):
 
 
     bpy.context.view_layer.update()
+    # print(col.name)
 
     return col
 
 
 def collection_objects_remove(collection, objects=[]):
+    if isinstance(type(objects), bpy.types.Object.__class__):
+        objects = [objects]
+
     for obj in objects:
         if obj.name in collection.objects:
             collection.objects.unlink(obj)

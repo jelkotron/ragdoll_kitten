@@ -123,7 +123,6 @@ def object_add_to_collection(collection_name, objects=[]):
 
 
     bpy.context.view_layer.update()
-    # print(col.name)
 
     return col
 
@@ -273,3 +272,30 @@ def cube(width, name, mode='OBJECT'):
         return cube 
 
 
+
+#########################################################################################
+######################################## Drivers ########################################
+#------------------------ delete invalid drivers ------------------------
+def drivers_remove_invalid(object):
+    for d in object.animation_data.drivers:
+        if not d.is_valid:
+            object.animation_data.drivers.remove(d)
+
+#------------------------ delete ragdoll drivers ------------------------
+def drivers_remove_related(object):
+    for d in object.animation_data.drivers:
+        # TODO: add macros for these names and/or find another way to address these objects
+        if 'simulation_influence' in d.driver.expression:
+            object.animation_data.drivers.remove(d)
+
+#------------------------ update armature drivers ------------------------
+def force_update_drivers(context):
+    for armature in [i for i in bpy.data.objects if i.type=='ARMATURE']:
+        if armature.animation_data:
+            for fcurve in armature.animation_data.drivers:
+                if fcurve:
+                    # hacky, gets the job done
+                    if fcurve.driver.expression.endswith(" "):
+                        fcurve.driver.expression = fcurve.driver.expression[:-1]
+                    else:
+                        fcurve.driver.expression += " "

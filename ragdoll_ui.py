@@ -4,11 +4,11 @@ import sys
 sys.path.append("/home/schnollie/Work/bpy/ragdoll_tools")
 from ragdoll_aux import rb_constraint_collection_set, load_text, config_create
 
-from ragdoll import rag_doll_create, rag_doll_remove, rag_doll_update, wiggle_const_update
+from ragdoll import wiggle_const_update
 from ragdoll import force_update_drivers, wiggle_spring_drivers_add, wiggle_spring_drivers_remove
-from ragdoll import RagDollPropGroup
+from ragdoll import RagDoll
 
-from bpy_extras.io_utils import ImportHelper, ExportHelper
+from bpy_extras.io_utils import ImportHelper
 import os
 
 
@@ -68,7 +68,7 @@ class OBJECT_OT_AddRagDoll(bpy.types.Operator):
 
     def execute(self, context):
         # main(context.object.data.ragdoll_config)
-        rag_doll_create(context.object)
+        RagDoll.new(context.object)
         
         return {'FINISHED'}
 
@@ -84,7 +84,7 @@ class OBJECT_OT_RemoveRagDoll(bpy.types.Operator):
         return True
 
     def execute(self, context):
-        rag_doll_remove(context.object)
+        RagDoll.remove(context.object)
         
         return {'FINISHED'}
 
@@ -100,7 +100,7 @@ class OBJECT_OT_UpdateRagDoll(bpy.types.Operator):
         return True
 
     def execute(self, context):
-        rag_doll_update(context)
+        RagDoll.update(context)
         return {'FINISHED'}
 
 
@@ -133,6 +133,7 @@ class OBJECT_OT_UpdateWiggles(bpy.types.Operator):
         wiggle_const_update(context)
         return {'FINISHED'}
 
+
 class OBJECT_OT_AddWiggleDrivers(bpy.types.Operator):
     """Add drivers to wiggle constraints"""
     bl_idname = "armature.wiggle_drivers_add"
@@ -148,6 +149,7 @@ class OBJECT_OT_AddWiggleDrivers(bpy.types.Operator):
         context.object.data.ragdoll.wiggle_drivers = True
         print("Info: Added Drivers to Rigid Body Constraints' Spring Settings.")
         return {'FINISHED'}
+
 
 class OBJECT_OT_RemoveWiggleDrivers(bpy.types.Operator):
     """Add drivers to wiggle constraints"""
@@ -191,7 +193,7 @@ class OBJECT_OT_HookAdd(bpy.types.Operator):
 
         # add hook (bone + mesh + rigid body constraint), (bone) edit mode needs to active
         bpy.ops.object.mode_set(mode='EDIT')
-        hook_bone = RagDollPropGroup.hook_bone_add(self, context, 0.1) # TODO: user input for hook object dimensions
+        hook_bone = RagDoll.hook_bone_add(context, 0.1) # TODO: user input for hook object dimensions
         bone_name = hook_bone.name
         # restore previouse mode if possible
         if mode_init != 'EDIT_ARMATURE':
@@ -204,12 +206,11 @@ class OBJECT_OT_HookAdd(bpy.types.Operator):
         hook_pose_bone = context.object.pose.bones[bone_name]
         
         # set hook properties to bone
-        hook = RagDollPropGroup.hook_set(self, context, pose_bone, hook_pose_bone)
+        hook = RagDoll.hook_set(context, pose_bone, hook_pose_bone)
 
         print("Info: Hook added")
         
         return {'FINISHED'}
-
 
 
 class OBJECT_PT_RagDollCollections(bpy.types.Panel):
@@ -249,7 +250,7 @@ class OBJECT_PT_RagDollCollections(bpy.types.Panel):
 
 class OBJECT_PT_RagDollSuffixes(bpy.types.Panel):
     """Naming Suffixes for Ragdoll"""
-    bl_label = "Postifxes"
+    bl_label = "Suffixes"
     bl_idname = "OBJECT_PT_ragdollsuffixes"
     bl_parent_id = "OBJECT_PT_ragdoll"
     bl_space_type = 'PROPERTIES'
@@ -290,8 +291,35 @@ class OBJECT_PT_RagDollSuffixes(bpy.types.Panel):
             col_6.label(text="Connectors")
             col_7.prop(context.object.data.ragdoll,"connect_suffix", text="")
 
-def a_poll():
-    return True
+            row = layout.row()
+            split = row.split(factor=0.25)
+            col_6 = split.column()
+            col_7 = split.column()
+            col_6.label(text="Wiggles")
+            col_7.prop(context.object.data.ragdoll,"wiggle_suffix", text="")
+
+            row = layout.row()
+            split = row.split(factor=0.25)
+            col_6 = split.column()
+            col_7 = split.column()
+            col_6.label(text="Wiggle Constraints")
+            col_7.prop(context.object.data.ragdoll,"wiggle_const_suffix", text="")
+
+            row = layout.row()
+            split = row.split(factor=0.25)
+            col_6 = split.column()
+            col_7 = split.column()
+            col_6.label(text="Hooks")
+            col_7.prop(context.object.data.ragdoll,"hook_suffix", text="")
+
+            row = layout.row()
+            split = row.split(factor=0.25)
+            col_6 = split.column()
+            col_7 = split.column()
+            col_6.label(text="Hook Constraints")
+            col_7.prop(context.object.data.ragdoll,"hook_const_suffix", text="")
+
+
 
 class OBJECT_PT_RagDoll(bpy.types.Panel):
     """Creates a Panel in the Object Data properties window"""
@@ -476,13 +504,14 @@ class OBJECT_PT_RagDoll(bpy.types.Panel):
                             hooks_col_0 = split.column()
                             hooks_col_1 = split.column()
 
-                            # for pose_bone in context.object.pose.bones:
-                            #     if pose_bone.ragdoll.type == 'HOOK':
-                            #         row = hooks_col_1.row()
-                            #         row.label(text=pose_bone.name)
-                            #         row = hooks_col_1.row()
-                            #         row.prop(pose_bone.ragdoll.hook_constraint.rigid_body_constraint, "object1", text="")
-                            #         row.prop(pose_bone.ragdoll.hook_constraint.rigid_body_constraint, "object2", text="")
+                            for pose_bone in context.object.pose.bones:
+                                if pose_bone.ragdoll.type == 'HOOK':
+                                    row = hooks_col_0.row()
+                                    row.label(text="#1")
+                                    row.prop(pose_bone.ragdoll.hook_constraint.rigid_body_constraint, "enabled", text="")
+                                    row = hooks_col_1.row()
+                                    row.prop(pose_bone.ragdoll.hook_constraint.rigid_body_constraint, "object1", text="")
+                                    row.prop(pose_bone.ragdoll.hook_constraint.rigid_body_constraint, "object2", text="")
                             
                             row = hooks_col_1.row()
                             row.operator("armature.hook_add")
@@ -507,4 +536,3 @@ class OBJECT_PT_RagDoll(bpy.types.Panel):
                             anim_override_row.enabled = not context.object.data.ragdoll.kinematic
                             wiggle_spring_add_drivers.enabled = not context.object.data.ragdoll.wiggle_drivers
                             wiggle_spring_remove_drivers.enabled = context.object.data.ragdoll.wiggle_drivers
-                    

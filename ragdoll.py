@@ -120,12 +120,12 @@ def wiggle_const_update(self, context):
 
 def meshes_update(self, context):
     control_rig = ragdoll_aux.validate_selection(context.object)
-    rb_cubes_scale(control_rig, 'RIGID_BODIES')
-    rb_cubes_scale(control_rig, 'WIGGLE')
+    rigid_bodies_scale(control_rig, 'RIGID_BODIES')
+    rigid_bodies_scale(control_rig, 'WIGGLE')
 
 
 #---- additional properties definition ----
-class RagDollBonePropGroup(bpy.types.PropertyGroup):
+class RagDollBone(bpy.types.PropertyGroup):
     is_ragdoll: bpy.props.BoolProperty(name="Part of a Ragdoll", default=False)
     tree_level: bpy.props.IntProperty(name="tree_level", min=0, default =0)
     rigid_body: bpy.props.PointerProperty(type=bpy.types.Object, name="Rigid Body", poll=mesh_poll)
@@ -142,8 +142,8 @@ class RagDollBonePropGroup(bpy.types.PropertyGroup):
                                     ], default='DEFAULT')
 
 
-class RagDollPropGroup(bpy.types.PropertyGroup):
-    #-------- Collections and Objects --------
+class RagDoll(bpy.types.PropertyGroup):
+    #-------- Collection and Object Pointers --------
     deform_rig: bpy.props.PointerProperty(type=bpy.types.Object, poll=armature_poll)
     control_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll)
     rigid_bodies: bpy.props.PointerProperty(type=bpy.types.Collection)
@@ -168,13 +168,13 @@ class RagDollPropGroup(bpy.types.PropertyGroup):
     #-------- Suffixes --------
     ctrl_rig_suffix: bpy.props.StringProperty(name="Control Rig Suffix", default=".Control")
     def_rig_suffix: bpy.props.StringProperty(name="Deform Rig Suffix", default=".Deform")
-    rb_suffix: bpy.props.StringProperty(name="Ragdoll Geo Suffix", default=".RigidBodies")
-    wiggle_suffix: bpy.props.StringProperty(name="Ragdoll Geo Suffix", default=".Wiggles")
-    wiggle_const_suffix: bpy.props.StringProperty(name="Ragdoll Geo Suffix", default=".WiggleConstraints")
-    const_suffix: bpy.props.StringProperty(name="Rigid Body Constraint Suffix", default=".Constraints")
-    connect_suffix: bpy.props.StringProperty(name="Connector Suffix", default=".Connectors")
-    hook_suffix: bpy.props.StringProperty(name="Connector Suffix", default=".Hooks")
-    hook_const_suffix: bpy.props.StringProperty(name="Connector Suffix", default=".HookConstraints")
+    rb_suffix: bpy.props.StringProperty(name="Ragdoll Geo Suffix", default=".RigidBody")
+    wiggle_suffix: bpy.props.StringProperty(name="Ragdoll Geo Suffix", default=".Wiggle")
+    wiggle_const_suffix: bpy.props.StringProperty(name="Ragdoll Geo Suffix", default=".WiggleConstraint")
+    const_suffix: bpy.props.StringProperty(name="Rigid Body Constraint Suffix", default=".Constraint")
+    connect_suffix: bpy.props.StringProperty(name="Connector Suffix", default=".Connector")
+    hook_suffix: bpy.props.StringProperty(name="Connector Suffix", default=".Hook")
+    hook_const_suffix: bpy.props.StringProperty(name="Connector Suffix", default=".HookConstraint")
 
     # -------- State --------
     initialized: bpy.props.BoolProperty(name="RagDoll initialized", default=False)
@@ -211,10 +211,272 @@ class RagDollPropGroup(bpy.types.PropertyGroup):
     wiggle_damping: bpy.props.FloatProperty(name="Stiffnesss", min=0, max=1000, update=wiggle_const_update)
 
     bone_level_max: bpy.props.IntProperty(name="bone_level_max", min=0, default=0)
+ 
+    def new(armature_object):
+        if armature_object.type == 'ARMATURE':
+            # get selected bones that are not hidden
+            bones = ragdoll_aux.get_visible_posebones(armature_object)
+            for b in bones:
+                b.ragdoll.is_ragdoll = True
+            deform_rig = armature_object
+            # store bones' hierarchy level in bone prop
+            deform_rig = ragdoll_aux.bones_tree_levels_set(deform_rig, bones)
+            # copy deform armature to use as control
+            control_rig = secondary_rig_add(deform_rig)
+        
+            # primary rigid body objects (transform targets for bones)
+            rigid_bodies_add(bones, mode='RIGID_BODIES')
+            rigid_body_constraints_add(control_rig, mode='RIGID_BODIES')
+            rb_constraint_defaults(control_rig.data.ragdoll.constraints, 0, 22.5)
+            
+            # secondary rigid body objects (wiggles)
+            rigid_bodies_add(bones, mode='WIGGLE')
+            rigid_body_constraints_add(control_rig, mode='WIGGLES') # wiggle constraints
+            rb_constraint_defaults(control_rig.data.ragdoll.wiggle_constraints, 0.01, 22.5)
+            
+            # read transformational limits from file, set to primary rigid body constraints
+            rb_constraint_limit(control_rig)
+
+            # additional object layer to copy transforms from, as rigid body meshes' pivots have to be centered
+            rb_connectors_add(control_rig)
+
+            # 
+            bone_constraints_add(bones, control_rig)
+            bone_drivers_add(deform_rig, control_rig)
+            control_rig.data.ragdoll.initialized = True
+            deform_rig.data.ragdoll.initialized = True
+
+            print("Info: added ragdoll")
 
 
+    def update(context):
+        rig = context.object
+        if ragdoll_aux.validate_selection(rig):
+            control_rig = rig
+            if rig.data.ragdoll.type == 'DEFORM':
+                control_rig = rig.data.ragdoll.control_rig
+            rb_constraint_limit(control_rig)
+            RagDoll.rigid_bodies_scale(control_rig)
+            print("Info: ragdoll updated")
 
-    def hook_bone_add(self, context, length):
+
+    def remove(armature_object):
+        if armature_object.type == 'ARMATURE':
+            if armature_object.data.ragdoll.type == 'DEFORM':
+                deform_rig = armature_object
+                control_rig = armature_object.data.ragdoll.control_rig
+
+            else:
+                control_rig = armature_object
+                deform_rig = armature_object.data.ragdoll.deform_rig
+                
+            for bone in deform_rig.pose.bones:
+                bone.ragdoll.is_ragdoll = False
+                for const in bone.constraints:
+                    if const.name == "Copy Transforms RD" or const.name == "Copy Transforms CTRL":
+                        bone.constraints.remove(const)
+
+
+            rigid_bodies = control_rig.data.ragdoll.rigid_bodies
+            constraints = control_rig.data.ragdoll.constraints
+            connectors = control_rig.data.ragdoll.connectors
+            wiggles = control_rig.data.ragdoll.wiggles
+            wiggle_constraints = control_rig.data.ragdoll.wiggle_constraints
+            hooks = control_rig.data.ragdoll.hooks
+            hook_constraints = control_rig.data.ragdoll.hook_constraints
+
+            if bpy.context.scene.rigidbody_world:
+                collection = bpy.context.scene.rigidbody_world.collection
+                if rigid_bodies: ragdoll_aux.object_remove_from_collection(collection, rigid_bodies.objects)
+                if wiggles: ragdoll_aux.object_remove_from_collection(collection, wiggles.objects)
+                if hooks: ragdoll_aux.object_remove_from_collection(collection, hooks.objects)
+
+            if bpy.context.scene.rigidbody_world.constraints:
+                #TODO: be more concise
+                collection = bpy.context.scene.rigidbody_world.constraints.collection_objects.data
+                rb_obj_list =  bpy.context.scene.rigidbody_world.constraints
+
+                if constraints: 
+                    ragdoll_aux.object_remove_from_collection(collection, constraints.objects)
+                    ragdoll_aux.object_remove_from_collection(rb_obj_list, constraints.objects)
+                if wiggle_constraints:
+                    ragdoll_aux.object_remove_from_collection(collection, wiggle_constraints.objects)
+                    ragdoll_aux.object_remove_from_collection(rb_obj_list, wiggle_constraints.objects)
+                if hook_constraints:
+                    ragdoll_aux.object_remove_from_collection(collection, hook_constraints.objects)
+                    ragdoll_aux.object_remove_from_collection(rb_obj_list, hook_constraints.objects)
+
+
+            ragdoll_aux.collection_remove(rigid_bodies)
+            ragdoll_aux.collection_remove(constraints)
+            ragdoll_aux.collection_remove(connectors)
+            ragdoll_aux.collection_remove(wiggles)
+            ragdoll_aux.collection_remove(wiggle_constraints)
+            ragdoll_aux.collection_remove(hooks)
+            ragdoll_aux.collection_remove(hook_constraints)
+
+            armature_data = control_rig.data
+
+            bpy.data.objects.remove(control_rig, do_unlink=True)
+            if armature_data.name in bpy.data.armatures:
+                bpy.data.armatures.remove(armature_data, do_unlink=True)
+
+            drivers_remove_invalid(deform_rig)
+            drivers_remove_related(deform_rig)
+
+            deform_rig.data.ragdoll.initialized = False
+
+            print("Info: removed ragdoll")
+
+
+    def rigid_bodies_add(pbones, mode='RIGID_BODIES'):
+        if isinstance(type(pbones), bpy.types.PoseBone.__class__):
+            pbones = [pbones]
+        rb_bones = []
+        
+        # set current frame to beginning of frame range # TODO: get frame range for this!
+        bpy.context.scene.frame_current = 1
+        
+        selected_rig = ragdoll_aux.validate_selection(bpy.context.object, 'ARMATURE')
+        control_rig = None
+        deform_rig = None
+
+        if selected_rig:
+            if selected_rig.data.ragdoll.type == 'DEFORM':
+                control_rig = selected_rig.data.ragdoll.control_rig
+                deform_rig = selected_rig
+            elif selected_rig.data.ragdoll.type == 'CONTROL':
+                control_rig = selected_rig
+                deform_rig = selected_rig.data.ragdoll.deform_rig
+        
+        # select name and collection
+        if mode == 'RIGID_BODIES':
+            suffix = deform_rig.data.ragdoll.rb_suffix
+        
+        elif mode == 'WIGGLE':
+            suffix = deform_rig.data.ragdoll.wiggle_suffix
+
+        elif mode == 'HOOK':
+            suffix = deform_rig.data.ragdoll.hook_suffix
+
+        if control_rig:
+            for pb in pbones:
+                geo_name = deform_rig.name + "." + pb.name + suffix
+                # add and scale box geometry per bone
+                new_cube = ragdoll_aux.cube(1, geo_name)
+                new_cube.display_type = 'WIRE'
+
+                for vert in new_cube.data.vertices:
+                    vert.co[0] *= 1 / new_cube.dimensions[1] * pb.length * deform_rig.data.ragdoll.rb_bone_width_relative
+                    vert.co[1] *= 1 / new_cube.dimensions[1] * pb.length
+                    vert.co[2] *= 1 / new_cube.dimensions[1] * pb.length * deform_rig.data.ragdoll.rb_bone_width_relative
+
+                # parent cube to control rig bone
+                new_cube.matrix_local = pb.matrix
+                new_cube.parent = control_rig
+                new_cube.parent_type = 'BONE'
+                new_cube.parent_bone = pb.name
+
+                # apply bone's transform to cube
+                vector = (pb.head - pb.tail) / 2
+                translate = mathutils.Matrix.Translation(vector)
+                new_cube.matrix_parent_inverse = pb.matrix.inverted() @ translate
+            
+                # add cube to rigid body collection & set collision shape 
+                bpy.context.scene.rigidbody_world.collection.objects.link(new_cube)
+                new_cube.rigid_body.collision_shape = 'BOX'
+                new_cube.rigid_body.kinematic = True
+
+                # add driver to switch animation/simulation
+                if mode == 'RIGID_BODIES':
+                    # set bone property
+                    pb.ragdoll.rigid_body = new_cube
+                    if control_rig.pose.bones.get(pb.name):
+                        control_rig.pose.bones[pb.name].ragdoll.rigid_body = new_cube
+                        
+                    # add driver
+                    driven_value = new_cube.rigid_body.driver_add("kinematic")
+                    driven_value.driver.type = 'SCRIPTED'
+                    driven_value.driver.expression = "kinematic"
+                    driver_var = driven_value.driver.variables.new()
+                    driver_var.name = "kinematic"
+                    driver_var.type = 'SINGLE_PROP'
+                    target = driver_var.targets[0]
+                    target.id_type = 'ARMATURE'
+                    target.id = control_rig.data
+                    target.data_path = 'ragdoll.kinematic'
+
+                elif mode == 'WIGGLE':
+                    # TODO: set this elsewhere
+                    new_cube.rigid_body.collision_collections[0] = False
+                    new_cube.rigid_body.collision_collections[1] = True
+                    # set bone property
+                    pb.ragdoll.wiggle = new_cube
+                    if control_rig.pose.bones.get(pb.name):
+                        control_rig.pose.bones[pb.name].ragdoll.wiggle = new_cube
+
+                elif mode == 'HOOK':
+                    pb.ragdoll.rigid_body = new_cube
+
+                rb_bones.append(new_cube)
+    
+        
+        # add cubes to collection
+        collection_name = deform_rig.name + suffix
+        collection = ragdoll_aux.object_add_to_collection(collection_name, [rb_geo for rb_geo in rb_bones])
+        ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, [rb_geo for rb_geo in rb_bones])
+        if mode == 'RIGID_BODIES':
+            control_rig.data.ragdoll.rigid_bodies = collection
+            rigid_bodies_scale(control_rig, 'RIGID_BODIES')
+        elif mode == 'WIGGLE':
+            control_rig.data.ragdoll.wiggles = collection
+            rigid_bodies_scale(control_rig, 'WIGGLES')
+        elif mode == 'HOOK':
+            control_rig.data.ragdoll.hooks = collection
+
+
+    def rigid_bodies_scale(control_rig, mode='RIGID_BODIES'):
+        width_relative = control_rig.data.ragdoll.rb_bone_width_relative
+        width_min = control_rig.data.ragdoll.rb_bone_width_min
+        width_max = control_rig.data.ragdoll.rb_bone_width_max
+
+        if width_min + width_max + width_relative > 0:
+            for bone in control_rig.pose.bones:
+                mesh = None
+                if mode == 'RIGID_BODIES':
+                    if bone.ragdoll.rigid_body:
+                        mesh = bone.ragdoll.rigid_body
+                elif mode == 'WIGGLES':
+                    if bone.ragdoll.wiggle:
+                        mesh = bone.ragdoll.wiggle
+                if mesh:
+                    for vert in mesh.data.vertices:
+                        for i in range(3):
+                            # reset cube to dimensions = [1,1,1] 
+                            vert.co[i] *= abs(0.5 / vert.co[i])
+                            if i == 1:
+                                vert.co[i] *= bone.length
+                            else:
+                                # clamp values to min/max
+                                width_factor = width_relative * bone.length
+
+                                if width_max != 0:
+                                    width_factor = min(width_max, width_relative)
+                                
+                                if width_min != 0:
+                                    width_factor = max(width_factor, width_min)
+            
+                                # apply new transform
+                                vert.co[i] *= width_factor
+
+                    mesh.data.update()
+                    bpy.context.view_layer.update()
+
+        else:
+            print("Error: Cannot create mesh with width of 0")
+
+
+    def hook_bone_add(context, length):
         if bpy.context.mode == 'EDIT_ARMATURE':
             bone_name = "Hook.000" # TODO: name elsewhere
             edit_bone = context.object.data.edit_bones.new(name=bone_name)
@@ -228,9 +490,9 @@ class RagDollPropGroup(bpy.types.PropertyGroup):
             return edit_bone
 
 
-    def hook_set(self, context, pose_bone, hook_pose_bone):
+    def hook_set(context, pose_bone, hook_pose_bone):
         pose_bone.ragdoll.type = 'HOOK'
-        rb_cubes_add(hook_pose_bone, mode='HOOK')
+        rigid_bodies_add(hook_pose_bone, mode='HOOK')
         rigid_body_constraints_add(context.object, [pose_bone, hook_pose_bone], 'HOOK')
         rb_constraint_defaults(context.object.data.ragdoll.hook_constraints, 0, 22.5)
 
@@ -238,43 +500,7 @@ class RagDollPropGroup(bpy.types.PropertyGroup):
 
 
 
-def rag_doll_create(armature_object):
-    if armature_object.type == 'ARMATURE':
-        # get selected bones that are not hidden
-        bones = ragdoll_aux.get_visible_posebones(armature_object)
-        for b in bones:
-            b.ragdoll.is_ragdoll = True
-        deform_rig = armature_object
-        # store bones' hierarchy level in bone prop
-        deform_rig = ragdoll_aux.bones_tree_levels_set(deform_rig, bones)
-        # copy deform armature to use as control
-        control_rig = secondary_rig_add(deform_rig)
-      
-        # primary rigid body objects (transform targets for bones)
-        rb_cubes_add(bones, mode='RIGID_BODIES')
-        rigid_body_constraints_add(control_rig, mode='RIGID_BODIES')
-        rb_constraint_defaults(control_rig.data.ragdoll.constraints, 0, 22.5)
-        
-        # secondary rigid body objects (wiggles)
-        rb_cubes_add(bones, mode='WIGGLE')
-        rigid_body_constraints_add(control_rig, mode='WIGGLES') # wiggle constraints
-        rb_constraint_defaults(control_rig.data.ragdoll.wiggle_constraints, 0.01, 22.5)
-        
-        # read transformational limits from file, set to primary rigid body constraints
-        rb_constraint_limit(control_rig)
-
-        # additional object layer to copy transforms from, as rigid body meshes' pivots have to be centered
-        rb_connectors_add(control_rig)
-
-        # 
-        bone_constraints_add(bones, control_rig)
-        bone_drivers_add(deform_rig, control_rig)
-        control_rig.data.ragdoll.initialized = True
-        deform_rig.data.ragdoll.initialized = True
-
-        print("Info: added ragdoll")
-
-
+# TODO: make member function
 def secondary_rig_add(armature_object):
     if armature_object:
         # copy armature
@@ -329,248 +555,15 @@ def secondary_rig_add(armature_object):
         return None
         
 
-def rb_cubes_scale(control_rig, mode='RIGID_BODIES'):
-    width_relative = control_rig.data.ragdoll.rb_bone_width_relative
-    width_min = control_rig.data.ragdoll.rb_bone_width_min
-    width_max = control_rig.data.ragdoll.rb_bone_width_max
 
-    if width_min + width_max + width_relative > 0:
-        for bone in control_rig.pose.bones:
-            mesh = None
-            if mode == 'RIGID_BODIES':
-                if bone.ragdoll.rigid_body:
-                    mesh = bone.ragdoll.rigid_body
-            elif mode == 'WIGGLES':
-                if bone.ragdoll.wiggle:
-                    mesh = bone.ragdoll.wiggle
-            if mesh:
-                for vert in mesh.data.vertices:
-                    for i in range(3):
-                        # reset cube to dimensions = [1,1,1] 
-                        vert.co[i] *= abs(0.5 / vert.co[i])
-                        if i == 1:
-                            vert.co[i] *= bone.length
-                        else:
-                            # clamp values to min/max
-                            width_factor = width_relative * bone.length
-
-                            if width_max != 0:
-                                width_factor = min(width_max, width_relative)
-                            
-                            if width_min != 0:
-                                width_factor = max(width_factor, width_min)
-        
-                            # apply new transform
-                            vert.co[i] *= width_factor
-
-                mesh.data.update()
-                bpy.context.view_layer.update()
-
-    else:
-        print("Error: Cannot create mesh with width of 0")
         
 
-def rb_cubes_add(pbones, mode='RIGID_BODIES'):
-    if isinstance(type(pbones), bpy.types.PoseBone.__class__):
-        pbones = [pbones]
-    rb_bones = []
-    # store current frame & tmp reset to 0
-    bpy.context.scene.frame_current = 0
-    
-    selected_rig = ragdoll_aux.validate_selection(bpy.context.object, 'ARMATURE')
-
-    control_rig = None
-    deform_rig = None
-
-    if selected_rig:
-        if selected_rig.data.ragdoll.type == 'DEFORM':
-            control_rig = selected_rig.data.ragdoll.control_rig
-            deform_rig = selected_rig
-        elif selected_rig.data.ragdoll.type == 'CONTROL':
-            control_rig = selected_rig
-            deform_rig = selected_rig.data.ragdoll.deform_rig
-    
-    # select name and collection
-    if mode == 'RIGID_BODIES':
-        suffix = deform_rig.data.ragdoll.rb_suffix
-    
-    elif mode == 'WIGGLE':
-        suffix = deform_rig.data.ragdoll.wiggle_suffix
-
-    elif mode == 'HOOK':
-        suffix = deform_rig.data.ragdoll.hook_suffix
-
-    if control_rig:
-        for pb in pbones:
-            geo_name = deform_rig.name + "." + pb.name + suffix
-            # add and scale box geometry per bone
-            new_cube = ragdoll_aux.cube(1, geo_name)
-            new_cube.display_type = 'WIRE'
-
-            for vert in new_cube.data.vertices:
-                vert.co[0] *= 1 / new_cube.dimensions[1] * pb.length * deform_rig.data.ragdoll.rb_bone_width_relative
-                vert.co[1] *= 1 / new_cube.dimensions[1] * pb.length
-                vert.co[2] *= 1 / new_cube.dimensions[1] * pb.length * deform_rig.data.ragdoll.rb_bone_width_relative
-
-            # parent cube to control rig bone
-            new_cube.matrix_local = pb.matrix
-            new_cube.parent = control_rig
-            new_cube.parent_type = 'BONE'
-            new_cube.parent_bone = pb.name
-
-            # apply bone's transform to cube
-            vector = (pb.head - pb.tail) / 2
-            translate = mathutils.Matrix.Translation(vector)
-            new_cube.matrix_parent_inverse = pb.matrix.inverted() @ translate
-          
-            # add cube to rigid body collection & set collision shape 
-            bpy.context.scene.rigidbody_world.collection.objects.link(new_cube)
-            new_cube.rigid_body.collision_shape = 'BOX'
-            new_cube.rigid_body.kinematic = True
-
-            # add driver to switch animation/simulation
-            if mode == 'RIGID_BODIES':
-                # set bone property
-                pb.ragdoll.rigid_body = new_cube
-                if control_rig.pose.bones.get(pb.name):
-                    control_rig.pose.bones[pb.name].ragdoll.rigid_body = new_cube
-                    
-                # add driver
-                driven_value = new_cube.rigid_body.driver_add("kinematic")
-                driven_value.driver.type = 'SCRIPTED'
-                driven_value.driver.expression = "kinematic"
-                driver_var = driven_value.driver.variables.new()
-                driver_var.name = "kinematic"
-                driver_var.type = 'SINGLE_PROP'
-                target = driver_var.targets[0]
-                target.id_type = 'ARMATURE'
-                target.id = control_rig.data
-                target.data_path = 'ragdoll.kinematic'
-
-            elif mode == 'WIGGLE':
-                # TODO: set this elsewhere
-                new_cube.rigid_body.collision_collections[0] = False
-                new_cube.rigid_body.collision_collections[1] = True
-                # set bone property
-                pb.ragdoll.wiggle = new_cube
-                if control_rig.pose.bones.get(pb.name):
-                    control_rig.pose.bones[pb.name].ragdoll.wiggle = new_cube
-
-            elif mode == 'HOOK':
-                pb.ragdoll.rigid_body = new_cube
-
-            rb_bones.append(new_cube)
-   
-    
-        
-    # add cubes to collection
-    collection_name = deform_rig.name + suffix
-    collection = ragdoll_aux.collection_objects_add(collection_name, [rb_geo for rb_geo in rb_bones])
-    ragdoll_aux.collection_objects_remove(bpy.context.scene.collection, [rb_geo for rb_geo in rb_bones])
-    if mode == 'RIGID_BODIES':
-        control_rig.data.ragdoll.rigid_bodies = collection
-    elif mode == 'WIGGLE':
-        control_rig.data.ragdoll.wiggles = collection
-    elif mode == 'HOOK':
-        control_rig.data.ragdoll.hooks = collection
     
 
-def rag_doll_remove(armature_object):
-    if armature_object.type == 'ARMATURE':
-        if armature_object.data.ragdoll.type == 'DEFORM':
-            deform_rig = armature_object
-            control_rig = armature_object.data.ragdoll.control_rig
-
-        else:
-            control_rig = armature_object
-            deform_rig = armature_object.data.ragdoll.deform_rig
-            
-        for bone in deform_rig.pose.bones:
-            bone.ragdoll.is_ragdoll = False
-            for const in bone.constraints:
-                if const.name == "Copy Transforms RD" or const.name == "Copy Transforms CTRL":
-                    bone.constraints.remove(const)
 
 
-        rigid_bodies = control_rig.data.ragdoll.rigid_bodies
-        constraints = control_rig.data.ragdoll.constraints
-        connectors = control_rig.data.ragdoll.connectors
-        wiggles = control_rig.data.ragdoll.wiggles
-        wiggle_constraints = control_rig.data.ragdoll.wiggle_constraints
-        hooks = control_rig.data.ragdoll.hooks
-        hook_constraints = control_rig.data.ragdoll.hook_constraints
 
-        if bpy.context.scene.rigidbody_world:
-            collection = bpy.context.scene.rigidbody_world.collection
-            if rigid_bodies: object_remove_from_collection(collection, rigid_bodies.objects)
-            if wiggles: object_remove_from_collection(collection, wiggles.objects)
-            if hooks: object_remove_from_collection(collection, hooks.objects)
-
-        if bpy.context.scene.rigidbody_world.constraints:
-            #TODO: be more concise
-            collection = bpy.context.scene.rigidbody_world.constraints.collection_objects.data
-            rb_obj_list =  bpy.context.scene.rigidbody_world.constraints
-
-            if constraints: 
-                object_remove_from_collection(collection, constraints.objects)
-                object_remove_from_collection(rb_obj_list, constraints.objects)
-            if wiggle_constraints:
-                object_remove_from_collection(collection, wiggle_constraints.objects)
-                object_remove_from_collection(rb_obj_list, wiggle_constraints.objects)
-            if hook_constraints:
-                object_remove_from_collection(collection, hook_constraints.objects)
-                object_remove_from_collection(rb_obj_list, hook_constraints.objects)
-
-
-        collection_remove(rigid_bodies)
-        collection_remove(constraints)
-        collection_remove(connectors)
-        collection_remove(wiggles)
-        collection_remove(wiggle_constraints)
-        collection_remove(hooks)
-        collection_remove(hook_constraints)
-
-        armature_data = control_rig.data
-
-        bpy.data.objects.remove(control_rig, do_unlink=True)
-        if armature_data.name in bpy.data.armatures:
-            bpy.data.armatures.remove(armature_data, do_unlink=True)
-
-        drivers_remove_invalid(deform_rig)
-        drivers_remove_related(deform_rig)
-
-        deform_rig.data.ragdoll.initialized = False
-
-        print("Info: removed ragdoll")
-
-
-def collection_remove(collection):
-    if collection:
-        for obj in collection.objects:
-            bpy.data.objects.remove(obj, do_unlink=True)
-        bpy.context.scene.collection.children.unlink(collection)
-        bpy.data.collections.remove(collection, do_unlink=True)
-
-
-def object_remove_from_collection(collection, objects):
-    if collection != None:
-        for obj in objects:
-            if obj.name in collection.objects:
-                collection.objects.unlink(obj)
-    
-
-def rag_doll_update(context):
-
-    rig = context.object
-    if ragdoll_aux.validate_selection(rig):
-        control_rig = rig
-        if rig.data.ragdoll.type == 'DEFORM':
-            control_rig = rig.data.ragdoll.control_rig
-        rb_constraint_limit(control_rig)
-        rb_cubes_scale(control_rig)
-        print("Info: ragdoll updated")
-
-
+# TODO: move to aux
 def force_update_drivers(context):
     # hack
     for armature in [i for i in bpy.data.objects if i.type=='ARMATURE']:
@@ -582,8 +575,8 @@ def force_update_drivers(context):
                     else:
                         fcurve.driver.expression += " "
 
-
-def rb_const_add(object_0, object_1, parent_bone, suffix, size=0.15):
+# TODO: make member function
+def rb_const_add(object_0, object_1, parent_bone, suffix, size=0.1, constraint_type='GENERIC_SPRING'):
     name = parent_bone.id_data.name + "." + parent_bone.name + suffix
     suffix
     empty = bpy.data.objects.new(name, None)
@@ -591,7 +584,7 @@ def rb_const_add(object_0, object_1, parent_bone, suffix, size=0.15):
     empty.empty_display_size = size
     
     bpy.context.scene.rigidbody_world.constraints.objects.link(empty)
-    empty.rigid_body_constraint.type = 'GENERIC_SPRING'
+    empty.rigid_body_constraint.type = constraint_type
     
     vec = (parent_bone.head - parent_bone.tail)
     trans = mathutils.Matrix.Translation(vec)
@@ -607,10 +600,9 @@ def rb_const_add(object_0, object_1, parent_bone, suffix, size=0.15):
     if object_1:
         empty.rigid_body_constraint.object2 = object_1
 
-
     return empty
     
-    
+# TODO: make member function
 def rigid_body_constraints_add(control_rig, hook_bones=None, mode='RIGID_BODIES'):
     bones = ragdoll_aux.get_visible_posebones(control_rig)
     empty = None
@@ -622,41 +614,39 @@ def rigid_body_constraints_add(control_rig, hook_bones=None, mode='RIGID_BODIES'
             for child in bone.children:
                 obj_0 = bone.ragdoll.rigid_body
                 obj_1 = child.ragdoll.rigid_body
-                empty = rb_const_add(obj_0, obj_1, child, suffix)
+                empty = rb_const_add(obj_0, obj_1, child, suffix, 0.1)
                 bone.ragdoll.constraint = empty
-                collection = ragdoll_aux.collection_objects_add(collection_name, empty)
+                collection = ragdoll_aux.object_add_to_collection(collection_name, empty)
                 control_rig.data.ragdoll.constraints = collection
-                ragdoll_aux.collection_objects_remove(bpy.context.scene.collection, empty)
+                ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, empty)
 
     elif mode == 'WIGGLES':
         suffix = control_rig.data.ragdoll.wiggle_const_suffix
-        collection_name = control_rig.data.ragdoll.deform_rig.name
+        collection_name = control_rig.data.ragdoll.deform_rig.name + suffix
         for bone in bones:
             obj_0 = bone.ragdoll.rigid_body
             obj_1 = bone.ragdoll.wiggle
             empty = rb_const_add(obj_0, obj_1, bone, suffix)
             empty.rigid_body_constraint.enabled = control_rig.data.ragdoll.wiggle
             bone.ragdoll.wiggle_constraint = empty
-            collection = ragdoll_aux.collection_objects_add(collection_name, empty)
+            collection = ragdoll_aux.object_add_to_collection(collection_name, empty)
             control_rig.data.ragdoll.wiggle_constraints = collection
-            ragdoll_aux.collection_objects_remove(bpy.context.scene.collection, empty)
+            ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, empty)
 
     elif mode == 'HOOK':
         suffix = control_rig.data.ragdoll.hook_const_suffix
-        collection_name = control_rig.data.ragdoll.deform_rig.name
+        collection_name = control_rig.data.ragdoll.deform_rig.name + suffix
         if hook_bones:
-            print("PipiKAka!")
             bone_mesh = hook_bones[0].ragdoll.rigid_body
             hook_mesh = hook_bones[1].ragdoll.rigid_body
             empty = rb_const_add(bone_mesh, hook_mesh, hook_bones[1], suffix)
             hook_bones[0].ragdoll.hook_constraint = empty
             hook_bones[1].ragdoll.hook_constraint = empty
-            collection = ragdoll_aux.collection_objects_add(collection_name, empty)
+            collection = ragdoll_aux.object_add_to_collection(collection_name, empty)
             control_rig.data.ragdoll.hook_constraints = collection
-            ragdoll_aux.collection_objects_remove(bpy.context.scene.collection, empty)
+            ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, empty)
 
-
-
+# TODO: make member function
 def rb_constraint_defaults(constraints, max_lin, max_ang):
     if constraints:
         for obj in constraints.objects:
@@ -685,7 +675,7 @@ def rb_constraint_defaults(constraints, max_lin, max_ang):
                     rb_const.limit_ang_z_lower = math.radians(-max_ang)
                     rb_const.limit_ang_z_upper = math.radians(max_ang) 
 
-
+# TODO: make member function
 def rb_constraint_limit(control_rig):
     config = control_rig.data.ragdoll.config
     if config:
@@ -736,10 +726,10 @@ def rb_constraint_limit(control_rig):
     else:
         rb_constraint_defaults(control_rig.data.ragdoll.constraints, 0, 22.5)
 
-
+# TODO: make member function
 def rb_connectors_add(control_rig):
     # set current frame to 0
-    bpy.context.scene.frame_current = 0
+    bpy.context.scene.frame_current = 1
     empties = []
     bones = ragdoll_aux.get_visible_posebones(control_rig)
     deform_rig = control_rig.data.ragdoll.deform_rig
@@ -770,21 +760,21 @@ def rb_connectors_add(control_rig):
 
             # modifiy visualization
             empty.empty_display_type = 'SPHERE'
-            empty.empty_display_size = 0.1
+            empty.empty_display_size = 0.05
 
             empties.append(empty)
 
     # add empties to collection
     collection_name = deform_rig.name + control_rig.data.ragdoll.connect_suffix
-    collection = ragdoll_aux.collection_objects_add(collection_name, empties)
-    ragdoll_aux.collection_objects_remove(bpy.context.scene.collection, empties)
+    collection = ragdoll_aux.object_add_to_collection(collection_name, empties)
+    ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, empties)
     # TODO: get objs current collection
     control_rig.data.ragdoll.connectors = collection
     deform_rig.data.ragdoll.connectors = collection
 
     print("Info: rd connectors added")
 
-
+# TODO: make member function
 def bone_constraints_add(bones, control_rig):
     # control_rig = ragdoll_aux.validate_selection(bpy.context.object, 'ARMATURE')
     
@@ -806,7 +796,7 @@ def bone_constraints_add(bones, control_rig):
          
     print("Info: bone constraints set")
 
-
+# TODO: make member function
 def bone_drivers_add(deform_rig, control_rig):
     for bone in deform_rig.pose.bones:
         # add driver to copy ragdoll transform constraint
@@ -829,7 +819,7 @@ def bone_drivers_add(deform_rig, control_rig):
 
     print("Info: bone constraint drivers set")
 
-
+# TODO: make member function
 def wiggle_spring_drivers_add(control_rig):
     for obj in control_rig.data.ragdoll.wiggle_constraints.objects:
         if obj.rigid_body_constraint and obj.rigid_body_constraint.type == 'GENERIC_SPRING':
@@ -866,22 +856,22 @@ def wiggle_spring_drivers_add(control_rig):
         else:
             print("Error: Wrong Rigid Body Constraint Type: %s"%obj.rigid_body_constraint.type)
     
-
+# TODO: make member function
 def wiggle_spring_drivers_remove(control_rig):
     wiggle_constraints = control_rig.data.ragdoll.wiggle_constraints.objects
     for obj in wiggle_constraints:
         for d in obj.animation_data.drivers:
             obj.animation_data.drivers.remove(d)
 
-
+# TODO: move to aux
 def drivers_remove_invalid(object):
     for d in object.animation_data.drivers:
         if not d.is_valid:
             object.animation_data.drivers.remove(d)               
 
+# TODO: move to aux
 def drivers_remove_related(object):
     for d in object.animation_data.drivers:
         # TODO: add macros for these names and/or find another way to address these objects
         if 'simulation_influence' in d.driver.expression:
-            object.animation_data.drivers.remove(d)               
-
+            object.animation_data.drivers.remove(d)

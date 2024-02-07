@@ -14,15 +14,12 @@ import ragdoll_aux
 
 def register():
     #-------- register custom properties --------
-    # bpy.utils.register_class(ragdoll.RagDollHook)
-    bpy.utils.register_class(ragdoll.RagDollPropGroup)
-    bpy.utils.register_class(ragdoll.RagDollBonePropGroup)
-
+    bpy.utils.register_class(ragdoll.RagDoll)
+    bpy.utils.register_class(ragdoll.RagDollBone)
 
     #-------- set custom properties --------
-    bpy.types.Armature.ragdoll = bpy.props.PointerProperty(type=ragdoll.RagDollPropGroup)
-    bpy.types.PoseBone.ragdoll = bpy.props.PointerProperty(type=ragdoll.RagDollBonePropGroup)
-    # bpy.types.Armature.ragdoll.hooks = bpy.props.PointerProperty(type=ragdoll.RagDollBonePropGroup)
+    bpy.types.Armature.ragdoll = bpy.props.PointerProperty(type=ragdoll.RagDoll)
+    bpy.types.PoseBone.ragdoll = bpy.props.PointerProperty(type=ragdoll.RagDollBone)
 
     #-------- register UI elements --------
     bpy.utils.register_class(ragdoll_ui.OBJECT_PT_RagDoll)
@@ -43,8 +40,8 @@ def register():
 def unregister():
     if bpy.types.Armature.ragdoll: del bpy.types.Armature.ragdoll
     if bpy.types.Bone.ragdoll: del bpy.types.Bone.ragdoll
-    bpy.utils.unregister_class(ragdoll.RagDollPropGroup)
-    bpy.utils.unregister_class(ragdoll.RagDollBonePropGroup)
+    bpy.utils.unregister_class(ragdoll.RagDoll)
+    bpy.utils.unregister_class(ragdoll.RagDollBone)
     # bpy.utils.unregister_class(ragdoll.RagDollHook)
 
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_PT_RagDoll)
@@ -72,5 +69,3 @@ if "bpy" in locals():
 
 if __name__ == "__main__":
     register()
-    
-

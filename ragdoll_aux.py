@@ -1,16 +1,10 @@
 import bpy
 import json
 import os
-        
-def deselect_all():
-    objs = []
-    for obj in bpy.context.selected_objects:
-        objs.append(obj)
-    for obj in objs:
-        obj.select_set(False)
 
-
-#-------- create dictionary w/ bones' level in tree --------
+#######################################################################################
+######################################## Bones ########################################
+#------------ create dictionary w/ bones' level in tree ------------------------
 def bones_tree_levels_get(armature):
     pose_bones = armature.pose.bones
     max_level = 0
@@ -28,16 +22,14 @@ def bones_tree_levels_get(armature):
 
     return levels
 
-
-#-------- recursively iterate over bones' children to map their position in tree
+#------------ recursively iterate over bones' children to map their position in tree
 def bone_map_children(root, map_obj, level=0):
     if root.name not in map_obj: 
         map_obj[root.name] = level
     for child in root.children:
         bone_map_children(child, map_obj, level+1)
 
-
-#-------- set bones' tree level properties --------
+#------------ set bones' hierarchy property ------------------------
 def bones_tree_levels_set(armature, pose_bones_to_use):
     level_map = bones_tree_levels_get(armature)
     for bone in armature.pose.bones:
@@ -48,15 +40,7 @@ def bones_tree_levels_set(armature, pose_bones_to_use):
             
     return armature
 
-
-#-------- validate object type --------
-def validate_selection(selected_object, mode = 'ARMATURE'):
-    if selected_object.type == mode:
-        return selected_object
-    else:
-        return None
-
-#-------- exclude unselected/hidden pose bones and hidden bone collections --------
+#------------------------ exclude unselected/hidden pose bones and hidden bone collections ------------------------
 def get_visible_posebones(armature_object=None):
     bones = []
     if armature_object.type == 'ARMATURE':
@@ -86,7 +70,85 @@ def get_visible_posebones(armature_object=None):
         print("Error: No active armature.")
         return None
 
-#-------- read config for rigid body constraint limits --------
+#------------------------ remove armatures w/o users ------------------------
+def garbage_collect_armatures():
+    for arm in bpy.data.armatures:
+        if arm.users == 0:
+            bpy.data.armatures.remove(arm, do_unlink=True)
+
+
+###############################################################################################
+######################################## Selection ############################################ 
+#------------ deselect all objects ------------ 
+def deselect_all():
+    objs = []
+    for obj in bpy.context.selected_objects:
+        objs.append(obj)
+    for obj in objs:
+        obj.select_set(False)
+
+#------------------------ validate object type ------------------------
+def validate_selection(selected_object, mode = 'ARMATURE'):
+    if selected_object.type == mode:
+        return selected_object
+    else:
+        return None
+    
+
+#############################################################################################
+######################################## Collections ########################################
+#------------------------ add or set rigid body constraint collection ------------------------
+def rb_constraint_collection_set(collection_name = 'RigidBodyConstraints'):
+    if collection_name not in bpy.data.collections:
+        bpy.data.collections.new(collection_name)
+
+    bpy.context.scene.rigidbody_world.constraints = bpy.data.collections[collection_name]    
+        
+#------------------------ create collection and/or add add objects ------------------------
+def object_add_to_collection(collection_name, objects=[]):
+    col = None
+    if isinstance(type(objects), bpy.types.Object.__class__):
+        objects = [objects]
+
+    if collection_name not in bpy.data.collections:
+        col = bpy.data.collections.new(collection_name)
+        bpy.context.scene.collection.children.link(col)
+    else:
+        col = bpy.data.collections[collection_name]
+    
+    if col:
+        for obj in objects:
+            if obj.name not in bpy.data.collections[collection_name].objects:    
+                bpy.data.collections[collection_name].objects.link(obj)
+
+
+    bpy.context.view_layer.update()
+    # print(col.name)
+
+    return col
+
+#------------------------ remove objects from collection ------------------------
+def object_remove_from_collection(collection, objects):
+    if isinstance(type(objects), bpy.types.Object.__class__):
+        objects = [objects]
+
+    if collection != None:
+        for obj in objects:
+            if obj.name in collection.objects:
+                collection.objects.unlink(obj)
+
+#------------------------ delete collection & objects ------------------------
+def collection_remove(collection):
+    if collection:
+        for obj in collection.objects:
+            bpy.data.objects.remove(obj, do_unlink=True)
+        bpy.context.scene.collection.children.unlink(collection)
+        bpy.data.collections.remove(collection, do_unlink=True)
+
+
+######################################################################################################
+######################################## Configuration / JSON ########################################
+#------------------------ import json file, set as selected armature's config ------------------------
 def load_text(context, filepath=None, datablock=None):
     if filepath and not datablock:
         text = bpy.data.texts.load(filepath)
@@ -101,7 +163,7 @@ def load_text(context, filepath=None, datablock=None):
             if control_rig:
                 control_rig.data.ragdoll.config = text
 
-
+#------------------------ parse json file / internal text content, return dict ------------------------
 def config_load(config):
     data = None
     filepath = bpy.path.abspath(config.filepath)
@@ -126,7 +188,7 @@ def config_load(config):
                     print(e)
     return data
 
-
+#------------------------ create config file w/ default values ------------------------
 def config_create(armature):
     deform_rig = None
     control_rig = None
@@ -175,52 +237,9 @@ def config_create(armature):
     return text_data_block
 
 
-
-
-
-
-#-------- add or set rigid body constraint collection --------
-def rb_constraint_collection_set(collection_name = 'RigidBodyConstraints'):
-    if collection_name not in bpy.data.collections:
-        bpy.data.collections.new(collection_name)
-
-    bpy.context.scene.rigidbody_world.constraints = bpy.data.collections[collection_name]
-    
-        
-#-------- create collection and/or add add objects --------
-def collection_objects_add(collection_name, objects=[]):
-    col = None
-    if isinstance(type(objects), bpy.types.Object.__class__):
-        objects = [objects]
-
-    if collection_name not in bpy.data.collections:
-        col = bpy.data.collections.new(collection_name)
-        bpy.context.scene.collection.children.link(col)
-    else:
-        col = bpy.data.collections[collection_name]
-    
-    if col:
-        for obj in objects:
-            if obj.name not in bpy.data.collections[collection_name].objects:    
-                bpy.data.collections[collection_name].objects.link(obj)
-
-
-    bpy.context.view_layer.update()
-    # print(col.name)
-
-    return col
-
-
-def collection_objects_remove(collection, objects=[]):
-    if isinstance(type(objects), bpy.types.Object.__class__):
-        objects = [objects]
-
-    for obj in objects:
-        if obj.name in collection.objects:
-            collection.objects.unlink(obj)
-
-
-#-------- add a cube --------
+##########################################################################################
+######################################## Geometry ########################################
+#------------------------ add a cube ------------------------
 def cube(width, name, mode='OBJECT'):
     verts = [
             (width/2, width/2, -width/2),
@@ -254,8 +273,3 @@ def cube(width, name, mode='OBJECT'):
         return cube 
 
 
-#-------- remove armatures w/o users --------
-def garbage_collect_armatures():
-    for arm in bpy.data.armatures:
-        if arm.users == 0:
-            bpy.data.armatures.remove(arm, do_unlink=True)

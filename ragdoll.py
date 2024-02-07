@@ -216,7 +216,7 @@ class RagDoll(bpy.types.PropertyGroup):
     deform_rig: bpy.props.PointerProperty(type=bpy.types.Object, poll=armature_poll)
     control_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll)
     
-    #-------- Control Rig Name --------
+    #-------- Control Rig Name Suffix --------
     ctrl_rig_suffix: bpy.props.StringProperty(default=".Control")
     
     #-------- Grouped Simulation Objects and Properties -------- 
@@ -863,7 +863,7 @@ class RagDoll(bpy.types.PropertyGroup):
 
     def hook_set(context, pose_bone, hook_pose_bone):
         pose_bone.ragdoll.type = 'HOOK'
-        RagDoll.rigid_bodies_add(hook_pose_bone, mode='HOOK')
+        context.object.data.ragdoll.hooks.collection = RagDoll.rigid_bodies_add(hook_pose_bone, mode='HOOK')
         context.object.data.ragdoll.hooks.constraints.collection = RagDoll.rigid_body_constraints_add(context.object, [pose_bone, hook_pose_bone], 'HOOK')
         RagDoll.rb_constraint_defaults(context.object.data.ragdoll.hooks.constraints.collection, 0, 22.5)
 

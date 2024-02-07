@@ -2,6 +2,7 @@ bl_info = {
     "name": "Ragdoll",
     "blender": (4, 0, 1),
     "category": "Physics",
+    "author": "Oliver Jelko"
 }
 
 import bpy
@@ -48,8 +49,8 @@ def unregister():
     #-------- unset custom properties --------
     if bpy.types.Armature.ragdoll: del bpy.types.Armature.ragdoll
     if bpy.types.Bone.ragdoll: del bpy.types.Bone.ragdoll
-    
-    #-------- register custom properties --------
+
+    #-------- unregister custom properties --------
     bpy.utils.unregister_class(ragdoll.RdConnectors)
     bpy.utils.unregister_class(ragdoll.RdRigidBodyConstraints)
     bpy.utils.unregister_class(ragdoll.RdRigidBodies)

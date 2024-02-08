@@ -44,6 +44,8 @@ def register():
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_TextBrowseImport)
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_RagdollJsonAdd)
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_HookAdd)
+    bpy.utils.register_class(ragdoll_ui.OBJECT_OT_HookRemove)
+
 
 def unregister():
     #-------- unset custom properties --------
@@ -75,6 +77,8 @@ def unregister():
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_TextBrowseImport)
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_RagdollJsonAdd)
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_HookAdd)
+    bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_HookRemove)
+
 
 if "bpy" in locals():
     import importlib

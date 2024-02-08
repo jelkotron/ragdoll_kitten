@@ -45,6 +45,7 @@ def register():
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_RagdollJsonAdd)
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_HookAdd)
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_HookRemove)
+    bpy.utils.register_class(ragdoll_ui.OBJECT_OT_MeshApproximate)
 
 
 def unregister():
@@ -78,6 +79,7 @@ def unregister():
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_RagdollJsonAdd)
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_HookAdd)
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_HookRemove)
+    bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_MeshApproximate)
 
 
 if "bpy" in locals():

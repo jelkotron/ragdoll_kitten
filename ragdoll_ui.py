@@ -243,6 +243,23 @@ class OBJECT_OT_HookRemove(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class OBJECT_OT_MeshApproximate(bpy.types.Operator):
+    """Approximate RagDoll Rigid Body Shapes"""
+    bl_idname = "mesh.rd_approximate"
+    bl_label = "Approximate Rigid Bodies"
+    bl_options = {'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        if context.object.type == 'ARMATURE':
+            if context.object.data.ragdoll.type == 'CONTROL':
+                return True
+        return False
+    
+    def execute(self, context):
+        print("Info: Rigid Body Shapes approximated.")
+        return {'FINISHED'}
+
 class OBJECT_PT_RagDollCollections(bpy.types.Panel):
     """Subpanel to Ragdoll"""
     bl_label = "Collections"
@@ -463,6 +480,24 @@ class OBJECT_PT_RagDoll(bpy.types.Panel):
 
                                 row = geo_box.row()
                                 row.prop(context.object.data.ragdoll.rigid_bodies, "width_max", text="Maximum Width")
+
+                                row = geo_box.row()
+                                split = row.split(factor=0.33)
+                                col_0 = split.column()
+                                col_1 = split.column()
+                                row = col_0.row()
+                                row.label(text="Target Mesh:")
+                                row = col_1.row()
+                                row.prop(context.object.data.ragdoll, "deform_mesh", text="")
+
+                                row = col_0.row()
+                                row.label(text="Offset:")
+                                row = col_1.row()
+                                row.prop(context.object.data.ragdoll, "deform_mesh_offset", text="")
+                                row = col_1.row()
+                                row.operator("mesh.rd_approximate")
+
+
 
                         if context.object.data.ragdoll.initialized == True:
                             if context.object.data.ragdoll.type == 'DEFORM':

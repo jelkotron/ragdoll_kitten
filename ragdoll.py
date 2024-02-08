@@ -217,7 +217,8 @@ class RagDoll(bpy.types.PropertyGroup):
     #-------- Object Pointers --------
     deform_rig: bpy.props.PointerProperty(type=bpy.types.Object, poll=armature_poll)
     control_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll)
-    
+    deform_mesh: bpy.props.PointerProperty(type=bpy.types.Object, name="Target Mesh", poll=mesh_poll)
+    deform_mesh_offset: bpy.props.FloatVectorProperty(name="Offset", subtype="XYZ")
     #-------- Control Rig Name Suffix --------
     ctrl_rig_suffix: bpy.props.StringProperty(default=".Control")
     

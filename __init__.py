@@ -30,6 +30,7 @@ def register():
     bpy.types.PoseBone.ragdoll = bpy.props.PointerProperty(type=ragdoll.RagDollBone)
    
     #-------- register UI elements --------
+    bpy.utils.register_class(ragdoll_ui.Scene_OT_RigidBodyWorldAddCustom)
     bpy.utils.register_class(ragdoll_ui.OBJECT_PT_RagDoll)
     bpy.utils.register_class(ragdoll_ui.OBJECT_PT_RagDollCollections)
     bpy.utils.register_class(ragdoll_ui.OBJECT_PT_RagDollSuffixes)
@@ -54,6 +55,7 @@ def unregister():
     if bpy.types.Bone.ragdoll: del bpy.types.Bone.ragdoll
 
     #-------- unregister custom properties --------
+    bpy.utils.unregister_class(ragdoll_ui.Scene_OT_RigidBodyWorldAddCustom)
     bpy.utils.unregister_class(ragdoll.RdConnectors)
     bpy.utils.unregister_class(ragdoll.RdRigidBodyConstraints)
     bpy.utils.unregister_class(ragdoll.RdRigidBodies)

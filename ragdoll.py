@@ -242,7 +242,7 @@ class RagDoll(bpy.types.PropertyGroup):
     initialized: bpy.props.BoolProperty(name="RagDoll initialized", default=False)
     
     # -------- Animation/Simulation switches --------
-    kinematic: bpy.props.BoolProperty(name="Animated", default=True)
+    kinematic: bpy.props.BoolProperty(name="Animated", default=False)
     simulation_influence: bpy.props.FloatProperty(name="Rigid Body_Influence",min=0.0, max=1.0, default=0.0)
    
     # -------- Hierarchy --------
@@ -456,67 +456,71 @@ class RagDoll(bpy.types.PropertyGroup):
 
         if control_rig:
             for pb in pbones:
-                geo_name = deform_rig.name + "." + pb.name + suffix
-                # add and scale box geometry per bone
-                new_cube = ragdoll_aux.cube(1, geo_name)
-                new_cube.display_type = 'WIRE'
+                if pb.id_data.data.bones[pb.name].use_deform or mode == 'HOOK':
+                    print("---> PipiKaka!")
+                    # add cubes to collection
+                    geo_name = deform_rig.name + "." + pb.name + suffix
+                    # add and scale box geometry per bone
+                    new_cube = ragdoll_aux.cube(1, geo_name, 'OBJECT')
+                    new_cube.display_type = 'WIRE'
 
-                for vert in new_cube.data.vertices:
-                    vert.co[0] *= 1 / new_cube.dimensions[1] * pb.length * deform_rig.data.ragdoll.rigid_bodies.width_relative
-                    vert.co[1] *= 1 / new_cube.dimensions[1] * pb.length
-                    vert.co[2] *= 1 / new_cube.dimensions[1] * pb.length * deform_rig.data.ragdoll.rigid_bodies.width_relative
+                    for vert in new_cube.data.vertices:
+                        vert.co[0] *= 1 / new_cube.dimensions[1] * pb.length * deform_rig.data.ragdoll.rigid_bodies.width_relative
+                        vert.co[1] *= 1 / new_cube.dimensions[1] * pb.length
+                        vert.co[2] *= 1 / new_cube.dimensions[1] * pb.length * deform_rig.data.ragdoll.rigid_bodies.width_relative
 
-                # parent cube to control rig bone
-                new_cube.matrix_local = pb.matrix
-                new_cube.parent = control_rig
-                new_cube.parent_type = 'BONE'
-                new_cube.parent_bone = pb.name
+                    # parent cube to control rig bone
+                    new_cube.matrix_local = pb.matrix
+                    new_cube.parent = control_rig
+                    new_cube.parent_type = 'BONE'
+                    new_cube.parent_bone = pb.name
 
-                # apply bone's transform to cube
-                vector = (pb.head - pb.tail) / 2
-                translate = mathutils.Matrix.Translation(vector)
-                new_cube.matrix_parent_inverse = pb.matrix.inverted() @ translate
-            
-                # add cube to rigid body collection & set collision shape 
-                bpy.context.scene.rigidbody_world.collection.objects.link(new_cube)
-                new_cube.rigid_body.collision_shape = 'BOX'
-                new_cube.rigid_body.kinematic = True
+                    # apply bone's transform to cube
+                    vector = (pb.head - pb.tail) / 2
+                    translate = mathutils.Matrix.Translation(vector)
+                    new_cube.matrix_parent_inverse = pb.matrix.inverted() @ translate
+                
+                    # add cube to rigid body collection & set collision shape 
+                    bpy.context.scene.rigidbody_world.collection.objects.link(new_cube)
+                    new_cube.rigid_body.collision_shape = 'BOX'
+                    new_cube.rigid_body.kinematic = False
 
-                # add driver to switch animation/simulation
-                if mode == 'RIGID_BODIES':
-                    # set bone property
-                    pb.ragdoll.rigid_body = new_cube
-                    if control_rig.pose.bones.get(pb.name):
-                        control_rig.pose.bones[pb.name].ragdoll.rigid_body = new_cube
-                        
-                    # add driver
-                    driven_value = new_cube.rigid_body.driver_add("kinematic")
-                    driven_value.driver.type = 'SCRIPTED'
-                    driven_value.driver.expression = "kinematic"
-                    driver_var = driven_value.driver.variables.new()
-                    driver_var.name = "kinematic"
-                    driver_var.type = 'SINGLE_PROP'
-                    target = driver_var.targets[0]
-                    target.id_type = 'ARMATURE'
-                    target.id = control_rig.data
-                    target.data_path = 'ragdoll.kinematic'
+                    # add driver to switch animation/simulation
+                    if mode == 'RIGID_BODIES':
+                        # set bone property
+                        pb.ragdoll.rigid_body = new_cube
+                        if control_rig.pose.bones.get(pb.name):
+                            control_rig.pose.bones[pb.name].ragdoll.rigid_body = new_cube
+                            
+                        # add driver
+                        driven_value = new_cube.rigid_body.driver_add("kinematic")
+                        driven_value.driver.type = 'SCRIPTED'
+                        driven_value.driver.expression = "kinematic"
+                        driver_var = driven_value.driver.variables.new()
+                        driver_var.name = "kinematic"
+                        driver_var.type = 'SINGLE_PROP'
+                        target = driver_var.targets[0]
+                        target.id_type = 'ARMATURE'
+                        target.id = control_rig.data
+                        target.data_path = 'ragdoll.kinematic'
 
-                elif mode == 'WIGGLE':
-                    # TODO: set this elsewhere
-                    new_cube.rigid_body.collision_collections[0] = False
-                    new_cube.rigid_body.collision_collections[1] = True
-                    # set bone property
-                    pb.ragdoll.wiggle = new_cube
-                    if control_rig.pose.bones.get(pb.name):
-                        control_rig.pose.bones[pb.name].ragdoll.wiggle = new_cube
+                    elif mode == 'WIGGLE':
+                        new_cube.rigid_body.kinematic = True
+                        # TODO: set this elsewhere
+                        new_cube.rigid_body.collision_collections[0] = False
+                        new_cube.rigid_body.collision_collections[1] = True
+                        # set bone property
+                        pb.ragdoll.wiggle = new_cube
+                        if control_rig.pose.bones.get(pb.name):
+                            control_rig.pose.bones[pb.name].ragdoll.wiggle = new_cube
 
-                elif mode == 'HOOK':
-                    pb.ragdoll.rigid_body = new_cube
+                    elif mode == 'HOOK':
+                        new_cube.rigid_body.kinematic = True
+                        pb.ragdoll.rigid_body = new_cube
 
-                rb_bones.append(new_cube)
+                    rb_bones.append(new_cube)
     
         
-        # add cubes to collection
         collection_name = deform_rig.name + suffix
         collection = ragdoll_aux.object_add_to_collection(collection_name, [rb_geo for rb_geo in rb_bones])
         ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, [rb_geo for rb_geo in rb_bones])
@@ -564,6 +568,18 @@ class RagDoll(bpy.types.PropertyGroup):
 
         else:
             print("Error: Cannot create mesh with width of 0")
+
+
+    def rigid_bodies_approximate(context):
+        control_rig = context.object
+        pose_bones = context.selected_pose_bones
+        target = control_rig.data.ragdoll.deform_mesh
+        print([bone.ragdoll.rigid_body for bone in pose_bones])
+        if target:
+            for bone in pose_bones:
+                if bone.ragdoll.rigid_body:
+                    ragdoll_aux.snap_rigid_body_cube(bone.ragdoll.rigid_body, target, 'XZ')
+
 
 
     def wiggle_spring_drivers_add(control_rig):
@@ -657,13 +673,14 @@ class RagDoll(bpy.types.PropertyGroup):
             suffix = control_rig.data.ragdoll.wiggles.constraints.suffix
             collection_name = control_rig.data.ragdoll.deform_rig.name + suffix
             for bone in bones:
-                obj_0 = bone.ragdoll.rigid_body
-                obj_1 = bone.ragdoll.wiggle
-                empty = RagDoll.rb_const_add(obj_0, obj_1, bone, suffix)
-                empty.rigid_body_constraint.enabled = control_rig.data.ragdoll.wiggles.constraints.wiggle
-                bone.ragdoll.wiggle_constraint = empty
-                collection = ragdoll_aux.object_add_to_collection(collection_name, empty)
-                ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, empty)
+                if bone.id_data.data.bones[bone.name].use_deform:
+                    obj_0 = bone.ragdoll.rigid_body
+                    obj_1 = bone.ragdoll.wiggle
+                    empty = RagDoll.rb_const_add(obj_0, obj_1, bone, suffix)
+                    empty.rigid_body_constraint.enabled = control_rig.data.ragdoll.wiggles.constraints.wiggle
+                    bone.ragdoll.wiggle_constraint = empty
+                    collection = ragdoll_aux.object_add_to_collection(collection_name, empty)
+                    ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, empty)
 
         elif mode == 'HOOK':
             suffix = control_rig.data.ragdoll.hooks.constraints.suffix

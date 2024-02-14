@@ -253,12 +253,35 @@ class OBJECT_OT_MeshApproximate(bpy.types.Operator):
     def poll(cls, context):
         if context.object.type == 'ARMATURE':
             if context.object.data.ragdoll.type == 'CONTROL':
-                return True
+                if bpy.context.mode == 'POSE':
+                    if len(bpy.context.selected_pose_bones) > 0:
+                        return True
         return False
     
     def execute(self, context):
+        RagDoll.rigid_bodies_approximate(context)
         print("Info: Rigid Body Shapes approximated.")
         return {'FINISHED'}
+
+
+
+class Scene_OT_RigidBodyWorldAddCustom(bpy.types.Operator):
+    """Add Rigid Body World, set Collection"""
+    bl_idname = "rigidbody.world_add_custom"
+    bl_label = "Add Rigid Body World and set collection"
+    bl_options = {'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return True
+    
+    def execute(self, context):
+        bpy.ops.rigidbody.world_add()
+        if not context.scene.rigidbody_world.collection:
+            context.scene.rigidbody_world.collection = bpy.data.collections.new("RigidBodyWorld")
+        print("Info: Rigid Body World added.")
+        return {'FINISHED'}
+
 
 class OBJECT_PT_RagDollCollections(bpy.types.Panel):
     """Subpanel to Ragdoll"""
@@ -407,7 +430,7 @@ class OBJECT_PT_RagDoll(bpy.types.Panel):
                 row = box.row()
                 row.label(text="Please add rigid body world first.", icon="ERROR")
                 row = box.row()
-                row.operator("rigidbody.world_add")
+                row.operator("rigidbody.world_add_custom", text="Add Rigid Body World")
                 
             elif not context.scene.rigidbody_world.constraints:
                 box = layout.box()

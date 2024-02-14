@@ -1,6 +1,7 @@
 import bpy
 import json
 import os
+import mathutils
 
 #######################################################################################
 ######################################## Bones ########################################
@@ -263,13 +264,145 @@ def cube(width, name, mode='OBJECT'):
             (4, 0, 3, 7)
             ]
 
-    if mode == 'OBJECT':
-        mesh = bpy.data.meshes.new(name) 
-        mesh.from_pydata(verts, [], faces)
+    mesh = bpy.data.meshes.new(name) 
+    mesh.from_pydata(verts, [], faces)
+    
+    if mode == 'DATA':
+        return mesh
+    
+    elif mode == 'OBJECT':
         cube = bpy.data.objects.new(name, mesh) 
         bpy.context.scene.collection.objects.link(cube)
+        return cube
+    
+    
 
-        return cube 
+# ------------------------ calculate face normal from list of coordinates ------------------------
+# input: [ [<vector3 vertex_0>, <vector3 vertex_1>, <vector3 vertex_2>], [...] ]
+# return: <vector3 face_normal>
+def normal_from_vertex_co_list(vertices):
+    if len(vertices) > 0:    
+        nrm = mathutils.Vector([0,0,0])
+        for i in range(len(vertices)):
+            vert_0 = mathutils.Vector(vertices[i])
+            vert_1 = mathutils.Vector(vertices[(i+1) % len(vertices)])
+            nrm += vert_0.cross(vert_1)
+        
+        return nrm.normalized()        
+    else:
+        return None
+
+
+# ------------------------ convert a mesh's triangles to a simplified list coordinates ------------------------
+# input: mesh object (object type datablock)
+# return: [ [<vector3 vertex_0>, <vector3 vertex_1>, <vector3 vertex_2>], [...] ] 
+def get_triangles(mesh_source):
+    loop_tris = mesh_source.data.loop_triangles
+    triangles = []    
+    for key, value in loop_tris.items():
+        tri = []
+        for vert_index in value.vertices:
+            vertex = mesh_source.data.vertices[vert_index]
+            tri.append(mesh_source.matrix_world @ vertex.co)
+        triangles.append(tri)
+    return triangles    
+
+
+# ------------------------ translate a polygon's vertices along a vector ------------------------
+def translate_polygon(object, polygon, vector, axis='XYZ'):
+    # TODO: Complex mesh support
+    axis = axis_string_to_index_list(axis)
+    
+    mesh = polygon.id_data
+    verts = mesh.vertices
+    try:
+        for idx in polygon.vertices:
+            vertex = verts[idx]
+            obj_scale = object.matrix_world.to_scale()
+            for i in range(3):
+                if i in axis:
+                    vertex.co[i] = vertex.co[i] + vector[i] * 1 / obj_scale[i]
+    except ZeroDivisionError as e:
+        print("ZeroDivisionError: %s. Scale on %s-axis is 0"%(e, ["X","Y","Z"][i]))
+
+
+# ------------------------ calculate vectors between source object's face centers and target objects surface ------------------------
+# input: source object of mesh type, target object of mesh type
+# return: { <int face index> : <vector3 translation> }
+def get_snapping_vectors(object, target):
+    triangles = []
+                
+    if isinstance(target, bpy.types.Object): 
+        if target.type == 'MESH':
+            triangles = get_triangles(target)
+    
+    if len(triangles) > 0:
+        if isinstance(object, bpy.types.Object) and object.type == 'MESH': 
+            vectors = {}
+            for i in range(len(object.data.polygons)):
+                poly = object.data.polygons[i]
+                normal_local = poly.normal
+                normal_world = (object.matrix_world.to_quaternion() @ normal_local).normalized()
+                center_world = object.matrix_world @ poly.center
+                
+                for tri in triangles:
+                    project_inwards = False        
+                    intersect = mathutils.geometry.intersect_ray_tri(tri[0], tri[1], tri[2], normal_world, center_world, True)
+                    # project inwards if no intersection is found
+                    if not intersect:
+                        target_normal = normal_from_vertex_co_list(tri)
+                        # avoid projecting to back faces
+                        if normal_world.dot(target_normal) > 0:
+                            intersect = mathutils.geometry.intersect_ray_tri(tri[0], tri[1], tri[2], -normal_world, center_world, True)
+                        if intersect:
+                            project_inwards = True        
+                        
+                    if intersect:
+                        distance = (intersect - center_world).length
+                        vector = normal_local * distance
+                        
+                        if project_inwards:
+                            vector = -normal_local * distance
+                        
+                        vectors[i] = vector
+
+                        break
+
+            return vectors
+        
+        else:
+            return None
+    
+
+# ------------------------ snap a mesh's faces to target mesh surface ------------------------ 
+# experimental function, not a fully featured shrinkwrap.
+# limitations: 
+#   - quad cube source object only.
+#   - single target object only
+#   - if source and target intersect, two iterations are necessary.
+def snap_rigid_body_cube(mesh_source, mesh_target, axis='XYZ'):
+    if len(mesh_source.data.vertices) == 8 and len(mesh_source.data.polygons) == 6:
+        vectors = get_snapping_vectors(mesh_source, mesh_target)
+        
+        if vectors:
+            for key, value in vectors.items():
+                vect = vectors[key]
+                poly = mesh_source.data.polygons[key]
+                translate_polygon(mesh_source, poly, vect, axis)
+                origin_to_center(mesh_source)
+        else:
+            print("Error: Invalid target.")
+    else:
+        print("Error: Mesh snapping only works on Quad Cubes.")
+
+
+def origin_to_center(mesh_obj):
+    center = sum((vert.co for vert in mesh_obj.data.vertices), mathutils.Vector()) / len(mesh_obj.data.vertices)
+    translation = mathutils.Matrix.Translation(-center)
+    mesh_obj.data.transform(translation)
+    for child in mesh_obj.children:
+        child.location -= center # TODO: use a matrices if possible!
+    mesh_obj.matrix_world.translation = mesh_obj.matrix_world @ center
 
 
 #########################################################################################
@@ -298,3 +431,23 @@ def force_update_drivers(context):
                         fcurve.driver.expression = fcurve.driver.expression[:-1]
                     else:
                         fcurve.driver.expression += " "
+
+
+######################################################################################
+######################################## Misc ########################################
+# ------------------------ convert axis described as a string to a list of indices ------------------------
+# input: string, i.e. 'XYZ' 
+# return: [0,1,2]
+def axis_string_to_index_list(axis_string):
+    map = {
+        'X': 0,
+        'Y': 1,
+        'Z': 2,
+        }
+    indices = []
+        
+    for key, value in map.items():
+        if key in axis_string.upper():
+            indices.append(value)
+            
+    return indices    

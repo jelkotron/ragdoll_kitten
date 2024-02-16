@@ -12,6 +12,8 @@ import ragdoll_ui
 import ragdoll
 import ragdoll_aux
 
+def mesh_poll(self, object):
+     return object.type == 'MESH'
 
 def register():
     #-------- register custom properties --------
@@ -29,6 +31,8 @@ def register():
     bpy.types.Armature.ragdoll = bpy.props.PointerProperty(type=ragdoll.RagDoll)
     bpy.types.PoseBone.ragdoll = bpy.props.PointerProperty(type=ragdoll.RagDollBone)
     bpy.types.Object.ragdoll_bone_name = bpy.props.StringProperty()
+    bpy.types.Object.ragdoll_mesh_0 = bpy.props.PointerProperty(type=bpy.types.Object, poll=mesh_poll)
+    bpy.types.Object.ragdoll_mesh_1 = bpy.props.PointerProperty(type=bpy.types.Object, poll=mesh_poll)
     
     #-------- register UI elements --------
     bpy.utils.register_class(ragdoll_ui.Scene_OT_RigidBodyWorldAddCustom)
@@ -59,6 +63,9 @@ def unregister():
         del bpy.types.Bone.ragdoll
     if bpy.types.Object.ragdoll_bone_name: 
         del bpy.types.Object.ragdoll_bone_name 
+    if bpy.types.Object.ragdoll_mesh: 
+        del bpy.types.Object.ragdoll_mesh
+
 
     #-------- unregister custom properties --------
     bpy.utils.unregister_class(ragdoll_ui.Scene_OT_RigidBodyWorldAddCustom)

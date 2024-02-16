@@ -117,10 +117,14 @@ def wiggle_const_update(self, context):
 
 
 #---- Property Definition ----
-class RdRigidBodyConstraints(bpy.types.PropertyGroup):
-    collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Ragdoll Rigid Body Constraint Collection") # type: ignore
-    suffix: bpy.props.StringProperty(name="Rigid Body Constraint Suffix", default=".Constraint") # type: ignore
+
+
+
+class ObjectConstraintsBase(bpy.types.PropertyGroup):
+    collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Collection") # type: ignore
+    suffix: bpy.props.StringProperty(name="Ragdoll Ridig Body Suffix", default=".Connect") # type: ignore 
     control_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
+    deform_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
 
     def add(self, bones, deform_rig_name):
         collection_name = deform_rig_name + self.suffix
@@ -128,95 +132,135 @@ class RdRigidBodyConstraints(bpy.types.PropertyGroup):
         for bone in bones:
             for child in bone.children:
                 if child in bones:
-                    obj_0 = bone.ragdoll.rigid_body
-                    obj_1 = child.ragdoll.rigid_body
-                    empty = self.add_single(obj_0, obj_1, child, self.suffix, 0.1)
-                    bone.ragdoll.constraint = empty
+                    empty = self.add_single(child)
+                    # bone.ragdoll.constraint = empty
                     collection = ragdoll_aux.object_add_to_collection(collection_name, empty)
                     ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, empty)
+                    empty.ragdoll_mesh_0 = bone.ragdoll.rigid_body
+                    empty.ragdoll_mesh_1 = child.ragdoll.rigid_body
+                    empty.ragdoll_bone_name = bone.name
+
         self.collection = collection
-        self.defaults_set(0, 22.5)
-        return collection
 
-
-    def add_single(self, object_0, object_1, parent_bone, suffix, size=0.1, constraint_type='GENERIC_SPRING'):
-        name = parent_bone.id_data.name + "." + parent_bone.name + suffix
+    def add_single(self, bone):
+        name = bone.name + self.suffix
         empty = bpy.data.objects.new(name, None)
-        bpy.context.collection.objects.link(empty)
-        empty.empty_display_size = size
-        
-        bpy.context.scene.rigidbody_world.constraints.objects.link(empty)
-        empty.rigid_body_constraint.type = constraint_type
-        
-        vec = (parent_bone.head - parent_bone.tail)
-        trans = mathutils.Matrix.Translation(vec)
-        empty.matrix_local = parent_bone.matrix
-        
-        empty.parent = parent_bone.id_data
-        empty.parent_type = 'BONE'
-        empty.parent_bone = parent_bone.name
-        empty.matrix_parent_inverse = parent_bone.matrix.inverted() @ trans
-        
-        if object_0:
-            empty.rigid_body_constraint.object1 = object_0
-        if object_1:
-            empty.rigid_body_constraint.object2 = object_1
-
+        empty.matrix_world = self.control_rig.matrix_world @ bone.matrix
+        bpy.context.scene.collection.objects.link(empty)
+        empty.empty_display_size = 0.1
         return empty
-    
-
-    def defaults_set(self, max_lin, max_ang):
-        if self.collection:
-            for obj in self.collection.objects:
-                rb_const = obj.rigid_body_constraint
-                if rb_const:
-                    if rb_const.type == 'GENERIC' or rb_const.type == 'GENERIC_SPRING':
-                        rb_const.use_limit_lin_x = True
-                        rb_const.use_limit_lin_y = True
-                        rb_const.use_limit_lin_z = True
-                        
-                        rb_const.use_limit_ang_x = True
-                        rb_const.use_limit_ang_y = True
-                        rb_const.use_limit_ang_z = True
-                        # default limits
-                        rb_const.limit_lin_x_lower = -max_lin
-                        rb_const.limit_lin_x_upper = max_lin
-                        rb_const.limit_lin_y_lower = -max_lin
-                        rb_const.limit_lin_y_upper = max_lin
-                        rb_const.limit_lin_z_lower = -max_lin
-                        rb_const.limit_lin_z_upper = max_lin
-                        
-                        rb_const.limit_ang_x_lower = math.radians(-max_ang)
-                        rb_const.limit_ang_x_upper = math.radians(max_ang)
-                        rb_const.limit_ang_y_lower = math.radians(-max_ang)
-                        rb_const.limit_ang_y_upper = math.radians(max_ang)
-                        rb_const.limit_ang_z_lower = math.radians(-max_ang)
-                        rb_const.limit_ang_z_upper = math.radians(max_ang) 
 
 
+class RdRigidBodyConstraints(ObjectConstraintsBase):
+    collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Ragdoll Rigid Body Constraint Collection") # type: ignore
+    suffix: bpy.props.StringProperty(name="Rigid Body Constraint Suffix", default=".Constraint") # type: ignore
+    control_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
+    enable: bpy.props.BoolProperty(name="Use Constraints", default=False, update=wiggle_const_update) # type: ignore
+    default_distance: bpy.props.FloatProperty(name="Maximum Wiggle Translation",min=0.0, max=16.0, default=0, update=wiggle_const_update) # type: ignore
+    default_rotation: bpy.props.FloatProperty(name="Maximum Wiggle Rotation", subtype="ANGLE", min=0.0, max=math.radians(360.0), default=math.radians(22.5), update=wiggle_const_update) # type: ignore
+    restrict_linear: bpy.props.BoolProperty(name="Limit Wiggle Translation", default=True, update=wiggle_const_update) # type: ignore
+    restrict_angular: bpy.props.BoolProperty(name="Limit Wiggle Rotation", default=False, update=wiggle_const_update) # type: ignore
 
+    def add(self, control_rig, bones, constraint_type):
+        super().add(bones, control_rig.data.ragdoll.deform_rig.name)
+        for obj in self.collection.objects:
+            obj.parent = control_rig
+            obj.parent_type = 'BONE'
+            obj.parent_bone = obj.ragdoll_bone_name
+            # restore initial transform by applying parent inverse
+            obj.matrix_world @= obj.matrix_parent_inverse
 
-class RdConnectors(bpy.types.PropertyGroup):
+            bpy.context.scene.rigidbody_world.constraints.objects.link(obj)
+            obj.rigid_body_constraint.type = constraint_type
+
+            obj.rigid_body_constraint.object1 = obj.ragdoll_mesh_0
+            obj.rigid_body_constraint.object2 = obj.ragdoll_mesh_1
+
+            self.default_set(obj)
+            
+    def default_set(self, obj, max_lin=None, max_ang=None):
+        if not max_lin:
+            max_lin = self.default_distance
+
+        if not max_ang:
+            max_ang = self.default_rotation
+
+        if obj.rigid_body_constraint:
+            if obj.rigid_body_constraint.type == 'GENERIC' or obj.rigid_body_constraint.type == 'GENERIC_SPRING':
+                # restrict linear movement
+                obj.rigid_body_constraint.use_limit_lin_x = self.restrict_linear
+                obj.rigid_body_constraint.use_limit_lin_y = self.restrict_linear
+                obj.rigid_body_constraint.use_limit_lin_z = self.restrict_linear
+                # restrict angular movement
+                obj.rigid_body_constraint.use_limit_ang_x = self.restrict_angular
+                obj.rigid_body_constraint.use_limit_ang_y = self.restrict_angular
+                obj.rigid_body_constraint.use_limit_ang_z = self.restrict_angular
+                # limit linear movement
+                obj.rigid_body_constraint.limit_lin_x_lower = -max_lin
+                obj.rigid_body_constraint.limit_lin_x_upper = max_lin
+                obj.rigid_body_constraint.limit_lin_y_lower = -max_lin
+                obj.rigid_body_constraint.limit_lin_y_upper = max_lin
+                obj.rigid_body_constraint.limit_lin_z_lower = -max_lin
+                obj.rigid_body_constraint.limit_lin_z_upper = max_lin
+                # limit angular movement
+                obj.rigid_body_constraint.limit_ang_x_lower = math.radians(-max_ang)
+                obj.rigid_body_constraint.limit_ang_x_upper = math.radians(max_ang)
+                obj.rigid_body_constraint.limit_ang_y_lower = math.radians(-max_ang)
+                obj.rigid_body_constraint.limit_ang_y_upper = math.radians(max_ang)
+                obj.rigid_body_constraint.limit_ang_z_lower = math.radians(-max_ang)
+                obj.rigid_body_constraint.limit_ang_z_upper = math.radians(max_ang) 
+                
+
+class RdConnectors(ObjectConstraintsBase):
     collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Ragdoll Connector Collection") # type: ignore
     suffix: bpy.props.StringProperty(name="Ragdoll Ridig Body Suffix", default=".Connect") # type: ignore
 
-
+    def add(self, bones, deform_rig_name):
+        super().add(bones, deform_rig_name)
+        for obj in self.collection.objects:
+            obj.empty_display_size = 0.085
+            obj.empty_display_type = 'SPHERE'
+            # set parent        
+            obj.parent_type = 'OBJECT'
+            obj.parent = obj.ragdoll_mesh_0
+            # restore initial transform by applying parent inverse
+            obj.matrix_world @= obj.matrix_parent_inverse
 
     
-class SimulationMeshBaseClass(bpy.types.PropertyGroup):
+# class RdWiggleConstraints(ObjectConstraintsBase):
+#     suffix: bpy.props.StringProperty(name="Rigid Body Constraint Suffix", default=".Constraint") # type: ignore
+#     use_falloff: bpy.props.BoolProperty(name="Use Wiggle Falloff", default=False, update=wiggle_const_update) # type: ignore
+#     falloff_invert: bpy.props.BoolProperty(name="Invert Falloff", default=False, update=wiggle_const_update) # type: ignore
+#     falloff_chain_ends: bpy.props.BoolProperty(name="Chain Ends", default=True, update=wiggle_const_update) # type: ignore
+#     falloff_mode: bpy.props.EnumProperty(items=[
+#                                                             ('LINEAR', "Linear", "Linear bone chain based falloff in wiggle"),
+#                                                             ('QUADRATIC', "Quadratic", "Quadratic bone chain based falloff in wiggle") 
+#                                                             ], default='QUADRATIC', name="Falloff Mode", update=wiggle_const_update) # type: ignore
+    
+#     falloff_factor: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=0.0, max=10.0, default=1.0, update=wiggle_const_update) # type: ignore
+#     falloff_offset: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=-10.0, max=10.0, update=wiggle_const_update) # type: ignore
+#     drivers: bpy.props.BoolProperty(name="Wiggle has Drivers", default=False) # type: ignore
+#     use_springs: bpy.props.BoolProperty(name="Use Springs", default=True, update=wiggle_const_update) # type: ignore
+#     stiffness: bpy.props.FloatProperty(name="Stiffnesss", min=0, max=1000, update=wiggle_const_update) # type: ignore
+#     damping: bpy.props.FloatProperty(name="Stiffnesss", min=0, max=1000, update=wiggle_const_update) # type: ignore
+#     drivers: bpy.props.BoolProperty(name="Wiggle has Drivers", default=False) # type: ignore
+
+
+
+class SimulationMeshBase(bpy.types.PropertyGroup):
     collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Ragdoll Rigid Body Geometry Collection") # type: ignore
     suffix: bpy.props.StringProperty(name="Ragdoll Rigid Body Suffix", default=".RigidBody") # type: ignore
     constraints : bpy.props.PointerProperty(type=RdRigidBodyConstraints) # type: ignore
     control_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
-    
+    deform_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
+
     width_min: bpy.props.FloatProperty(name="Minimum Rigid Body Geo Width", default=0.1, min=0.0, update=lambda self, context: self.update(context)) # type: ignore
     width_max: bpy.props.FloatProperty(name="Minimum Rigid Body Geo Width", default=0.1, min=0.0, update=lambda self, context: self.update(context)) # type: ignore
     width_relative: bpy.props.FloatProperty(name="Relative Rigid Body Geo Width", default=0.1, min=0.0, update=lambda self, context: self.update(context)) # type: ignore
     length_relative: bpy.props.FloatProperty(name="Relative Rigid Body Geo Length", default=0.9, min=0.0, update=lambda self, context: self.update(context)) # type: ignore
 
     def add(self, armature, pbones):
-        print("-----------------__>", self.suffix)
-        self.control_rig = armature
+        self.deform_rig = armature
         if isinstance(type(pbones), bpy.types.PoseBone.__class__):
             pbones = [pbones]
         rb_bones = []
@@ -242,12 +286,6 @@ class SimulationMeshBaseClass(bpy.types.PropertyGroup):
                 bpy.context.scene.rigidbody_world.collection.objects.link(new_cube)
                 new_cube.rigid_body.collision_shape = 'BOX'
                 new_cube.rigid_body.kinematic = False
-
-                # set bone property
-                pb.ragdoll.rigid_body = new_cube
-                # if armature.pose.bones.get(pb.name):
-                #     armature.pose.bones[pb.name].ragdoll.rigid_body = new_cube
-
                 rb_bones.append(new_cube)
         
         collection_name = armature.name + self.suffix
@@ -259,12 +297,9 @@ class SimulationMeshBaseClass(bpy.types.PropertyGroup):
 
     def scale(self):
         if self.width_min + self.width_max + self.width_relative > 0:
-            for bone in self.control_rig.pose.bones:
-                mesh = None
-                if bone.ragdoll.rigid_body:
-                    mesh = bone.ragdoll.rigid_body
-               
+            for mesh in self.collection.objects:
                 if mesh:
+                    bone = self.deform_rig.pose.bones[mesh.ragdoll_bone_name]
                     for vert in mesh.data.vertices:
                         for i in range(3):
                             # reset cube to dimensions = [1,1,1] 
@@ -290,20 +325,21 @@ class SimulationMeshBaseClass(bpy.types.PropertyGroup):
         else:
             print("Error: Cannot create mesh with width of 0")
 
-    def parents_set(self):
+    def parents_set(self, control_rig):
         if self.collection:
             for obj in self.collection.objects:
                 bone_name = obj.ragdoll_bone_name
-                if bone_name in self.control_rig.pose.bones:
-                    bone =  self.control_rig.pose.bones[bone_name]
-                    obj.parent = self.control_rig
+                if bone_name in control_rig.pose.bones:
+                    bone =  control_rig.pose.bones[bone_name]
+                    obj.parent = control_rig
                     obj.parent_type = 'BONE'
                     obj.parent_bone = bone_name
                     
-                    bone_matrix = self.control_rig.matrix_world @ bone.matrix
-                    bone_center = self.control_rig.matrix_world @ bone.center
-                    obj.matrix_world = self.control_rig.matrix_world @ bone.matrix
+                    bone_matrix = control_rig.matrix_world @ bone.matrix
+                    bone_center = control_rig.matrix_world @ bone.center
+                    obj.matrix_world = control_rig.matrix_world @ bone.matrix
                     obj.matrix_world = mathutils.Matrix.LocRotScale(bone_center, bone_matrix.decompose()[1], bone_matrix.decompose()[2])
+        self.control_rig = control_rig
 
     def approximate_geometry(self, context):
         pose_bones = context.selected_pose_bones
@@ -320,20 +356,29 @@ class SimulationMeshBaseClass(bpy.types.PropertyGroup):
         print(context)
 
 
-class RdRigidBodies(SimulationMeshBaseClass):
+class RdRigidBodies(SimulationMeshBase):
     collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Geometry Collection") # type: ignore
     suffix: bpy.props.StringProperty(name="Suffix", default=".RigidBody") # type: ignore
     constraints : bpy.props.PointerProperty(type=RdRigidBodyConstraints) # type: ignore
     connectors : bpy.props.PointerProperty(type=RdConnectors) # type: ignore
 
+    def add(self, armature, pbones):
+        super().add(armature, pbones)
+        for obj in self.collection.objects:
+            bone_name = obj.ragdoll_bone_name
+            if bone_name in self.deform_rig.pose.bones:
+                armature.pose.bones[bone_name].ragdoll.rigid_body = obj
+            if bone_name in armature.pose.bones:
+                armature.pose.bones[bone_name].ragdoll.rigid_body = obj
+
 
 class RdWiggleConstraints(bpy.types.PropertyGroup):
-    wiggle: bpy.props.BoolProperty(name="Use Wiggle", default=False, update=wiggle_const_update) # type: ignore
     collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Ragdoll Wiggle Constraint Collection") # type: ignore
     suffix: bpy.props.StringProperty(name="Ragdoll Wiggle Constraint Suffix", default=".WiggleConstraint") # type: ignore
 
-    distance: bpy.props.FloatProperty(name="Maximum Wiggle Translation",min=0.0, max=16.0, default=0.2, update=wiggle_const_update) # type: ignore
-    rotation: bpy.props.FloatProperty(name="Maximum Wiggle Rotation", subtype="ANGLE", min=0.0, max=math.radians(360.0), default=math.radians(22.5), update=wiggle_const_update) # type: ignore
+    enable: bpy.props.BoolProperty(name="Use Wiggle", default=False, update=wiggle_const_update) # type: ignore
+    default_distance: bpy.props.FloatProperty(name="Maximum Wiggle Translation",min=0.0, max=16.0, default=0.2, update=wiggle_const_update) # type: ignore
+    default_rotation: bpy.props.FloatProperty(name="Maximum Wiggle Rotation", subtype="ANGLE", min=0.0, max=math.radians(360.0), default=math.radians(22.5), update=wiggle_const_update) # type: ignore
     restrict_linear: bpy.props.BoolProperty(name="Limit Wiggle Translation", default=True, update=wiggle_const_update) # type: ignore
     restrict_angular: bpy.props.BoolProperty(name="Limit Wiggle Rotation", default=False, update=wiggle_const_update) # type: ignore
 
@@ -362,19 +407,32 @@ class RdWiggleConstraints(bpy.types.PropertyGroup):
         pass
 
 
-class RdWiggles(SimulationMeshBaseClass):
+
+class RdWiggles(SimulationMeshBase):
     collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Ragdoll Wiggle Geometry Collection") # type: ignore
     suffix: bpy.props.StringProperty(name="Ragdoll Wiggle Geometry Suffix", default=".Wiggle") # type: ignore
     constraints : bpy.props.PointerProperty(type=RdWiggleConstraints) # type: ignore
 
     def add(self, armature, pbones):
-        self.collection = super().add(armature, pbones)
+        super().add(armature, pbones)
         for obj in self.collection.objects:
             obj.rigid_body.kinematic = True
             # TODO: set this elsewhere?
             obj.rigid_body.collision_collections[0] = False
             obj.rigid_body.collision_collections[1] = True
+            bone_name = obj.ragdoll_bone_name
+            if bone_name in self.deform_rig.pose.bones:
+                armature.pose.bones[bone_name].ragdoll.wiggle = obj
+            if bone_name in armature.pose.bones:
+                armature.pose.bones[bone_name].ragdoll.wiggle = obj
 
+
+
+
+
+
+
+        
 
 class RdHookConstraints(bpy.types.PropertyGroup):
     collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Ragdoll Hook Constraint Collection") # type: ignore
@@ -449,8 +507,11 @@ class RagDoll(bpy.types.PropertyGroup):
             b.ragdoll.is_ragdoll = True
         
         # store bones' hierarchy level in bone prop
-        self.deform_rig = ragdoll_aux.bones_tree_levels_set(bpy.context.object, bones)
-    
+        deform_rig = ragdoll_aux.bones_tree_levels_set(bpy.context.object, bones)
+        self.deform_rig = deform_rig
+        self.rigid_bodies.deform_rig = deform_rig
+        self.rigid_bodies.constraints.deform_rig = deform_rig
+        self.rigid_bodies.connectors.deform_rig = deform_rig
         # primary rigid body objects (transform targets for bones)
         #self.rigid_bodies.collection = self.rigid_bodies_add(bones, mode='RIGID_BODIES')
         # self.rigid_bodies.collection = self.rigid_bodies.add(self.deform_rig, bones)
@@ -458,7 +519,6 @@ class RagDoll(bpy.types.PropertyGroup):
         
 
         # self.rigid_bodies.constraints.collection = self.rigid_body_constraints_add(mode='RIGID_BODIES')
-        self.rigid_bodies.constraints.collection = self.rigid_bodies.constraints.add(bones, self.deform_rig.name)
         # self.rb_constraint_defaults(self.rigid_bodies.constraints.collection, 0, 22.5)
         
         # # secondary rigid body objects (wiggles)
@@ -480,12 +540,22 @@ class RagDoll(bpy.types.PropertyGroup):
 
         # copy deform armature to use as control
         self.control_rig = self.secondary_rig_add()
+        self.rigid_bodies.connectors.control_rig = self.control_rig    
+        self.rigid_bodies.control_rig = self.control_rig
+        self.rigid_bodies.constraints.control_rig = self.control_rig
+        self.wiggles.control_rig = self.control_rig
+        self.wiggles.constraints.control_rig = self.control_rig
+
         self.deform_rig.data.ragdoll.initialized = True
 
-        self.rigid_bodies.parents_set()
-        self.wiggles.parents_set()
+        self.rigid_bodies.constraints.add(self.control_rig, bones, 'GENERIC_SPRING')
+        # self.rigid_bodies.parents_set(self.control_rig)
+        # self.rigid_bodies.connectors.add(bones, self.deform_rig.name)
 
-        # self.rigid_bodies_parents_set()
+        # self.wiggles.parents_set(self.control_rig)
+        # self.wiggles.constraints.add(bones, self.deform_rig.name)
+
+        self.rigid_bodies_parents_set()
         # self.rigid_bodies_drivers_add()
         # self.control_rig.data.ragdoll.rigid_bodies.connectors.collection = self.rb_connectors_add()
         
@@ -1128,3 +1198,119 @@ class RagDoll(bpy.types.PropertyGroup):
     def hook_bone_remove(context, edit_bone_name):
         edit_bone = context.object.data.edit_bones[edit_bone_name]
         context.object.data.edit_bones.remove(edit_bone)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class RRdRigidBodyConstraints(bpy.types.PropertyGroup):
+    collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Ragdoll Rigid Body Constraint Collection") # type: ignore
+    suffix: bpy.props.StringProperty(name="Rigid Body Constraint Suffix", default=".Constraint") # type: ignore
+    control_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
+
+    def add(self, bones, deform_rig_name):
+        collection_name = deform_rig_name + self.suffix
+        collection = None
+        for bone in bones:
+            for child in bone.children:
+                if child in bones:
+                    obj_0 = bone.ragdoll.rigid_body
+                    obj_1 = child.ragdoll.rigid_body
+                    empty = self.add_single(obj_0, obj_1, child, self.suffix, 0.1)
+                    bone.ragdoll.constraint = empty
+                    collection = ragdoll_aux.object_add_to_collection(collection_name, empty)
+                    ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, empty)
+        self.collection = collection
+        self.defaults_set(0, 22.5)
+
+
+    def add_single(self, object_0, object_1, parent_bone, suffix, size=0.1, constraint_type='GENERIC_SPRING'):
+        name = parent_bone.id_data.name + "." + parent_bone.name + suffix
+        empty = bpy.data.objects.new(name, None)
+        bpy.context.collection.objects.link(empty)
+        empty.empty_display_size = size
+        
+        bpy.context.scene.rigidbody_world.constraints.objects.link(empty)
+        empty.rigid_body_constraint.type = constraint_type
+        
+        vec = (parent_bone.head - parent_bone.tail)
+        trans = mathutils.Matrix.Translation(vec)
+        empty.matrix_local = parent_bone.matrix
+        
+        # TODO: move parenting to base class
+        empty.parent = parent_bone.id_data
+        empty.parent_type = 'BONE'
+        empty.parent_bone = parent_bone.name
+        empty.matrix_parent_inverse = parent_bone.matrix.inverted() @ trans
+        
+        # TODO: move constraining to base class?
+        if object_0:
+            empty.rigid_body_constraint.object1 = object_0
+        if object_1:
+            empty.rigid_body_constraint.object2 = object_1
+
+        return empty
+    
+
+    def defaults_set(self, max_lin, max_ang):
+        if self.collection:
+            for obj in self.collection.objects:
+                rb_const = obj.rigid_body_constraint
+                if rb_const:
+                    if rb_const.type == 'GENERIC' or rb_const.type == 'GENERIC_SPRING':
+                        rb_const.use_limit_lin_x = True
+                        rb_const.use_limit_lin_y = True
+                        rb_const.use_limit_lin_z = True
+                        
+                        rb_const.use_limit_ang_x = True
+                        rb_const.use_limit_ang_y = True
+                        rb_const.use_limit_ang_z = True
+                        # default limits
+                        rb_const.limit_lin_x_lower = -max_lin
+                        rb_const.limit_lin_x_upper = max_lin
+                        rb_const.limit_lin_y_lower = -max_lin
+                        rb_const.limit_lin_y_upper = max_lin
+                        rb_const.limit_lin_z_lower = -max_lin
+                        rb_const.limit_lin_z_upper = max_lin
+                        
+                        rb_const.limit_ang_x_lower = math.radians(-max_ang)
+                        rb_const.limit_ang_x_upper = math.radians(max_ang)
+                        rb_const.limit_ang_y_lower = math.radians(-max_ang)
+                        rb_const.limit_ang_y_upper = math.radians(max_ang)
+                        rb_const.limit_ang_z_lower = math.radians(-max_ang)
+                        rb_const.limit_ang_z_upper = math.radians(max_ang) 

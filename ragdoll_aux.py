@@ -3,6 +3,7 @@ import json
 import os
 import mathutils
 
+
 #######################################################################################
 ######################################## Bones ########################################
 #------------ create dictionary w/ bones' level in tree ------------------------
@@ -44,7 +45,7 @@ def bones_tree_levels_set(armature, pose_bones_to_use):
 #------------------------ exclude unselected/hidden pose bones and hidden bone collections ------------------------
 def get_visible_posebones(armature_object=None):
     bones = []
-    if armature_object.type == 'ARMATURE':
+    if armature_object and armature_object.type == 'ARMATURE':
         if bpy.context.mode == 'POSE' and len(bpy.context.selected_pose_bones) > 0:
             bones = [i for i in bpy.context.selected_pose_bones]
             
@@ -275,7 +276,54 @@ def cube(width, name, mode='OBJECT'):
         bpy.context.scene.collection.objects.link(cube)
         return cube
     
+
+#------------------------ partition polygon list for quicksort ------------------------
+# input:   <list of polygon vertex coordinate arrays> [[<vector3 v_0>, <vector3 v_1>, <vector3 v_n>], [...], ...]
+#          <vector3 target location>
+#          <int index lowest value>
+#          <int index hightest value> 
+# return:  <int partition index> 
+def partition_polygons_by_proximity(polygons, target, low, high):
+    # set last element index as pivot
+    pivot = polygons[high]
+    # calculate distance between center of triangle at pivot index and target vector
+    pivot_center = sum([vert for vert in pivot], mathutils.Vector()) / len(pivot)
+    distance_pivot_target = (pivot_center - target).length
     
+    # pointer for greater element
+    i = low - 1
+    
+    for j in range(low, high):
+        poly = polygons[j]
+        # calculate distance between center of triangle and target vector, compare to pivot
+        poly_center = sum([vert for vert in poly], mathutils.Vector()) / len(poly)
+        distance_poly_target = (poly_center - target).length         
+        # compare distance    
+        if distance_poly_target <= distance_pivot_target:
+            i = i + 1
+            
+            # swap elements
+            (polygons[i], polygons[j]) = (polygons[j], polygons[i])
+            
+    # swap pivot element w/ greater element
+    (polygons[i+1], polygons[high]) = (polygons[high], polygons[i+1])
+    
+    return i+1 
+
+#------------------------ quicksort polygons by their centers' proximity to target vector ------------------------
+# input:   <list of polygon vertex coordinate arrays> [[<vector3 v_0>, <vector3 v_1>, <vector3 v_n>], [...], ...]
+#          <vector3 target location>
+#          <int index lowest value>
+#          <int index hightest value>
+# return:  <sorted list of polygon vertex coordinate arrays>
+def sort_polygons_by_proximity(polygons, target, low, high):
+    if low < high:
+        partition_index = partition_polygons_by_proximity(polygons, target, low, high)
+        sort_polygons_by_proximity(polygons, target, low, partition_index - 1)
+        sort_polygons_by_proximity(polygons, target, partition_index + 1, high)
+        
+    return(polygons)
+
 
 # ------------------------ calculate face normal from list of coordinates ------------------------
 # input: [ [<vector3 vertex_0>, <vector3 vertex_1>, <vector3 vertex_2>], [...] ]
@@ -322,6 +370,7 @@ def translate_polygon(object, polygon, vector, axis='XYZ'):
             for i in range(3):
                 if i in axis:
                     vertex.co[i] = vertex.co[i] + vector[i] * 1 / obj_scale[i]
+                    
     except ZeroDivisionError as e:
         print("ZeroDivisionError: %s. Scale on %s-axis is 0"%(e, ["X","Y","Z"][i]))
 
@@ -329,14 +378,23 @@ def translate_polygon(object, polygon, vector, axis='XYZ'):
 # ------------------------ calculate vectors between source object's face centers and target objects surface ------------------------
 # input: source object of mesh type, target object of mesh type
 # return: { <int face index> : <vector3 translation> }
-def get_snapping_vectors(object, target):
+def get_snapping_vectors(object, target, threshold): 
+    # TODO: avoid confusion in variable naming: "object" and "target" are inconsistent
+    # TODO: use parent bone as origin of projection
     triangles = []
-                
     if isinstance(target, bpy.types.Object): 
         if target.type == 'MESH':
             triangles = get_triangles(target)
     
     if len(triangles) > 0:
+        try:
+            sorted_triangles = sort_polygons_by_proximity(triangles, object.matrix_world.to_translation(), 0, len(triangles)-1)
+        except RecursionError as e: 
+            print("RecursionError: %s"%(e))
+            print("Info: Using unsorted target geometry. Object too complex to snap to.")
+            sorted_triangles = triangles
+            # TODO: exception handling necessary?
+
         if isinstance(object, bpy.types.Object) and object.type == 'MESH': 
             vectors = {}
             for i in range(len(object.data.polygons)):
@@ -344,24 +402,31 @@ def get_snapping_vectors(object, target):
                 normal_local = poly.normal
                 normal_world = (object.matrix_world.to_quaternion() @ normal_local).normalized()
                 center_world = object.matrix_world @ poly.center
-                
-                for tri in triangles:
-                    project_inwards = False        
-                    intersect = mathutils.geometry.intersect_ray_tri(tri[0], tri[1], tri[2], normal_world, center_world, True)
-                    # project inwards if no intersection is found
+
+                for tri in sorted_triangles:
+                    intersect = None
+                    project_inwards = True
+                    target_normal = normal_from_vertex_co_list(tri)
+                    # avoid projecting to back faces
+                    if normal_world.dot(target_normal) > 0:
+                        # try projecting inwards
+                        intersect = mathutils.geometry.intersect_ray_tri(tri[0], tri[1], tri[2], -normal_world, center_world, True)
                     if not intersect:
-                        target_normal = normal_from_vertex_co_list(tri)
-                        # avoid projecting to back faces
-                        if normal_world.dot(target_normal) > 0:
-                            intersect = mathutils.geometry.intersect_ray_tri(tri[0], tri[1], tri[2], -normal_world, center_world, True)
+                        # try projecting outwards
+                        intersect = mathutils.geometry.intersect_ray_tri(tri[0], tri[1], tri[2], normal_world, center_world, True)
                         if intersect:
-                            project_inwards = True        
+                            project_inwards = False  
                         
                     if intersect:
+                        # calculate vector between intersection and face center
                         distance = (intersect - center_world).length
-                        vector = normal_local * distance
-                        
-                        if project_inwards:
+                        if threshold > 0 and distance > threshold:
+                            # nullify vector if beyond threshold
+                            distance = 0
+
+                        if not project_inwards:
+                            vector = normal_local * distance
+                        else:
                             vector = -normal_local * distance
                         
                         vectors[i] = vector
@@ -380,9 +445,9 @@ def get_snapping_vectors(object, target):
 #   - quad cube source object only.
 #   - single target object only
 #   - if source and target intersect, two iterations are necessary.
-def snap_rigid_body_cube(mesh_source, mesh_target, axis='XYZ'):
+def snap_rigid_body_cube(mesh_source, mesh_target, axis='XYZ', threshold=0.0):
     if len(mesh_source.data.vertices) == 8 and len(mesh_source.data.polygons) == 6:
-        vectors = get_snapping_vectors(mesh_source, mesh_target)
+        vectors = get_snapping_vectors(mesh_source, mesh_target, threshold)
         
         if vectors:
             for key, value in vectors.items():
@@ -394,6 +459,12 @@ def snap_rigid_body_cube(mesh_source, mesh_target, axis='XYZ'):
             print("Error: Invalid target.")
     else:
         print("Error: Mesh snapping only works on Quad Cubes.")
+
+
+# ------------------------ reset a bone's rigid body geometry ------------------------ 
+def reset_rigid_body_cube(pose_bone):
+    rigid_body = pose_bone.data.ragdoll.rigid_body
+    rigid_body.data = cube("", 'DATA')
 
 
 def origin_to_center(mesh_obj):

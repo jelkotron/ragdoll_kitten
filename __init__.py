@@ -28,7 +28,8 @@ def register():
     #-------- set custom properties --------
     bpy.types.Armature.ragdoll = bpy.props.PointerProperty(type=ragdoll.RagDoll)
     bpy.types.PoseBone.ragdoll = bpy.props.PointerProperty(type=ragdoll.RagDollBone)
-   
+    bpy.types.Object.ragdoll_bone_name = bpy.props.StringProperty()
+    
     #-------- register UI elements --------
     bpy.utils.register_class(ragdoll_ui.Scene_OT_RigidBodyWorldAddCustom)
     bpy.utils.register_class(ragdoll_ui.OBJECT_PT_RagDoll)
@@ -47,12 +48,17 @@ def register():
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_HookAdd)
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_HookRemove)
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_MeshApproximate)
+    bpy.utils.register_class(ragdoll_ui.OBJECT_OT_MeshApproximateReset)
 
 
 def unregister():
     #-------- unset custom properties --------
-    if bpy.types.Armature.ragdoll: del bpy.types.Armature.ragdoll
-    if bpy.types.Bone.ragdoll: del bpy.types.Bone.ragdoll
+    if bpy.types.Armature.ragdoll: 
+        del bpy.types.Armature.ragdoll
+    if bpy.types.Bone.ragdoll: 
+        del bpy.types.Bone.ragdoll
+    if bpy.types.Object.ragdoll_bone_name: 
+        del bpy.types.Object.ragdoll_bone_name 
 
     #-------- unregister custom properties --------
     bpy.utils.unregister_class(ragdoll_ui.Scene_OT_RigidBodyWorldAddCustom)
@@ -82,6 +88,7 @@ def unregister():
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_HookAdd)
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_HookRemove)
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_MeshApproximate)
+    bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_MeshApproximateReset)
 
 
 if "bpy" in locals():

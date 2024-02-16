@@ -64,11 +64,15 @@ class OBJECT_OT_AddRagDoll(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return True
+        if context.object.type == 'ARMATURE':
+            if not context.object.data.ragdoll.initialized:
+                return True
+        else:
+            return False
 
     def execute(self, context):
         # main(context.object.data.ragdoll_config)
-        RagDoll.new(context.object)
+        context.object.data.ragdoll.new()
         
         return {'FINISHED'}
 
@@ -97,10 +101,15 @@ class OBJECT_OT_UpdateRagDoll(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return True
+        if context.object.type == 'ARMATURE':
+            if context.object.data.ragdoll.initialized:
+                if context.object.data.ragdoll.type == 'CONTROL':
+                    return True
+        else:
+            return False
 
     def execute(self, context):
-        RagDoll.update(context)
+        context.object.data.ragdoll.update()
         return {'FINISHED'}
 
 
@@ -259,8 +268,28 @@ class OBJECT_OT_MeshApproximate(bpy.types.Operator):
         return False
     
     def execute(self, context):
-        RagDoll.rigid_bodies_approximate(context)
+        context.object.data.ragdoll.rigid_bodies.approximate_geometry(context)
         print("Info: Rigid Body Shapes approximated.")
+        return {'FINISHED'}
+    
+class OBJECT_OT_MeshApproximateReset(bpy.types.Operator):
+    """Reset approximate RagDoll Rigid Body Shapes"""
+    bl_idname = "mesh.rd_approximate_reset"
+    bl_label = "Approximate Rigid Bodies"
+    bl_options = {'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        if context.object.type == 'ARMATURE':
+            if context.object.data.ragdoll.type == 'CONTROL':
+                if bpy.context.mode == 'POSE':
+                    if len(bpy.context.selected_pose_bones) > 0:
+                        return True
+        return False
+    
+    def execute(self, context):
+        # RagDoll.rigid_bodies_approximate(context)
+        print("Info: Rigid Body Shapes reset.")
         return {'FINISHED'}
 
 
@@ -496,12 +525,13 @@ class OBJECT_PT_RagDoll(bpy.types.Panel):
                                 geo_box = layout.box()
                                 row = geo_box.row()
                                 row.label(text="Geometry")
+                                
                                 row = geo_box.row()
-                                row.prop(context.object.data.ragdoll.rigid_bodies, "width_relative", text="Relative Bone Width")
+                                row.prop(context.object.data.ragdoll.rigid_bodies, "width_relative", text="Relative Width")
+                                row.prop(context.object.data.ragdoll.rigid_bodies, "length_relative", text="Relative Length")
+                                
                                 row = geo_box.row()
                                 row.prop(context.object.data.ragdoll.rigid_bodies, "width_min", text="Minimum Width")
-
-                                row = geo_box.row()
                                 row.prop(context.object.data.ragdoll.rigid_bodies, "width_max", text="Maximum Width")
 
                                 row = geo_box.row()
@@ -513,13 +543,23 @@ class OBJECT_PT_RagDoll(bpy.types.Panel):
                                 row = col_1.row()
                                 row.prop(context.object.data.ragdoll, "deform_mesh", text="")
 
+
                                 row = col_0.row()
                                 row.label(text="Offset:")
                                 row = col_1.row()
                                 row.prop(context.object.data.ragdoll, "deform_mesh_offset", text="")
+                                
+                                row = col_0.row()
+                                row.label(text="Projection:")
+
+                                row = col_1.row()
+                                row.prop(context.object.data.ragdoll, "deform_mesh_projection_threshold", text="Threshold:")
+                                
                                 row = col_1.row()
                                 row.operator("mesh.rd_approximate")
 
+                                row = col_1.row()
+                                row.operator("mesh.rd_approximate_reset", text="Reset")
 
 
                         if context.object.data.ragdoll.initialized == True:

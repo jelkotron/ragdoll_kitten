@@ -585,7 +585,7 @@ class OBJECT_PT_RagDoll(bpy.types.Panel):
                                 wiggle_label_row = wiggle_box.row()
                                 wiggle_label_row.label(text="Wiggle")
                                 wiggle_checkbox_row = wiggle_box.row()
-                                wiggle_checkbox_row.prop(context.object.data.ragdoll.wiggles.constraints, "enable", text="Use")
+                                wiggle_checkbox_row.prop(context.object.data.ragdoll.wiggles.constraints, "enabled", text="Enabled")
                                 
                                 #------------------------ Constraint Limits ------------------------
                                 wiggle_limit_row = wiggle_box.row()
@@ -735,9 +735,9 @@ class OBJECT_PT_RagDoll(bpy.types.Panel):
                                 wiggle_falloff_settings_row_1.prop(context.object.data.ragdoll.wiggles.constraints, "falloff_offset", text="Offset")
 
                                 #-------- UI States --------
-                                wiggle_limit_row.enabled = context.object.data.ragdoll.wiggles.constraints.enable
-                                wiggle_spring_row.enabled = context.object.data.ragdoll.wiggles.constraints.enable
-                                wiggle_falloff_row.enabled = context.object.data.ragdoll.wiggles.constraints.enable
+                                wiggle_limit_row.enabled = context.object.data.ragdoll.wiggles.constraints.enabled
+                                wiggle_spring_row.enabled = context.object.data.ragdoll.wiggles.constraints.enabled
+                                wiggle_falloff_row.enabled = context.object.data.ragdoll.wiggles.constraints.enabled
                                 
                                 wiggle_limit_lin_row.enabled = context.object.data.ragdoll.wiggles.constraints.restrict_linear
                                 wiggle_limit_ang_row.enabled = context.object.data.ragdoll.wiggles.constraints.restrict_angular

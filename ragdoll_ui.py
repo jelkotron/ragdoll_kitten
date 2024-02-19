@@ -4,7 +4,7 @@ import sys
 sys.path.append("/home/schnollie/Work/bpy/ragdoll_tools")
 from ragdoll_aux import rb_constraint_collection_set, load_text, config_create, force_update_drivers
 
-from ragdoll import wiggle_const_update
+# from ragdoll import wiggle_const_update
 # from ragdoll import wiggle_spring_drivers_add, wiggle_spring_drivers_remove
 from ragdoll import RagDoll
 
@@ -109,7 +109,7 @@ class OBJECT_OT_UpdateRagDoll(bpy.types.Operator):
             return False
 
     def execute(self, context):
-        context.object.data.ragdoll.update()
+        context.object.data.ragdoll.update_constraints(context)
         return {'FINISHED'}
 
 
@@ -139,7 +139,7 @@ class OBJECT_OT_UpdateWiggles(bpy.types.Operator):
         return True
 
     def execute(self, context):
-        wiggle_const_update(context)
+        # wiggle_const_update(context)
         return {'FINISHED'}
 
 
@@ -264,7 +264,8 @@ class OBJECT_OT_MeshApproximate(bpy.types.Operator):
             if context.object.data.ragdoll.type == 'CONTROL':
                 if bpy.context.mode == 'POSE':
                     if len(bpy.context.selected_pose_bones) > 0:
-                        return True
+                        if context.object.data.ragdoll.deform_mesh:
+                            return True
         return False
     
     def execute(self, context):

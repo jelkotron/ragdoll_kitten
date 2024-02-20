@@ -202,7 +202,7 @@ class OBJECT_OT_HookAdd(bpy.types.Operator):
 
         # add hook (bone + mesh + rigid body constraint), (bone) edit mode needs to active
         bpy.ops.object.mode_set(mode='EDIT')
-        hook_bone = RagDoll.hook_bone_add(context, 0.1) # TODO: user input for hook object dimensions
+        hook_bone = context.object.data.ragdoll.hooks.bone_add(context, 0.666) # TODO: user input for hook object dimensions
         bone_name = hook_bone.name
         # restore previouse mode if possible
         if mode_init != 'EDIT_ARMATURE':
@@ -213,9 +213,9 @@ class OBJECT_OT_HookAdd(bpy.types.Operator):
             bpy.ops.object.mode_set(mode='OBJECT')
 
         hook_pose_bone = context.object.pose.bones[bone_name]
-        
+        print(hook_pose_bone)
         # set hook properties to bone
-        hook = RagDoll.hook_set(context, pose_bone, hook_pose_bone)
+        context.object.data.ragdoll.hooks.add(context, pose_bone, hook_pose_bone)
 
         print("Info: Hook added")
         
@@ -228,7 +228,7 @@ class OBJECT_OT_HookRemove(bpy.types.Operator):
     bl_label = "Remove Hook"
     bl_options = {'UNDO'}
 
-    bone_name : bpy.props.StringProperty()
+    bone_name : bpy.props.StringProperty() # type: ignore
 
     @classmethod
     def poll(cls, context):

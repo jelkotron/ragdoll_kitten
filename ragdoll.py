@@ -40,8 +40,8 @@ class ObjectConstraintsBase(bpy.types.PropertyGroup):
                     collection = ragdoll_aux.object_add_to_collection(collection_name, empty)
                     ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, empty)
                     empty.ragdoll_mesh_0 = bone.ragdoll.rigid_body
-                    empty.ragdoll_mesh_1 = child.ragdoll.rigid_body
-                    empty.ragdoll_bone_name = child.name # why child and not bone?
+                    empty.ragdoll_mesh_1 = child.ragdoll.rigid_body # TODO: move out of base class
+                    empty.ragdoll_bone_name = child.name # TODO: why child and not bone?
 
         self.collection = collection
 
@@ -57,11 +57,11 @@ class ObjectConstraintsBase(bpy.types.PropertyGroup):
         child.parent = parent
         if not parent_bone:
             child.parent_type = 'OBJECT'
-            child.matrix_world @= child.matrix_parent_inverse
         else:
             child.parent_type = 'BONE'
             child.parent_bone = parent_bone.name
-            child.matrix_world @= parent.matrix_parent_inverse
+        
+        child.matrix_world @= parent.matrix_parent_inverse
         
     def default_set(self, obj, max_lin=None, max_ang=None):
         if not max_lin:
@@ -344,7 +344,8 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
     width_relative: bpy.props.FloatProperty(name="Relative Geo Width", default=0.1, min=0.0, update=lambda self, context: self.update(context)) # type: ignore
     length_relative: bpy.props.FloatProperty(name="Relative Geo Length", default=0.9, min=0.01, update=lambda self, context: self.update(context)) # type: ignore
 
-    def add(self, deform_rig, control_rig, pbones):
+
+    def add(self, deform_rig, control_rig, pbones, is_hook=False):
         self.deform_rig = deform_rig
         self.control_rig = control_rig
 
@@ -356,7 +357,7 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
         bpy.context.scene.frame_current = 1
         
         for pb in pbones:
-            if pb.id_data.data.bones[pb.name].use_deform:
+            if pb.id_data.data.bones[pb.name].use_deform or is_hook == True:
                 # add cubes to collection
                 geo_name = deform_rig.name + "." + pb.name + self.suffix
                 # add and scale box geometry per bone
@@ -385,7 +386,10 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
         self.scale()
         self.parents_set(control_rig)
         
-        return self.collection
+        if is_hook:
+            return rb_bones[0]
+        else:
+            return self.collection
 
 
     def kinematic_drivers_add(self, target_rig):
@@ -406,7 +410,7 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
         if self.width_min + self.width_max + self.width_relative > 0:
             for mesh in self.collection.objects:
                 if mesh:
-                    bone = self.deform_rig.pose.bones[mesh.ragdoll_bone_name]
+                    bone = self.control_rig.pose.bones[mesh.ragdoll_bone_name]  # was deform rig
                     for vert in mesh.data.vertices:
                         for i in range(3):
                             # reset cube to dimensions = [1,1,1] 
@@ -491,7 +495,7 @@ class RdWiggles(SimulationMeshBase):
             obj.rigid_body.kinematic = True
             # TODO: set this elsewhere?
             obj.rigid_body.collision_collections[0] = False
-            obj.rigid_body.collision_collections[1] = True
+            obj.rigid_body.collision_collections[19] = True
             bone_name = obj.ragdoll_bone_name
             if bone_name in deform_rig.pose.bones:
                 deform_rig.pose.bones[bone_name].ragdoll.wiggle = obj
@@ -504,11 +508,44 @@ class RdHookConstraints(bpy.types.PropertyGroup):
     suffix: bpy.props.StringProperty(name="Ragdoll Hook Constraint Suffix", default=".HookConstraint") # type: ignore
 
 
-class RdHooks(bpy.types.PropertyGroup):
+class RdHooks(SimulationMeshBase):
     collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Ragdoll Hook Geometry") # type: ignore
     suffix: bpy.props.StringProperty(name="Ragdoll Hook Geometry Suffix", default=".Hook") # type: ignore
     constraints : bpy.props.PointerProperty(type=RdHookConstraints) # type: ignore
 
+    def bone_add(self, context, length):
+        if bpy.context.mode == 'EDIT_ARMATURE':
+            bone_name = "RagDollHook.000" # TODO: name elsewhere
+            edit_bone = context.object.data.edit_bones.new(name=bone_name)
+            cursor_loc = bpy.context.scene.cursor.location
+            head = cursor_loc @ context.object.matrix_world
+            tail = head + mathutils.Vector([0,0,length])
+            setattr(edit_bone, 'use_deform', False)
+            setattr(edit_bone, 'head', head)
+            setattr(edit_bone, 'tail', tail)
+
+            return edit_bone
+        
+    def constraint_add(self, mesh_1, mesh_2):
+        pass
+
+    def add(self, context, pose_bone, hook_pose_bone):
+        control_rig = context.object
+        deform_rig = context.object.data.ragdoll.deform_rig
+        obj = super().add(deform_rig, control_rig, hook_pose_bone, is_hook=True)
+        obj.rigid_body.kinematic = True
+        obj.rigid_body.collision_collections[0] = False
+        obj.rigid_body.collision_collections[19] = True
+    
+        if pose_bone.name in deform_rig.pose.bones:
+            deform_rig.pose.bones[pose_bone.name].ragdoll.hook_mesh = obj
+            deform_rig.pose.bones[pose_bone.name].ragdoll.hook_bone_name = hook_pose_bone.name
+        if pose_bone.name in control_rig.pose.bones:
+            control_rig.pose.bones[pose_bone.name].ragdoll.hook_mesh = obj
+            control_rig.pose.bones[pose_bone.name].ragdoll.hook_bone_name = hook_pose_bone.name
+
+        self.constraints.add()
+        
 
 class RagDollBone(bpy.types.PropertyGroup):
     is_ragdoll: bpy.props.BoolProperty(name="Part of a Ragdoll", default=False) # type: ignore

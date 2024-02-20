@@ -154,7 +154,7 @@ class OBJECT_OT_AddWiggleDrivers(bpy.types.Operator):
         return True
 
     def execute(self, context):
-        RagDoll.wiggle_spring_drivers_add(context.object)
+        context.object.data.ragdoll.wiggles.constraints.spring_drivers_add(context.object)
         context.object.data.ragdoll.wiggles.constraints.drivers = True
         print("Info: Added Drivers to Rigid Body Constraints' Spring Settings.")
         return {'FINISHED'}
@@ -171,7 +171,7 @@ class OBJECT_OT_RemoveWiggleDrivers(bpy.types.Operator):
         return True
 
     def execute(self, context):
-        RagDoll.wiggle_spring_drivers_remove(context.object)
+        context.object.data.ragdoll.wiggles.constraints.spring_drivers_remove(context.object)
         context.object.data.ragdoll.wiggles.constraints.drivers = False
         
         print("Info: Removed Drivers from Rigid Body Constraints' Spring Settings.")
@@ -624,7 +624,7 @@ class OBJECT_PT_RagDoll(bpy.types.Panel):
                                 wiggle_spring_col_1 = split.column()
                                 wiggle_spring_add_drivers = wiggle_spring_col_0.row()
                                 wiggle_spring_remove_drivers = wiggle_spring_col_1.row()
-                                wiggle_spring_add_drivers.operator("armature.wiggle_drivers_add", text="Add Drivers", icon='DECORATE_DRIVER')
+                                wiggle_spring_add_drivers.operator("armature.wiggle_drivers_add", text="Add Spring Drivers", icon='DECORATE_DRIVER')
                                 wiggle_spring_remove_drivers.operator("armature.wiggle_drivers_remove", text="Remove Drivers", icon='PANEL_CLOSE')
 
                                 #------------------------ Falloff ------------------------

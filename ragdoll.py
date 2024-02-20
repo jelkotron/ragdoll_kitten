@@ -213,7 +213,7 @@ class RdWiggleConstraints(RdRigidBodyConstraintsBase):
     falloff_offset: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=-10.0, max=10.0, update=lambda self, context: self.update(context)) # type: ignore
     use_springs: bpy.props.BoolProperty(name="Use Springs", default=True, update=lambda self, context: self.update(context)) # type: ignore
     stiffness: bpy.props.FloatProperty(name="Stiffnesss", min=0, max=1000, update=lambda self, context: self.update(context)) # type: ignore
-    damping: bpy.props.FloatProperty(name="Stiffnesss", min=0, max=1000, update=lambda self, context: self.update(context)) # type: ignore
+    damping: bpy.props.FloatProperty(name="Damping", min=0, max=1000, update=lambda self, context: self.update(context)) # type: ignore
     drivers: bpy.props.BoolProperty(name="Wiggle has Drivers", default=False) # type: ignore
 
     def add(self, deform_rig, bones, control_rig):
@@ -344,6 +344,51 @@ class RdWiggleConstraints(RdRigidBodyConstraintsBase):
                                         wiggle_const.spring_damping_y = control_rig.data.ragdoll.wiggles.constraints.damping
                                         wiggle_const.spring_damping_z = control_rig.data.ragdoll.wiggles.constraints.damping
                 print("Info: Wiggle updated")
+
+
+    def spring_drivers_add(self, control_rig):
+            for obj in control_rig.data.ragdoll.wiggles.constraints.collection.objects:
+                if obj.rigid_body_constraint and obj.rigid_body_constraint.type == 'GENERIC_SPRING':
+                    obj.rigid_body_constraint.use_spring_x = True
+                    obj.rigid_body_constraint.use_spring_y = True
+                    obj.rigid_body_constraint.use_spring_z = True
+
+                    properties = {
+                        "stiffness": [
+                            "spring_stiffness_x",
+                            "spring_stiffness_y",
+                            "spring_stiffness_z",
+                            ],
+                        "damping": [
+                            "spring_damping_x",
+                            "spring_damping_y",
+                            "spring_damping_z",
+                        ]
+        
+                    }
+        
+                    for key, value in properties.items():
+                        for prop in value:
+                            fcurve = obj.rigid_body_constraint.driver_add(prop)
+                            var = fcurve.driver.variables.new()
+                            var.name = key
+                            var.type = 'SINGLE_PROP'
+                            target = var.targets[0]
+                            target.id_type = 'ARMATURE'
+                            target.id = control_rig.data
+                            target.data_path = 'ragdoll.wiggles.constraints.%s'%key
+                            fcurve.driver.expression = key
+
+                else:
+                    print("Error: Wrong Rigid Body Constraint Type: %s"%obj.rigid_body_constraint.type)
+        
+
+    def spring_drivers_remove(self, control_rig):
+        wiggle_constraints = control_rig.data.ragdoll.wiggles.constraints.collection
+        for obj in wiggle_constraints.objects:
+            for d in obj.animation_data.drivers:
+                obj.animation_data.drivers.remove(d)
+
 
 
 class SimulationMeshBase(bpy.types.PropertyGroup):
@@ -874,50 +919,6 @@ class RagDoll(bpy.types.PropertyGroup):
         for bone in context.selected_pose_bones:
             ragdoll_aux.reset_rigid_body_cube(bone)
             
-
-    def wiggle_spring_drivers_add(control_rig):
-        for obj in control_rig.data.ragdoll.wiggles.constraints.collection.objects:
-            if obj.rigid_body_constraint and obj.rigid_body_constraint.type == 'GENERIC_SPRING':
-                obj.rigid_body_constraint.use_spring_x = True
-                obj.rigid_body_constraint.use_spring_y = True
-                obj.rigid_body_constraint.use_spring_z = True
-
-                properties = {
-                    "stiffness": [
-                        "spring_stiffness_x",
-                        "spring_stiffness_y",
-                        "spring_stiffness_z",
-                        ],
-                    "damping": [
-                        "spring_damping_x",
-                        "spring_damping_y",
-                        "spring_damping_z",
-                    ]
-    
-                }
-    
-                for key, value in properties.items():
-                    for prop in value:
-                        fcurve = obj.rigid_body_constraint.driver_add(prop)
-                        var = fcurve.driver.variables.new()
-                        var.name = key
-                        var.type = 'SINGLE_PROP'
-                        target = var.targets[0]
-                        target.id_type = 'ARMATURE'
-                        target.id = control_rig.data
-                        target.data_path = 'ragdoll.wiggle_%s'%key
-                        fcurve.driver.expression = key
-
-            else:
-                print("Error: Wrong Rigid Body Constraint Type: %s"%obj.rigid_body_constraint.type)
-        
-
-    def wiggle_spring_drivers_remove(control_rig):
-        wiggle_constraints = control_rig.data.ragdoll.wiggles.constraints.collection
-        for obj in wiggle_constraints.objects:
-            for d in obj.animation_data.drivers:
-                obj.animation_data.drivers.remove(d)
-
 
     def pose_constraints_add(self, bones):
         for bone in bones:

@@ -18,7 +18,7 @@ def mesh_poll(self, object):
 def register():
     #-------- register custom properties --------
     bpy.utils.register_class(ragdoll.RdConnectors)
-    bpy.utils.register_class(ragdoll.RdRigidBodyConstraints)
+    bpy.utils.register_class(ragdoll.RdJointConstraints)
     bpy.utils.register_class(ragdoll.RdHookConstraints)
     bpy.utils.register_class(ragdoll.RdHooks)
     bpy.utils.register_class(ragdoll.RdRigidBodies)
@@ -70,7 +70,7 @@ def unregister():
     #-------- unregister custom properties --------
     bpy.utils.unregister_class(ragdoll_ui.Scene_OT_RigidBodyWorldAddCustom)
     bpy.utils.unregister_class(ragdoll.RdConnectors)
-    bpy.utils.unregister_class(ragdoll.RdRigidBodyConstraints)
+    bpy.utils.unregister_class(ragdoll.RdJointConstraints)
     bpy.utils.unregister_class(ragdoll.RdRigidBodies)
     bpy.utils.unregister_class(ragdoll.RdRigidBodies)
     bpy.utils.unregister_class(ragdoll.RagDollBone)

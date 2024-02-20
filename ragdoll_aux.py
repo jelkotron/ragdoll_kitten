@@ -119,9 +119,10 @@ def object_add_to_collection(collection_name, objects=[]):
         col = bpy.data.collections[collection_name]
     
     if col:
-        for obj in objects:
-            if obj.name not in bpy.data.collections[collection_name].objects:    
-                bpy.data.collections[collection_name].objects.link(obj)
+        if objects:
+            for obj in objects:
+                if obj.name not in bpy.data.collections[collection_name].objects:    
+                    bpy.data.collections[collection_name].objects.link(obj)
 
 
     bpy.context.view_layer.update()
@@ -134,9 +135,10 @@ def object_remove_from_collection(collection, objects):
         objects = [objects]
 
     if collection != None:
-        for obj in objects:
-            if obj.name in collection.objects:
-                collection.objects.unlink(obj)
+        if objects:
+            for obj in objects:
+                if obj.name in collection.objects:
+                    collection.objects.unlink(obj)
 
 #------------------------ delete collection & objects ------------------------
 def collection_remove(collection):

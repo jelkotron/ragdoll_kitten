@@ -499,7 +499,7 @@ def force_update_drivers(context):
         if armature.animation_data:
             for fcurve in armature.animation_data.drivers:
                 if fcurve:
-                    # hacky, gets the job done
+                    # known issue, hacky, gets the job done
                     if fcurve.driver.expression.endswith(" "):
                         fcurve.driver.expression = fcurve.driver.expression[:-1]
                     else:
@@ -509,8 +509,8 @@ def force_update_drivers(context):
 ######################################################################################
 ######################################## Misc ########################################
 # ------------------------ convert axis described as a string to a list of indices ------------------------
-# input: string, i.e. 'XYZ' 
-# return: [0,1,2]
+# input: string, i.e. 'XYZ' , 'xz'
+# return: [0,1,2], [0,2]
 def axis_string_to_index_list(axis_string):
     map = {
         'X': 0,

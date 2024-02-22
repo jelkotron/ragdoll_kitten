@@ -564,10 +564,12 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
         self.control_rig = control_rig
 
     def geometry_approximate(self, context):
+        self.approximated_reset(context)
         control_rig = context.object
         pose_bones = ragdoll_aux.get_visible_posebones(context.object)
         target = context.object.data.ragdoll.deform_mesh
         threshold = context.object.data.ragdoll.deform_mesh_projection_threshold
+        offset = context.object.data.ragdoll.deform_mesh_offset
         # store pose position
         init_pose_position = control_rig.data.pose_position
         # set to rest position
@@ -577,11 +579,10 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
         if target:
             for bone in pose_bones:
                 if bone.ragdoll.rigid_body:
-                    ragdoll_aux.snap_rigid_body_cube(bone.ragdoll.rigid_body, target, 'XZ', threshold)
+                    ragdoll_aux.snap_rigid_body_cube(bone.ragdoll.rigid_body, target, 'XZ', threshold, offset)
         # restore pose position
         control_rig.data.pose_position = init_pose_position
          
-
     def approximated_reset(self, context):
         control_rig = context.object
         pose_bones = ragdoll_aux.get_visible_posebones(context.object)
@@ -594,6 +595,7 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
                 mesh_obj.matrix_world = control_rig.matrix_world @ mathutils.Matrix.LocRotScale(bone.center, bone.matrix.decompose()[1], bone.matrix.decompose()[2])
                 for child in mesh_obj.children:
                     child.matrix_world @= mesh_obj.matrix_parent_inverse
+
 
 
 
@@ -728,7 +730,7 @@ class RagDoll(bpy.types.PropertyGroup):
     deform_rig : bpy.props.PointerProperty(type=bpy.types.Object, poll=armature_poll) # type: ignore
     control_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
     deform_mesh: bpy.props.PointerProperty(type=bpy.types.Object, name="Target Mesh", poll=mesh_poll) # type: ignore
-    deform_mesh_offset: bpy.props.FloatVectorProperty(name="Offset", subtype="XYZ") # type: ignore
+    deform_mesh_offset: bpy.props.FloatVectorProperty(name="Offset", size=2, default=(0.0, 0.0)) # type: ignore
     deform_mesh_projection_threshold: bpy.props.FloatProperty(name="Projection Threshold", min=0.0, default=0.1) # type: ignore
     #-------- Control Rig Name Suffix --------
     ctrl_rig_suffix: bpy.props.StringProperty(default=".Control") # type: ignore

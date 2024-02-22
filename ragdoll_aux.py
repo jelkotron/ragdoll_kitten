@@ -359,7 +359,7 @@ def get_triangles(mesh_source):
 
 
 # ------------------------ translate a polygon's vertices along a vector ------------------------
-def translate_polygon(object, polygon, vector, axis='XYZ'):
+def translate_polygon(object, polygon, vector, axis='XYZ', offset=[0,0,0]):
     # TODO: Complex mesh support
     axis = axis_string_to_index_list(axis)
     
@@ -371,7 +371,10 @@ def translate_polygon(object, polygon, vector, axis='XYZ'):
             obj_scale = object.matrix_world.to_scale()
             for i in range(3):
                 if i in axis:
-                    vertex.co[i] = vertex.co[i] + vector[i] * 1 / obj_scale[i]
+                    vertex.co[i] = vertex.co[i] + vector[i] * 1 / obj_scale[i]# + (-vector[i] / vector[i]) * offset[i]
+                    if vector[i] != 0:
+                        vertex.co[i] += offset[i] * (vector[i]/abs(vector[i]))
+                    print(vector[i])
                     
     except ZeroDivisionError as e:
         print("ZeroDivisionError: %s. Scale on %s-axis is 0"%(e, ["X","Y","Z"][i]))
@@ -380,7 +383,7 @@ def translate_polygon(object, polygon, vector, axis='XYZ'):
 # ------------------------ calculate vectors between source object's face centers and target objects surface ------------------------
 # input: source object of mesh type, target object of mesh type
 # return: { <int face index> : <vector3 translation> }
-def get_snapping_vectors(object, target, threshold): 
+def get_snapping_vectors(object, target, threshold, offset=[0,0,0]): 
     # TODO: avoid confusion in variable naming: "object" and "target" are inconsistent
     # TODO: use parent bone as origin of projection
     triangles = []
@@ -447,15 +450,15 @@ def get_snapping_vectors(object, target, threshold):
 #   - quad cube source object only.
 #   - single target object only
 #   - if source and target intersect, two iterations are necessary.
-def snap_rigid_body_cube(mesh_source, mesh_target, axis='XYZ', threshold=0.0):
+def snap_rigid_body_cube(mesh_source, mesh_target, axis='XYZ', threshold=0.0, offset=[0,0,0]):
     if len(mesh_source.data.vertices) == 8 and len(mesh_source.data.polygons) == 6:
-        vectors = get_snapping_vectors(mesh_source, mesh_target, threshold)
+        vectors = get_snapping_vectors(mesh_source, mesh_target, threshold, offset)
         
         if vectors:
             for key, value in vectors.items():
                 vect = vectors[key]
                 poly = mesh_source.data.polygons[key]
-                translate_polygon(mesh_source, poly, vect, axis)
+                translate_polygon(mesh_source, poly, vect, axis, offset)
                 origin_to_center(mesh_source)
         else:
             print("Error: Invalid target.")

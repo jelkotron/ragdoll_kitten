@@ -268,7 +268,7 @@ class OBJECT_OT_MeshApproximate(bpy.types.Operator):
         return False
     
     def execute(self, context):
-        context.object.data.ragdoll.rigid_bodies.approximate_geometry(context)
+        context.object.data.ragdoll.rigid_bodies.geometry_approximate(context)
         print("Info: Rigid Body Shapes approximated.")
         return {'FINISHED'}
     
@@ -287,7 +287,7 @@ class OBJECT_OT_MeshApproximateReset(bpy.types.Operator):
         return False
     
     def execute(self, context):
-        # RagDoll.rigid_bodies_approximate(context)
+        context.object.data.ragdoll.rigid_bodies.approximated_reset(context)
         print("Info: Rigid Body Shapes reset.")
         return {'FINISHED'}
 

@@ -512,9 +512,14 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
             target.data_path = 'ragdoll.kinematic'
 
 
-    def scale(self):
+    def scale(self, single_obj=None):
         if self.width_min + self.width_max + self.width_relative > 0:
-            for mesh in self.collection.objects:
+            if not single_obj:
+                objects = self.collection.objects
+            else:
+                objects = [single_obj]
+
+            for mesh in objects:
                 if mesh:
                     bone = self.control_rig.pose.bones[mesh.ragdoll_bone_name]  # was deform rig
                     for vert in mesh.data.vertices:
@@ -558,7 +563,7 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
                     obj.matrix_world = mathutils.Matrix.LocRotScale(bone_center, bone_matrix.decompose()[1], bone_matrix.decompose()[2])
         self.control_rig = control_rig
 
-    def approximate_geometry(self, context):
+    def geometry_approximate(self, context):
         control_rig = context.object
         pose_bones = ragdoll_aux.get_visible_posebones(context.object)
         target = context.object.data.ragdoll.deform_mesh
@@ -576,6 +581,21 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
         # restore pose position
         control_rig.data.pose_position = init_pose_position
          
+
+    def approximated_reset(self, context):
+        control_rig = context.object
+        pose_bones = ragdoll_aux.get_visible_posebones(context.object)
+
+        for bone in pose_bones:
+            mesh_obj = bone.ragdoll.rigid_body 
+            if mesh_obj:
+                mesh_obj.data = ragdoll_aux.cube(1, mesh_obj.name, 'DATA')
+                self.scale(mesh_obj)
+                mesh_obj.matrix_world = control_rig.matrix_world @ mathutils.Matrix.LocRotScale(bone.center, bone.matrix.decompose()[1], bone.matrix.decompose()[2])
+                for child in mesh_obj.children:
+                    child.matrix_world @= mesh_obj.matrix_parent_inverse
+
+
 
     def update(self, context):
         self.scale()
@@ -768,8 +788,6 @@ class RagDoll(bpy.types.PropertyGroup):
     def update_constraints(self, context):
         const_collection = context.object.data.ragdoll.rigid_bodies.constraints.collection
         context.object.data.ragdoll.rigid_bodies.constraints.limits_set(const_collection, context.object.data.ragdoll.config)
-        # context.object.data.ragdoll.rigid_bodies.scale()
-        
 
     # scale primary rigid bodies upon user input
     def update_geometry(self, context):

@@ -474,7 +474,7 @@ def origin_to_center(mesh_obj):
     translation = mathutils.Matrix.Translation(-center)
     mesh_obj.data.transform(translation)
     for child in mesh_obj.children:
-        child.location -= center # TODO: use a matrices if possible!
+        child.matrix_world @= mesh_obj.matrix_parent_inverse
     mesh_obj.matrix_world.translation = mesh_obj.matrix_world @ center
 
 

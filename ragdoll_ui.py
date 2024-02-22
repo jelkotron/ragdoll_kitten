@@ -110,6 +110,7 @@ class OBJECT_OT_UpdateRagDoll(bpy.types.Operator):
 
     def execute(self, context):
         context.object.data.ragdoll.update_constraints(context)
+        print("Info: ragdoll constraints updated")
         return {'FINISHED'}
 
 
@@ -282,8 +283,7 @@ class OBJECT_OT_MeshApproximateReset(bpy.types.Operator):
         if context.object.type == 'ARMATURE':
             if context.object.data.ragdoll.type == 'CONTROL':
                 if context.mode == 'POSE' or context.mode == 'OBJECT':
-                    if len(bpy.context.selected_pose_bones) > 0:
-                        return True
+                    return True
         return False
     
     def execute(self, context):
@@ -488,14 +488,18 @@ class OBJECT_PT_RagDoll(bpy.types.Panel):
                         config_label_row = col_0.row()
                         config_text_row = col_1.row()
                         
+                        # TODO: fix this mess
                         if context.object.data.ragdoll.config and context.object.data.ragdoll.config.is_dirty:
                             if os.path.exists(context.object.data.ragdoll.config.filepath):
-                                config_label_row.label(text="Text: External, modified")
+                                config_label_row.label(text="Text (External, modified):")
                             else:
-                                config_label_row.label(text="Text: Internal")
+                                config_label_row.label(text="Text (Internal):")
+
+                        elif context.object.data.ragdoll.config:
+                            config_label_row.label(text="Text (External):")
 
                         else:
-                            config_label_row.label(text="Text: External")
+                            config_label_row.label(text="Text:")
                         
                         if context.object.data.ragdoll.type == 'CONTROL' or not context.object.data.ragdoll.control_rig:
                             config_text_row.prop(context.object.data.ragdoll,"config", text="")
@@ -505,17 +509,23 @@ class OBJECT_PT_RagDoll(bpy.types.Panel):
                         config_text_row.operator("text.import_filebrowser", text="", icon='FILEBROWSER')
                         config_text_row.operator("text.json_create", text="", icon='FILE_NEW')
 
+                        default_label_row = col_0.row()
+                        default_label_row.label(text="Default Values:")
+                        default_values_row = col_1.row(align=True)
+                        default_values_row.prop(context.object.data.ragdoll.rigid_bodies.constraints, "default_distance", text="Distance")
+                        default_values_row.prop(context.object.data.ragdoll.rigid_bodies.constraints, "default_rotation",text="Angle")
+
                         text_ops_row = col_1.row()
                         if context.object.data.ragdoll.initialized == False:
                             text_ops_row.operator("armature.ragdoll_add", text="Create Ragdoll")
                         else:
-                            split = text_ops_row.split(factor=0.33)
+                            split = text_ops_row.split(factor=0.5)
                             update_rd_row = split.column().row()
-                            update_drivers_row = split.column().row()
+                            # update_drivers_row = split.column().row()
                             delete_ragdoll_row = split.column().row()
 
                             update_rd_row.operator("armature.ragdoll_update", text="Update Ragdoll")
-                            update_drivers_row.operator("armature.update_drivers", text="Update Drivers")
+                            # update_drivers_row.operator("armature.update_drivers", text="Update Drivers")
                             delete_ragdoll_row.operator("armature.ragdoll_remove", text="Remove Ragdoll")
 
                         #-------- Geometry --------

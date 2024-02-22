@@ -450,6 +450,8 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
     width_relative: bpy.props.FloatProperty(name="Relative Geo Width", default=0.1, min=0.0, update=lambda self, context: self.update(context)) # type: ignore
     length_relative: bpy.props.FloatProperty(name="Relative Geo Length", default=0.9, min=0.01, update=lambda self, context: self.update(context)) # type: ignore
 
+    # appro
+
 
     def add(self, deform_rig, control_rig, pbones, is_hook=False):
         self.deform_rig = deform_rig
@@ -730,7 +732,7 @@ class RagDoll(bpy.types.PropertyGroup):
     deform_rig : bpy.props.PointerProperty(type=bpy.types.Object, poll=armature_poll) # type: ignore
     control_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
     deform_mesh: bpy.props.PointerProperty(type=bpy.types.Object, name="Target Mesh", poll=mesh_poll) # type: ignore
-    deform_mesh_offset: bpy.props.FloatVectorProperty(name="Offset", size=2, default=(0.0, 0.0)) # type: ignore
+    deform_mesh_offset: bpy.props.FloatVectorProperty(name="Offset", subtype='XYZ', default=(0.0, 0.0, 0.0)) # type: ignore
     deform_mesh_projection_threshold: bpy.props.FloatProperty(name="Projection Threshold", min=0.0, default=0.1) # type: ignore
     #-------- Control Rig Name Suffix --------
     ctrl_rig_suffix: bpy.props.StringProperty(default=".Control") # type: ignore

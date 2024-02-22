@@ -374,7 +374,6 @@ def translate_polygon(object, polygon, vector, axis='XYZ', offset=[0,0,0]):
                     vertex.co[i] = vertex.co[i] + vector[i] * 1 / obj_scale[i]# + (-vector[i] / vector[i]) * offset[i]
                     if vector[i] != 0:
                         vertex.co[i] += offset[i] * (vector[i]/abs(vector[i]))
-                    print(vector[i])
                     
     except ZeroDivisionError as e:
         print("ZeroDivisionError: %s. Scale on %s-axis is 0"%(e, ["X","Y","Z"][i]))
@@ -453,7 +452,7 @@ def get_snapping_vectors(object, target, threshold, offset=[0,0,0]):
 def snap_rigid_body_cube(mesh_source, mesh_target, axis='XYZ', threshold=0.0, offset=[0,0,0]):
     if len(mesh_source.data.vertices) == 8 and len(mesh_source.data.polygons) == 6:
         vectors = get_snapping_vectors(mesh_source, mesh_target, threshold, offset)
-        
+
         if vectors:
             for key, value in vectors.items():
                 vect = vectors[key]

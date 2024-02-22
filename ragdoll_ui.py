@@ -557,7 +557,7 @@ class OBJECT_PT_RagDoll(bpy.types.Panel):
                                 row.label(text="Offset:")
                                 row = col_1.row(align=True)
                                 row.prop(context.object.data.ragdoll, "deform_mesh_offset", index=0, text="X:")
-                                row.prop(context.object.data.ragdoll, "deform_mesh_offset", index=1, text="Z:")
+                                row.prop(context.object.data.ragdoll, "deform_mesh_offset", index=2, text="Z:")
                                 
                                 row = col_0.row()
                                 row.label(text="Projection:")

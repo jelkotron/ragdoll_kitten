@@ -49,6 +49,7 @@ class RdRigidBodyConstraintsBase(bpy.types.PropertyGroup):
     def add_single(self, bone):
         name = bone.name + self.suffix
         empty = bpy.data.objects.new(name, None)
+        empty.ragdoll_object_type = "RIGID_BODY_EMPTY"
         empty.matrix_world = self.control_rig.matrix_world @ bone.matrix
         bpy.context.scene.collection.objects.link(empty)
         empty.empty_display_size = 0.1
@@ -523,7 +524,7 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
             for mesh in objects:
                 if mesh:
                     bone = self.control_rig.pose.bones[mesh.ragdoll_bone_name]
-                    protected = bone.ragdoll.mesh_protected
+                    protected = mesh.ragdoll_protect_approx
                     if bone:
    
                         for vert in mesh.data.vertices:
@@ -588,7 +589,7 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
             for bone in pose_bones:
                 if bone.ragdoll.rigid_body:
                     ragdoll_aux.snap_rigid_body_cube(bone.ragdoll.rigid_body, target, 'XZ', threshold, offset)
-                    bone.ragdoll.mesh_protected = True
+                    bone.ragdoll.rigid_body.ragdoll_protect_approx = True
         # restore pose position
         control_rig.data.pose_position = init_pose_position
          
@@ -597,9 +598,9 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
         pose_bones = ragdoll_aux.get_visible_posebones(context.object)
 
         for bone in pose_bones:
-            bone.ragdoll.mesh_protected = False
             mesh_obj = bone.ragdoll.rigid_body 
             if mesh_obj:
+                mesh_obj.ragdoll_protect_approx = False
                 mesh_obj.data = ragdoll_aux.cube(1, mesh_obj.name, 'DATA')
                 self.scale(mesh_obj)
                 mesh_obj.matrix_world = control_rig.matrix_world @ mathutils.Matrix.LocRotScale(bone.center, bone.matrix.decompose()[1], bone.matrix.decompose()[2])
@@ -625,7 +626,8 @@ class RdRigidBodies(SimulationMeshBase):
         super().add(deform_rig, control_rig, pbones)
         self.control_rig = control_rig
         for obj in self.collection.objects:
-            obj.display_type = 'SOLID'
+            obj.display_type = 'WIRE'
+            obj.ragdoll_object_type = "RIGID_BODY_PRIMARY"
             bone_name = obj.ragdoll_bone_name
             if bone_name in deform_rig.pose.bones:
                 deform_rig.pose.bones[bone_name].ragdoll.rigid_body = obj
@@ -645,6 +647,7 @@ class RdWiggles(SimulationMeshBase):
         super().add(deform_rig, control_rig, pbones)
         for obj in self.collection.objects:
             obj.rigid_body.kinematic = True
+            obj.ragdoll_object_type = "RIGID_BODY_WIGGLE"
             # TODO: set this elsewhere?
             obj.rigid_body.collision_collections[0] = False
             obj.rigid_body.collision_collections[19] = True
@@ -678,6 +681,7 @@ class RdHooks(SimulationMeshBase):
         deform_rig = context.object.data.ragdoll.deform_rig
         obj = super().add(deform_rig, control_rig, hook_pose_bone, is_hook=True)
         obj.rigid_body.kinematic = True
+        obj.ragdoll_object_type = "RIGID_BODY_HOOK"
         obj.rigid_body.collision_collections[0] = False
         obj.rigid_body.collision_collections[19] = True
         hook_pose_bone.ragdoll.rigid_body = obj
@@ -735,7 +739,6 @@ class RagDollBone(bpy.types.PropertyGroup):
                                         ('HOOK', "Ragdoll Hook Bone in Control Rig", "Deform Rig of a RagDoll")                          
                                     ], default='DEFAULT') # type: ignore
 
-    mesh_protected : bpy.props.BoolProperty(name="Rigid Body Mesh modified by User", default=False) # type: ignore
 
 #------------------------ main property group. constraint and rigid body groups nested inside ------------------------
 class RagDoll(bpy.types.PropertyGroup):

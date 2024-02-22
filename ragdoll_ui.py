@@ -321,6 +321,14 @@ class OBJECT_PT_RagDollCollections(bpy.types.Panel):
     bl_region_type = 'WINDOW'
     bl_context = "physics"
 
+    @classmethod
+    def poll(self, context):
+        if context.object.type == 'ARMATURE':
+            if context.object.data.ragdoll.type == 'CONTROL':
+                return True
+            if context.object.data.ragdoll.initialized == False:
+                return True
+
     def draw(self, context):
         if context.scene.rigidbody_world and context.scene.rigidbody_world.constraints:         
             layout = self.layout
@@ -376,6 +384,14 @@ class OBJECT_PT_RagDollSuffixes(bpy.types.Panel):
     bl_region_type = 'WINDOW'
     bl_context = "physics"
     bl_options = {'DEFAULT_CLOSED'}
+
+    @classmethod
+    def poll(self, context):
+        if context.object.type == 'ARMATURE':
+            if context.object.data.ragdoll.type == 'CONTROL':
+                return True
+            if context.object.data.ragdoll.initialized == False:
+                return True
 
     def draw(self, context):
         if context.scene.rigidbody_world and context.scene.rigidbody_world.constraints:
@@ -448,6 +464,16 @@ class OBJECT_PT_RagDoll(bpy.types.Panel):
     bl_region_type = 'WINDOW'
     bl_context = "physics"
 
+    @classmethod
+    def poll(self, context):
+        if context.object.type == 'MESH':
+            if context.object.rigid_body:
+                if context.object.ragdoll_object_type == 'RIGID_BODY_PRIMARY':
+                    return True
+            
+        if context.object.type == 'ARMATURE':
+            return True
+            
     def draw(self, context):
         obj = context.object
         if obj.type == 'ARMATURE':
@@ -488,43 +514,46 @@ class OBJECT_PT_RagDoll(bpy.types.Panel):
                         config_label_row = col_0.row()
                         config_text_row = col_1.row()
                         
-                        # TODO: fix this mess
-                        if context.object.data.ragdoll.config and context.object.data.ragdoll.config.is_dirty:
-                            if os.path.exists(context.object.data.ragdoll.config.filepath):
-                                config_label_row.label(text="Text (External, modified):")
+                        if context.object.data.ragdoll.initialized == False or context.object.data.ragdoll.type == 'CONTROL': 
+                            # TODO: fix this mess
+                            if context.object.data.ragdoll.config and context.object.data.ragdoll.config.is_dirty:
+                                if os.path.exists(context.object.data.ragdoll.config.filepath):
+                                    config_label_row.label(text="Text (External, modified):")
+                                else:
+                                    config_label_row.label(text="Text (Internal):")
+
+                            elif context.object.data.ragdoll.config:
+                                config_label_row.label(text="Text (External):")
+
                             else:
-                                config_label_row.label(text="Text (Internal):")
+                                config_label_row.label(text="Text:")
+                            
+                            if context.object.data.ragdoll.type == 'CONTROL' or not context.object.data.ragdoll.control_rig:
+                                config_text_row.prop(context.object.data.ragdoll,"config", text="")
+                            else:
+                                config_text_row.prop(context.object.data.ragdoll.control_rig.data.ragdoll,"config", text="")
 
-                        elif context.object.data.ragdoll.config:
-                            config_label_row.label(text="Text (External):")
 
-                        else:
-                            config_label_row.label(text="Text:")
-                        
-                        if context.object.data.ragdoll.type == 'CONTROL' or not context.object.data.ragdoll.control_rig:
-                            config_text_row.prop(context.object.data.ragdoll,"config", text="")
-                        else:
-                            config_text_row.prop(context.object.data.ragdoll.control_rig.data.ragdoll,"config", text="")
+                            config_text_row.operator("text.import_filebrowser", text="", icon='FILEBROWSER')
+                            config_text_row.operator("text.json_create", text="", icon='FILE_NEW')
 
-                        config_text_row.operator("text.import_filebrowser", text="", icon='FILEBROWSER')
-                        config_text_row.operator("text.json_create", text="", icon='FILE_NEW')
-
-                        default_label_row = col_0.row()
-                        default_label_row.label(text="Default Values:")
-                        default_values_row = col_1.row(align=True)
-                        default_values_row.prop(context.object.data.ragdoll.rigid_bodies.constraints, "default_distance", text="Distance")
-                        default_values_row.prop(context.object.data.ragdoll.rigid_bodies.constraints, "default_rotation",text="Angle")
+                            default_label_row = col_0.row()
+                            default_label_row.label(text="Default Values:")
+                            default_values_row = col_1.row(align=True)
+                            default_values_row.prop(context.object.data.ragdoll.rigid_bodies.constraints, "default_distance", text="Distance")
+                            default_values_row.prop(context.object.data.ragdoll.rigid_bodies.constraints, "default_rotation",text="Angle")
 
                         text_ops_row = col_1.row()
                         if context.object.data.ragdoll.initialized == False:
                             text_ops_row.operator("armature.ragdoll_add", text="Create Ragdoll")
                         else:
+                            
                             split = text_ops_row.split(factor=0.5)
                             update_rd_row = split.column().row()
                             # update_drivers_row = split.column().row()
                             delete_ragdoll_row = split.column().row()
-
-                            update_rd_row.operator("armature.ragdoll_update", text="Update Ragdoll")
+                            if context.object.data.ragdoll.type == 'CONTROL':
+                                update_rd_row.operator("armature.ragdoll_update", text="Update Ragdoll")
                             # update_drivers_row.operator("armature.update_drivers", text="Update Drivers")
                             delete_ragdoll_row.operator("armature.ragdoll_remove", text="Remove Ragdoll")
 
@@ -759,3 +788,15 @@ class OBJECT_PT_RagDoll(bpy.types.Panel):
                                 anim_override_row.enabled = not context.object.data.ragdoll.kinematic
                                 wiggle_spring_add_drivers.enabled = not context.object.data.ragdoll.wiggles.constraints.drivers
                                 wiggle_spring_remove_drivers.enabled = context.object.data.ragdoll.wiggles.constraints.drivers
+
+        elif obj.type == 'MESH':
+            layout = self.layout
+            row = layout.row()
+            split = row.split(factor=0.4)
+            col_0 = split.column()
+            col_1 = split.column()
+            label_row = col_0.row()
+            label_row.label(text="Protect:")
+            prop_row = col_1.row()
+            prop_row.prop(context.object, "ragdoll_protect_approx", text="Approximation") 
+            prop_row.prop(context.object, "ragdoll_protect_custom", text="Custom Shape") 

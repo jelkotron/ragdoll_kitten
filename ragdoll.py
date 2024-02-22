@@ -445,12 +445,10 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
     control_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
     deform_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
 
-    width_min: bpy.props.FloatProperty(name="Minimum Geo Width", default=0.1, min=0.01, update=lambda self, context: self.update(context)) # type: ignore
-    width_max: bpy.props.FloatProperty(name="Maximum Geo Width", default=0.1, min=0.0, update=lambda self, context: self.update(context)) # type: ignore
-    width_relative: bpy.props.FloatProperty(name="Relative Geo Width", default=0.1, min=0.0, update=lambda self, context: self.update(context)) # type: ignore
-    length_relative: bpy.props.FloatProperty(name="Relative Geo Length", default=0.9, min=0.01, update=lambda self, context: self.update(context)) # type: ignore
-
-    # appro
+    width_min: bpy.props.FloatProperty(name="Minimum Geo Width", default=0.1, min=0.01, update=lambda self, context: self.update_width(context)) # type: ignore
+    width_max: bpy.props.FloatProperty(name="Maximum Geo Width", default=0.1, min=0.0, update=lambda self, context: self.update_width(context)) # type: ignore
+    width_relative: bpy.props.FloatProperty(name="Relative Geo Width", default=0.1, min=0.0, update=lambda self, context: self.update_width(context)) # type: ignore
+    length_relative: bpy.props.FloatProperty(name="Relative Geo Length", default=0.9, min=0.01, update=lambda self, context: self.update_length(context)) # type: ignore
 
 
     def add(self, deform_rig, control_rig, pbones, is_hook=False):
@@ -514,7 +512,8 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
             target.data_path = 'ragdoll.kinematic'
 
 
-    def scale(self, single_obj=None):
+    def scale(self, single_obj=None, axis='XYZ'):
+        axis = ragdoll_aux.axis_string_to_index_list(axis)
         if self.width_min + self.width_max + self.width_relative > 0:
             if not single_obj:
                 objects = self.collection.objects
@@ -523,25 +522,32 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
 
             for mesh in objects:
                 if mesh:
-                    bone = self.control_rig.pose.bones[mesh.ragdoll_bone_name]  # was deform rig
-                    for vert in mesh.data.vertices:
-                        for i in range(3):
-                            # reset cube to dimensions = [1,1,1] 
-                            vert.co[i] *= abs(0.5 / vert.co[i])
-                            if i == 1:
-                                vert.co[i] *= bone.length * self.length_relative
-                            else:
-                                # clamp values to min/max
-                                width_factor = self.width_relative * bone.length
+                    bone = self.control_rig.pose.bones[mesh.ragdoll_bone_name]
+                    protected = bone.ragdoll.mesh_protected
+                    if bone:
+   
+                        for vert in mesh.data.vertices:
+                            for i in range(3):
+                                if i in axis:
+                                    if i == 1:
+                                        # reset Y dimension to 1 
+                                        vert.co[i] *= abs(0.5 / vert.co[i])
+                                        vert.co[i] *= bone.length * self.length_relative
+                                    else:
+                                        if not protected:
+                                            # reset XZ dimensions to 1
+                                            vert.co[i] *= abs(0.5 / vert.co[i])
+                                            # clamp values to min/max
+                                            width_factor = self.width_relative * bone.length
 
-                                if self.width_max != 0:
-                                    width_factor = min(self.width_max, self.width_relative)
-                                
-                                if self.width_min != 0:
-                                    width_factor = max(width_factor, self.width_min)
-            
-                                # apply new transform
-                                vert.co[i] *= width_factor
+                                            if self.width_max != 0:
+                                                width_factor = min(self.width_max, self.width_relative)
+                                            
+                                            if self.width_min != 0:
+                                                width_factor = max(width_factor, self.width_min)
+                        
+                                            # apply new transform
+                                            vert.co[i] *= width_factor
 
                     mesh.data.update()
                     bpy.context.view_layer.update()
@@ -582,6 +588,7 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
             for bone in pose_bones:
                 if bone.ragdoll.rigid_body:
                     ragdoll_aux.snap_rigid_body_cube(bone.ragdoll.rigid_body, target, 'XZ', threshold, offset)
+                    bone.ragdoll.mesh_protected = True
         # restore pose position
         control_rig.data.pose_position = init_pose_position
          
@@ -590,6 +597,7 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
         pose_bones = ragdoll_aux.get_visible_posebones(context.object)
 
         for bone in pose_bones:
+            bone.ragdoll.mesh_protected = False
             mesh_obj = bone.ragdoll.rigid_body 
             if mesh_obj:
                 mesh_obj.data = ragdoll_aux.cube(1, mesh_obj.name, 'DATA')
@@ -599,10 +607,12 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
                     child.matrix_world @= mesh_obj.matrix_parent_inverse
 
 
+    def update_width(self, context):
+        self.scale(None, 'XZ')
 
-
-    def update(self, context):
-        self.scale()
+    def update_length(self, context):
+        self.scale(None, 'Y')
+    
         
 #------------------------ mesh representations of bones ------------------------
 class RdRigidBodies(SimulationMeshBase):
@@ -725,7 +735,8 @@ class RagDollBone(bpy.types.PropertyGroup):
                                         ('HOOK', "Ragdoll Hook Bone in Control Rig", "Deform Rig of a RagDoll")                          
                                     ], default='DEFAULT') # type: ignore
 
-    
+    mesh_protected : bpy.props.BoolProperty(name="Rigid Body Mesh modified by User", default=False) # type: ignore
+
 #------------------------ main property group. constraint and rigid body groups nested inside ------------------------
 class RagDoll(bpy.types.PropertyGroup):
     #-------- Object Pointers --------

@@ -475,7 +475,7 @@ class OBJECT_PT_RagDoll(bpy.types.Panel):
                         #-------- Config --------
                         config_box = layout.box()
                         config_header_row = config_box.row()
-                        config_header_row.label(text="Configuration")
+                        config_header_row.label(text="Constraints")
                         row = config_box.row()
                         split = row.split(factor=0.33)
                         col_0 = split.column()

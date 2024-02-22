@@ -234,7 +234,7 @@ class OBJECT_OT_HookRemove(bpy.types.Operator):
         return True
     
     def execute(self, context):
-        mode_init = bpy.context.mode
+        mode_init = context.mode
         if mode_init == 'EDIT_ARMATURE':
             mode_init = 'EDIT'
 
@@ -261,10 +261,9 @@ class OBJECT_OT_MeshApproximate(bpy.types.Operator):
     def poll(cls, context):
         if context.object.type == 'ARMATURE':
             if context.object.data.ragdoll.type == 'CONTROL':
-                if bpy.context.mode == 'POSE':
-                    if len(bpy.context.selected_pose_bones) > 0:
-                        if context.object.data.ragdoll.deform_mesh:
-                            return True
+                if context.mode == 'POSE' or context.mode == 'OBJECT':
+                    if context.object.data.ragdoll.deform_mesh:
+                        return True
         return False
     
     def execute(self, context):
@@ -282,7 +281,7 @@ class OBJECT_OT_MeshApproximateReset(bpy.types.Operator):
     def poll(cls, context):
         if context.object.type == 'ARMATURE':
             if context.object.data.ragdoll.type == 'CONTROL':
-                if bpy.context.mode == 'POSE':
+                if context.mode == 'POSE' or context.mode == 'OBJECT':
                     if len(bpy.context.selected_pose_bones) > 0:
                         return True
         return False

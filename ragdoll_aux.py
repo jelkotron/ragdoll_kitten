@@ -508,7 +508,7 @@ def force_update_drivers(context):
 
 ######################################################################################
 ######################################## Misc ########################################
-# ------------------------ convert axis described as a string to a list of indices ------------------------
+# ------------------------ convert axis described as string to a list of indices ------------------------
 # input: string, i.e. 'XYZ' , 'xz'
 # return: [0,1,2], [0,2]
 def axis_string_to_index_list(axis_string):

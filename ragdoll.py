@@ -554,13 +554,23 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
         self.control_rig = control_rig
 
     def approximate_geometry(self, context):
-        pose_bones = context.selected_pose_bones
+        control_rig = context.object
+        pose_bones = ragdoll_aux.get_visible_posebones(context.object)
         target = context.object.data.ragdoll.deform_mesh
         threshold = context.object.data.ragdoll.deform_mesh_projection_threshold
+        # store pose position
+        init_pose_position = control_rig.data.pose_position
+        # set to rest position
+        control_rig.data.pose_position = 'REST'
+        context.view_layer.update()
+        # snap bones' rigid body objects' face centers to target mesh surface
         if target:
             for bone in pose_bones:
                 if bone.ragdoll.rigid_body:
                     ragdoll_aux.snap_rigid_body_cube(bone.ragdoll.rigid_body, target, 'XZ', threshold)
+        # restore pose position
+        control_rig.data.pose_position = init_pose_position
+         
 
     def update(self, context):
         self.scale()

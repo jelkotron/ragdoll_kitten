@@ -689,7 +689,8 @@ class RdHooks(SimulationMeshBase):
         if bpy.context.mode == 'EDIT_ARMATURE':
             bone_name = "RagDollHook.000" # TODO: name elsewhere
             edit_bone = context.object.data.edit_bones.new(name=bone_name)
-            head = pose_bone.matrix.decompose()[0]
+            # head = pose_bone.matrix.decompose()[0]
+            head = context.object.matrix_world @ context.scene.cursor.location
             tail = head + mathutils.Vector([0,0,length])
             setattr(edit_bone, 'use_deform', False)
             setattr(edit_bone, 'head', head)

@@ -200,19 +200,33 @@ class OBJECT_OT_HookAdd(bpy.types.Operator):
         
         # store selected pose bone to add hook to
         pose_bone = bpy.context.active_pose_bone
+        hook_pose_bone = None
         # add hook (bone + mesh + rigid body constraint), (bone) edit mode needs to active
-        bpy.ops.object.mode_set(mode='EDIT')
-        hook_bone = context.object.data.ragdoll.hooks.bone_add(context, pose_bone, 0.666) # TODO: user input for hook object dimensions
-        bone_name = hook_bone.name
-        # restore previouse mode if possible
-        if mode_init != 'EDIT_ARMATURE':
-            bpy.ops.object.mode_set(mode=mode_init)
-        else:
-            # new (pose)bone is found only after edit mode ends. 
-            # bones.update() or pose.bones.update() do not change this behaviour
-            bpy.ops.object.mode_set(mode='OBJECT')
+        # if len(context.selected_pose_bones) > 1:
+        #     hook_pose_bone = context.selected_pose_bones[1]
+            # check if selected bone to hook to is armature transform target
+            # if hook_pose_bone.ragdoll.rigid_body != None and hook_pose_bone.ragdoll.type != 'HOOK':
+            #     hook_pose_bone = None
+        if hook_pose_bone == None:
+            bpy.ops.object.mode_set(mode='EDIT')
+            hook_index = 0
+            hook_bone_name = context.object.name + context.object.data.ragdoll.hooks.suffix + "." + str(hook_index).zfill(3)
+            while hook_bone_name in context.object.data.bones:
+                hook_index += 1
+                hook_bone_name = context.object.name + context.object.data.ragdoll.hooks.suffix + "." + str(hook_index).zfill(3)
 
-        hook_pose_bone = context.object.pose.bones[bone_name]
+            bpy.ops.armature.bone_primitive_add(name=hook_bone_name)
+        
+            # restore previouse mode if possible
+            if mode_init != 'EDIT_ARMATURE':
+                bpy.ops.object.mode_set(mode=mode_init)
+            else:
+                # new (pose)bone is found only after edit mode ends. 
+                # bones.update() or pose.bones.update() do not change this behaviour
+                bpy.ops.object.mode_set(mode='OBJECT')
+                context.object.data.bones[hook_bone_name].use_deform = False
+
+            hook_pose_bone = context.object.pose.bones[hook_bone_name]
 
         # set hook properties to bone
         context.object.data.ragdoll.hooks.add(context, pose_bone, hook_pose_bone)

@@ -19,7 +19,9 @@ def empty_poll(self, object):
 #------------------------ baseclass for objects used as rigid body constraints ------------------------
 class RdRigidBodyConstraintsBase(bpy.types.PropertyGroup):
     collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Collection") # type: ignore
-    suffix: bpy.props.StringProperty(name="Ragdoll Ridig Body Suffix", default=".Connect") # type: ignore 
+    suffix: bpy.props.StringProperty(name="Ragdoll Ridig Body Suffix", default="", update = lambda self, context: self.update_suffix(context)) # type: ignore 
+    suffix_previous: bpy.props.StringProperty(name="Previous Ragdoll Ridig Body Suffix") # type: ignore 
+    
     control_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
     deform_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
     default_distance: bpy.props.FloatProperty(name="Maximum Constraint Translation", default=0) # type: ignore
@@ -29,6 +31,7 @@ class RdRigidBodyConstraintsBase(bpy.types.PropertyGroup):
 
     # name, create and return an empty collection (empty as in containing no objects). properties are set in subclasses.
     def add(self, deform_rig, bones, control_rig):
+        self.suffix_previous = self.suffix
         self.deform_rig = deform_rig
         self.control_rig = control_rig
         collection_name = deform_rig.name + self.suffix
@@ -99,10 +102,18 @@ class RdRigidBodyConstraintsBase(bpy.types.PropertyGroup):
                 obj.rigid_body_constraint.limit_ang_z_lower = math.radians(-max_ang)
                 obj.rigid_body_constraint.limit_ang_z_upper = math.radians(max_ang) 
 
+    # update name suffix of objects in collection
+    def update_suffix(self, context):
+        if self.collection:
+            for obj in self.collection.objects:
+                obj.name = obj.name.replace(self.suffix_previous, self.suffix)
+            self.collection.name = self.collection.name.replace(self.suffix_previous, self.suffix)
+            self.suffix_previous = self.suffix
+
 #------------------------ constraints connecting mesh representations of bones ------------------------       
 class RdJointConstraints(RdRigidBodyConstraintsBase):
     collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Ragdoll Rigid Body Constraint Collection") # type: ignore
-    suffix: bpy.props.StringProperty(name="Rigid Body Constraint Suffix", default=".Constraint") # type: ignore
+    suffix: bpy.props.StringProperty(name="Rigid Body Constraint Suffix", default=".Constraint", update=lambda self, context: super().update_suffix(context)) # type: ignore
 
     def add(self, deform_rig, bones, control_rig, constraint_type):
         self.deform_rig = deform_rig
@@ -190,7 +201,7 @@ class RdJointConstraints(RdRigidBodyConstraintsBase):
 #------------------------ another set of meshes bound to control armature to allow -----------------------   
 #------------------------ for simulation atop of animation                  
 class RdWiggleConstraints(RdRigidBodyConstraintsBase):
-    suffix: bpy.props.StringProperty(name="Rigid Body Constraint Suffix", default=".WiggleConstraint") # type: ignore
+    suffix: bpy.props.StringProperty(name="Rigid Body Constraint Suffix", default=".WiggleConstraint", update= lambda self, context: super().update_suffix(context)) # type: ignore
 
     enabled: bpy.props.BoolProperty(name="Use Constraints", default=False, update=lambda self, context: self.update(context)) # type: ignore
     default_distance: bpy.props.FloatProperty(name="Maximum Wiggle Translation",min=0.0, max=16.0, default=0, update=lambda self, context: self.update(context)) # type: ignore
@@ -395,7 +406,7 @@ class RdWiggleConstraints(RdRigidBodyConstraintsBase):
 #------------------------ mesh representation of bones to addional "hook" bones --------------------                        
 class RdHookConstraints(RdRigidBodyConstraintsBase):
     collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Ragdoll Hook Constraint Collection") # type: ignore
-    suffix: bpy.props.StringProperty(name="Ragdoll Hook Constraint Suffix", default=".HookConstraint") # type: ignore
+    suffix: bpy.props.StringProperty(name="Ragdoll Hook Constraint Suffix", default=".HookConstraint", update= lambda self, context: super().update_suffix(context)) # type: ignore
 
     def add(self, deform_rig, hook_bone, target_bone, control_rig):
         super().add(deform_rig, hook_bone, control_rig)
@@ -416,9 +427,12 @@ class RdHookConstraints(RdRigidBodyConstraintsBase):
 #------------------------ simulate correctly
 class RdConnectors(bpy.types.PropertyGroup):
     collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Ragdoll Connector Collection") # type: ignore
-    suffix: bpy.props.StringProperty(name="Ragdoll Ridig Body Suffix", default=".Connect") # type: ignore
+    suffix: bpy.props.StringProperty(name="Ragdoll Ridig Body Suffix", default=".Connect", update=lambda self, context: self.update_suffix(context)) # type: ignore
+    suffix_previous: bpy.props.StringProperty(name="Previous Ragdoll Ridig Body Suffix", default=".Connect") # type: ignore
 
     def add(self, deform_rig, bones, control_rig):
+        self.suffix_previous = self.suffix
+        print("...>", self.suffix_previous)
         collection = ragdoll_aux.object_add_to_collection(deform_rig.name + self.suffix, None)
         for bone in bones:
             empty = bpy.data.objects.new(bone.name + self.suffix, None)
@@ -436,14 +450,21 @@ class RdConnectors(bpy.types.PropertyGroup):
         self.collection = collection
         control_rig.data.ragdoll.rigid_bodies.connectors.collection = collection
 
-
+    def update_suffix(self, context):
+        if self.collection:
+            for obj in self.collection.objects:
+                obj.name = obj.name.replace(self.suffix_previous, self.suffix)
+            self.collection.name = self.collection.name.replace(self.suffix_previous, self.suffix)
+            self.suffix_previous = self.suffix
+        
 #############################################################################################################
 ################################ Rigid Body Properties for Mesh Type Objects ################################
 
 #------------------------ baseclass for simulated objects of ragdoll ------------------------
 class SimulationMeshBase(bpy.types.PropertyGroup):
     collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Geometry Collection") # type: ignore
-    suffix: bpy.props.StringProperty(name="Naming Suffix", default=".RigidBody") # type: ignore
+    suffix: bpy.props.StringProperty(name="Naming Suffix", default=".RigidBody", update=lambda self, context: self.update(context)) # type: ignore
+    suffix_previous: bpy.props.StringProperty(name="Previous Naming Suffix") # type: ignore
     constraints : bpy.props.PointerProperty(type=RdJointConstraints) # type: ignore
     control_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
     deform_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
@@ -457,6 +478,7 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
     def add(self, deform_rig, control_rig, pbones, is_hook=False):
         self.deform_rig = deform_rig
         self.control_rig = control_rig
+        self.suffix_previous = self.suffix
 
         if isinstance(type(pbones), bpy.types.PoseBone.__class__):
             pbones = [pbones]
@@ -609,18 +631,23 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
                 for child in mesh_obj.children:
                     child.matrix_world @= mesh_obj.matrix_parent_inverse
 
-
     def update_width(self, context):
         self.scale(None, 'XZ')
 
     def update_length(self, context):
         self.scale(None, 'Y')
     
+    def update_suffix(self, context):
+        if self.collection:
+            for obj in self.collection.objects:
+                obj.name = obj.name.replace(self.suffix_previous, self.suffix)
+            self.collection.name = self.collection.name.replace(self.suffix_previous, self.suffix)
+            self.suffix_previous = self.suffix
         
 #------------------------ mesh representations of bones ------------------------
 class RdRigidBodies(SimulationMeshBase):
     collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Geometry Collection") # type: ignore
-    suffix: bpy.props.StringProperty(name="Suffix", default=".RigidBody") # type: ignore
+    suffix: bpy.props.StringProperty(name="Suffix", default=".RigidBody", update=lambda self, context: super().update_suffix(context)) # type: ignore
     constraints : bpy.props.PointerProperty(type=RdJointConstraints) # type: ignore
     connectors : bpy.props.PointerProperty(type=RdConnectors) # type: ignore
 
@@ -642,7 +669,7 @@ class RdRigidBodies(SimulationMeshBase):
 #------------------------ as component of wiggle constraints for simulation atop of animation
 class RdWiggles(SimulationMeshBase):
     collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Ragdoll Wiggle Geometry Collection") # type: ignore
-    suffix: bpy.props.StringProperty(name="Ragdoll Wiggle Geometry Suffix", default=".Wiggle") # type: ignore
+    suffix: bpy.props.StringProperty(name="Ragdoll Wiggle Geometry Suffix", default=".Wiggle", update=lambda self, context: super().update_suffix(context)) # type: ignore
     constraints : bpy.props.PointerProperty(type=RdWiggleConstraints) # type: ignore
 
     def add(self, deform_rig, control_rig, pbones):
@@ -662,7 +689,7 @@ class RdWiggles(SimulationMeshBase):
 #------------------------ additional meshes created by user as component of hook constraints
 class RdHooks(SimulationMeshBase):
     collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Ragdoll Hook Geometry") # type: ignore
-    suffix: bpy.props.StringProperty(name="Ragdoll Hook Geometry Suffix", default=".Hook") # type: ignore
+    suffix: bpy.props.StringProperty(name="Ragdoll Hook Geometry Suffix", default=".Hook", update=lambda self, context: super().update_suffix(context)) # type: ignore
     constraints : bpy.props.PointerProperty(type=RdHookConstraints) # type: ignore
 
     def bone_add(self, context, pose_bone, length):
@@ -751,7 +778,8 @@ class RagDoll(bpy.types.PropertyGroup):
     deform_mesh_offset: bpy.props.FloatVectorProperty(name="Offset", subtype='XYZ', default=(0.0, 0.0, 0.0)) # type: ignore
     deform_mesh_projection_threshold: bpy.props.FloatProperty(name="Projection Threshold", min=0.0, default=0.1) # type: ignore
     #-------- Control Rig Name Suffix --------
-    ctrl_rig_suffix: bpy.props.StringProperty(default=".Control") # type: ignore
+    ctrl_rig_suffix: bpy.props.StringProperty(default=".Control", update = lambda self, context: self.update_suffix(context)) # type: ignore
+    ctrl_rig_suffix_previous: bpy.props.StringProperty() # type: ignore
     
     #-------- Grouped Simulation Objects and Properties -------- 
     rigid_bodies : bpy.props.PointerProperty(type=RdRigidBodies) # type: ignore
@@ -780,6 +808,8 @@ class RagDoll(bpy.types.PropertyGroup):
     bone_level_max: bpy.props.IntProperty(name="bone_level_max", min=0, default=0) # type: ignore
  
     def new(self):
+        # naming sheme
+        self.ctrl_rig_suffix_previous = self.ctrl_rig_suffix
         # get selected bones. if none are selected, use all visible bones 
         bones = ragdoll_aux.get_visible_posebones(bpy.context.object)
         for b in bones:
@@ -966,5 +996,15 @@ class RagDoll(bpy.types.PropertyGroup):
         target.id = self.control_rig.data
         target.data_path = rd_data_path
         rd_influence.driver.expression = expression
+
+    def update_suffix(self, context):
+        if self.control_rig:
+            rig = self.control_rig
+        elif self.deform_rig:
+            rig = self.deform_rig.data.ragdoll.control_rig
+        if rig:
+            rig.name = rig.name.replace(self.ctrl_rig_suffix_previous, self.ctrl_rig_suffix)
+        self.ctrl_rig_suffix_previous = self.ctrl_rig_suffix
+        
 
 

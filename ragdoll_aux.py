@@ -82,9 +82,9 @@ def garbage_collect_armatures():
 ###############################################################################################
 ######################################## Selection ############################################ 
 #------------ deselect all objects ------------ 
-def deselect_all():
+def deselect_all(context=bpy.context):
     objs = []
-    for obj in bpy.context.selected_objects:
+    for obj in context.selected_objects:
         objs.append(obj)
     for obj in objs:
         obj.select_set(False)
@@ -96,6 +96,10 @@ def validate_selection(selected_object, mode = 'ARMATURE'):
     else:
         return None
     
+def select_set_active(context, obj):
+    obj.select_set(True)
+    context.view_layer.objects.active = obj
+
 
 #############################################################################################
 ######################################## Collections ########################################

@@ -45,9 +45,16 @@ def register():
 
     #-------- register UI elements --------
     bpy.utils.register_class(ragdoll_ui.Scene_OT_RigidBodyWorldAddCustom)
-    bpy.utils.register_class(ragdoll_ui.OBJECT_PT_RagDoll)
-    bpy.utils.register_class(ragdoll_ui.OBJECT_PT_RagDollCollections)
-    bpy.utils.register_class(ragdoll_ui.OBJECT_PT_RagDollSuffixes)
+    bpy.utils.register_class(ragdoll_ui.PHYSICS_PT_RagDoll)
+    bpy.utils.register_class(ragdoll_ui.PHYSICS_PT_RagDollConfig)
+    bpy.utils.register_class(ragdoll_ui.PHYSICS_PT_RagDollGeometry)
+    bpy.utils.register_class(ragdoll_ui.PHYSICS_PT_RagDollAnimation)
+    bpy.utils.register_class(ragdoll_ui.PHYSICS_PT_RagDollWiggles)
+    bpy.utils.register_class(ragdoll_ui.PHYSICS_PT_RagDollHooks)
+
+    bpy.utils.register_class(ragdoll_ui.PHYSICS_PT_RagDollNames)
+    bpy.utils.register_class(ragdoll_ui.PHYSICS_PT_RagDollCollections)
+
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_AddRigidBodyConstraints)
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_AddRagDoll)
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_RemoveRagDoll)
@@ -62,7 +69,8 @@ def register():
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_HookRemove)
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_MeshApproximate)
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_MeshApproximateReset)
-   
+    bpy.utils.register_class(ragdoll_ui.Scene_OT_RagDollControlRigSelect)
+    
 
 
 def unregister():
@@ -96,9 +104,17 @@ def unregister():
     bpy.utils.unregister_class(ragdoll.RdWiggles)
     
     #-------- unregister UI elements --------
-    bpy.utils.unregister_class(ragdoll_ui.OBJECT_PT_RagDoll)
-    bpy.utils.unregister_class(ragdoll_ui.OBJECT_PT_RagDollCollections)
-    bpy.utils.unregister_class(ragdoll_ui.OBJECT_PT_RagDollSuffixes)
+    bpy.utils.unregister_class(ragdoll_ui.PHYSICS_PT_RagDoll)
+    bpy.utils.unregister_class(ragdoll_ui.PHYSICS_PT_RagDollConfig)
+    bpy.utils.unregister_class(ragdoll_ui.PHYSICS_PT_RagDollGeometry)
+    bpy.utils.unregister_class(ragdoll_ui.PHYSICS_PT_RagDollAnimation)
+    bpy.utils.unregister_class(ragdoll_ui.PHYSICS_PT_RagDollWiggles)
+    bpy.utils.unregister_class(ragdoll_ui.PHYSICS_PT_RagDollHooks)
+
+
+    bpy.utils.unregister_class(ragdoll_ui.PHYSICS_PT_RagDollCollections)
+    bpy.utils.unregister_class(ragdoll_ui.PHYSICS_PT_RagDollNames)
+
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_AddRigidBodyConstraints)
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_AddRagDoll)
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_RemoveRagDoll)
@@ -113,6 +129,7 @@ def unregister():
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_HookRemove)
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_MeshApproximate)
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_MeshApproximateReset)
+    bpy.utils.unregister_class(ragdoll_ui.Scene_OT_RagDollControlRigSelect)
    
 
 

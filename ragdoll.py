@@ -116,8 +116,7 @@ class RdJointConstraints(RdRigidBodyConstraintsBase):
                     ragdoll_aux.object_add_to_collection(self.collection.name, empty)
                     super().constraint_set(empty, child.ragdoll.rigid_body, bone.ragdoll.rigid_body)
                     super().parent_set(empty, control_rig, child)
-                    # TODO: set default values in UI
-                    super().default_set(empty, 0, 22.5)
+                    super().default_set(empty)
                     
                     child.ragdoll.constraint = empty
                     if child.name in control_rig.pose.bones:
@@ -307,7 +306,10 @@ class RdWiggleConstraints(RdRigidBodyConstraintsBase):
                                             # base quadratic function
                                             max_lin = global_max_lin * falloff_factor * tree_level**2  + falloff_offset
                                             # inverse value
-                                            max_lin = 1/max_lin
+                                            if max_lin != 0:
+                                                max_lin = 1/max_lin
+                                            else: 
+                                                max_lin = 0
                                             # scale to stepsize
                                             max_lin = max_lin * global_max_lin
                                             # clamp
@@ -812,7 +814,8 @@ class RagDoll(bpy.types.PropertyGroup):
         context.object.data.ragdoll.rigid_bodies.scale()
 
     # delete all ragdoll related objects
-    def remove(armature_object):
+    def remove(self, context):
+        armature_object = context.object
         if armature_object.type == 'ARMATURE':
             if armature_object.data.ragdoll.type == 'DEFORM':
                 deform_rig = armature_object
@@ -846,19 +849,21 @@ class RagDoll(bpy.types.PropertyGroup):
                 if hooks: 
                     ragdoll_aux.object_remove_from_collection(collection, hooks.objects)
 
-            if bpy.context.scene.rigidbody_world.constraints:
-                collection = bpy.context.scene.rigidbody_world.constraints.collection_objects.data
-                rb_obj_list =  bpy.context.scene.rigidbody_world.constraints
+            if context.scene.rigidbody_world:
+                if context.scene.rigidbody_world.constraints:
+                    collection = bpy.context.scene.rigidbody_world.constraints.collection_objects.data
+                    rb_obj_list =  bpy.context.scene.rigidbody_world.constraints
 
-                if constraints: 
-                    ragdoll_aux.object_remove_from_collection(collection, constraints.objects)
-                    ragdoll_aux.object_remove_from_collection(rb_obj_list, constraints.objects)
-                if wiggle_constraints:
-                    ragdoll_aux.object_remove_from_collection(collection, wiggle_constraints.objects)
-                    ragdoll_aux.object_remove_from_collection(rb_obj_list, wiggle_constraints.objects)
-                if hook_constraints:
-                    ragdoll_aux.object_remove_from_collection(collection, hook_constraints.objects)
-                    ragdoll_aux.object_remove_from_collection(rb_obj_list, hook_constraints.objects)
+                    if constraints: 
+                        ragdoll_aux.object_remove_from_collection(collection, constraints.objects)
+                        ragdoll_aux.object_remove_from_collection(rb_obj_list, constraints.objects)
+                    if wiggle_constraints:
+                        ragdoll_aux.object_remove_from_collection(collection, wiggle_constraints.objects)
+                        ragdoll_aux.object_remove_from_collection(rb_obj_list, wiggle_constraints.objects)
+                    if hook_constraints:
+                        ragdoll_aux.object_remove_from_collection(collection, hook_constraints.objects)
+                        ragdoll_aux.object_remove_from_collection(rb_obj_list, hook_constraints.objects)
+
 
 
             ragdoll_aux.collection_remove(rigid_bodies)
@@ -879,6 +884,8 @@ class RagDoll(bpy.types.PropertyGroup):
             ragdoll_aux.drivers_remove_related(deform_rig)
 
             deform_rig.data.ragdoll.initialized = False
+
+            ragdoll_aux.select_set_active(bpy.context, deform_rig)
 
             print("Info: removed ragdoll")
 

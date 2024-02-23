@@ -70,6 +70,7 @@ def register():
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_MeshApproximate)
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_MeshApproximateReset)
     bpy.utils.register_class(ragdoll_ui.Scene_OT_RagDollControlRigSelect)
+    bpy.utils.register_class(ragdoll_ui.Object_OT_RagDollNamesReplaceSubstring)
     
 
 
@@ -130,6 +131,7 @@ def unregister():
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_MeshApproximate)
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_MeshApproximateReset)
     bpy.utils.unregister_class(ragdoll_ui.Scene_OT_RagDollControlRigSelect)
+    bpy.utils.unregister_class(ragdoll_ui.Object_OT_RagDollNamesReplaceSubstring)
    
 
 

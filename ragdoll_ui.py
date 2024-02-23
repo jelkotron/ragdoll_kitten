@@ -332,6 +332,22 @@ class Scene_OT_RagDollControlRigSelect(bpy.types.Operator):
         return {'FINISHED'}
     
 
+
+class Object_OT_RagDollNamesReplaceSubstring(bpy.types.Operator):
+    """Add Rigid Body World, set Collection"""
+    bl_idname = "object.name_substring_replace"
+    bl_label = "Replace substring in Bone Names and RagDoll Objects"
+    bl_options = {'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return True
+    
+    def execute(self, context):
+        context.object.data.ragdoll.bone_names_substring_replace(context)
+        print("Info: Object Names replaced.")
+        return {'FINISHED'}
+
 class PHYSICS_PT_RagDollConfig(bpy.types.Panel):
     """Configuration of RagDoll Constraints"""
     bl_label = "Settings"
@@ -490,7 +506,6 @@ class PHYSICS_PT_RagDollGeometry(bpy.types.Panel):
             row.operator("mesh.rd_approximate", text="Approximate", icon="SNAP_ON")
             row.operator("mesh.rd_approximate_reset", text="Reset", icon="FILE_REFRESH")
 
-
     
 class PHYSICS_PT_RagDollAnimation(bpy.types.Panel):
     """Configuration of RagDoll Animation"""
@@ -619,6 +634,7 @@ class PHYSICS_PT_RagDollWiggles(bpy.types.Panel):
 
         wiggle_falloff_settings_row_1 = wiggle_falloff_col_1.row()
         split = wiggle_falloff_settings_row_1.split(factor=0.5)
+        col_0 = split.column()
         col_1 = split.column()
         wiggle_falloff_settings_row_0 = col_1.row()
         wiggle_falloff_settings_row_0.prop(context.object.data.ragdoll.wiggles.constraints, "falloff_invert", text="Invert")
@@ -720,7 +736,6 @@ class PHYSICS_PT_RagDollHooks(bpy.types.Panel):
         row.operator("armature.hook_add")
 
 
-
 class PHYSICS_PT_RagDollNames(bpy.types.Panel):
     """Naming Suffixes for Ragdoll"""
     bl_label = "Naming"
@@ -796,7 +811,19 @@ class PHYSICS_PT_RagDollNames(bpy.types.Panel):
             row_1 = col_1.row()
             row_0.label(text="Hook Constraints")
             row_1.prop(context.object.data.ragdoll.hooks.constraints,"suffix", text="")
+            
+            # # cheap spacing
+            row_0 = col_0.row()
+            row_1 = col_1.row()
 
+            row_0 = col_0.row()
+            row_0.alignment = 'RIGHT'
+            row_1 = col_1.row()
+            row_0.label(text="Replace")
+            row_1.prop(context.object.data.ragdoll,"substring_replace_source", text="")
+            row_1.prop(context.object.data.ragdoll,"substring_replace_target", text="")
+            row_1.prop(context.object.data.ragdoll,"substring_replace_suffix", text="")
+            row_1.operator("object.name_substring_replace", text="", icon="EVENT_RETURN")
 
 class PHYSICS_PT_RagDollCollections(bpy.types.Panel):
     """Subpanel to Ragdoll"""
@@ -875,7 +902,6 @@ class PHYSICS_PT_RagDollCollections(bpy.types.Panel):
             row_info.label(text="Info: Display only, RagDoll Collections Locked.")
             
         
-
 class PHYSICS_PT_RagDoll(bpy.types.Panel):
     """Creates a Panel in the Object Data properties window"""
     bl_label = "RagDoll"
@@ -891,7 +917,7 @@ class PHYSICS_PT_RagDoll(bpy.types.Panel):
         if context.object.type == 'MESH':
             if context.object.ragdoll_object_type == 'RIGID_BODY_PRIMARY':
                 return True
-            
+   
     def draw(self, context):
 
         if not context.scene.rigidbody_world or not context.scene.rigidbody_world.constraints: 
@@ -919,7 +945,7 @@ class PHYSICS_PT_RagDoll(bpy.types.Panel):
                         op_row_0.operator("armature.ragdoll_ctrl_select", text="Select Armature ", icon="ARMATURE_DATA")
                         op_row_1 = layout.row()
                         op_row_1.operator("armature.ragdoll_remove", text="Remove Ragdoll", icon="X")
-
+                    
             elif context.object.type == 'MESH':
                 layout = self.layout
                 row = layout.row()

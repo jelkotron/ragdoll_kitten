@@ -49,8 +49,8 @@ class RdRigidBodyConstraintsBase(bpy.types.PropertyGroup):
         empty.rigid_body_constraint.enabled = enabled
     
     # create single empty object, apply bone's transform, return empty object  
-    def add_single(self, bone):
-        name = bone.name + self.suffix
+    def add_single(self, bone, deform_rig_name = ''):
+        name = deform_rig_name + "." + bone.name + self.suffix
         empty = bpy.data.objects.new(name, None)
         empty.ragdoll_object_type = "RIGID_BODY_EMPTY"
         empty.matrix_world = self.control_rig.matrix_world @ bone.matrix
@@ -123,7 +123,7 @@ class RdJointConstraints(RdRigidBodyConstraintsBase):
         for bone in bones:
             for child in bone.children:
                 if child in bones:
-                    empty = super().add_single(child)
+                    empty = super().add_single(child, deform_rig.name)
                     ragdoll_aux.object_add_to_collection(self.collection.name, empty)
                     super().constraint_set(empty, child.ragdoll.rigid_body, bone.ragdoll.rigid_body)
                     super().parent_set(empty, control_rig, child)
@@ -230,7 +230,7 @@ class RdWiggleConstraints(RdRigidBodyConstraintsBase):
         self.deform_rig = deform_rig
 
         for bone in bones:
-            empty = super().add_single(bone)
+            empty = super().add_single(bone, deform_rig.name)
             ragdoll_aux.object_add_to_collection(self.collection.name, empty)
             super().parent_set(empty, control_rig, bone)
             super().constraint_set(empty, bone.ragdoll.rigid_body, bone.ragdoll.wiggle, 'GENERIC_SPRING', self.enabled)
@@ -253,9 +253,6 @@ class RdWiggleConstraints(RdRigidBodyConstraintsBase):
         target.id_type = 'ARMATURE'
         target.id = control_rig.data
         target.data_path = 'ragdoll.wiggles.constraints.enabled'
-
-
-
 
     def update(self, context):
         control_rig = ragdoll_aux.validate_selection(context.object)
@@ -358,7 +355,6 @@ class RdWiggleConstraints(RdRigidBodyConstraintsBase):
                                         wiggle_const.spring_damping_z = control_rig.data.ragdoll.wiggles.constraints.damping
                 print("Info: Wiggle updated")
 
-
     def spring_drivers_add(self, control_rig):
             for obj in control_rig.data.ragdoll.wiggles.constraints.collection.objects:
                 if obj.rigid_body_constraint and obj.rigid_body_constraint.type == 'GENERIC_SPRING':
@@ -395,7 +391,6 @@ class RdWiggleConstraints(RdRigidBodyConstraintsBase):
                 else:
                     print("Error: Wrong Rigid Body Constraint Type: %s"%obj.rigid_body_constraint.type)
         
-
     def spring_drivers_remove(self, control_rig):
         wiggle_constraints = control_rig.data.ragdoll.wiggles.constraints.collection
         for obj in wiggle_constraints.objects:
@@ -412,7 +407,7 @@ class RdHookConstraints(RdRigidBodyConstraintsBase):
         super().add(deform_rig, hook_bone, control_rig)
         self.deform_rig = deform_rig
         self.control_rig = control_rig
-        empty = super().add_single(hook_bone)
+        empty = super().add_single(hook_bone, deform_rig.name)
         ragdoll_aux.object_add_to_collection(self.collection.name, empty)
         super().parent_set(empty, control_rig, hook_bone)
         super().constraint_set(empty, hook_bone.ragdoll.rigid_body, target_bone.ragdoll.rigid_body, 'GENERIC_SPRING', True)
@@ -432,10 +427,10 @@ class RdConnectors(bpy.types.PropertyGroup):
 
     def add(self, deform_rig, bones, control_rig):
         self.suffix_previous = self.suffix
-        print("...>", self.suffix_previous)
         collection = ragdoll_aux.object_add_to_collection(deform_rig.name + self.suffix, None)
         for bone in bones:
-            empty = bpy.data.objects.new(bone.name + self.suffix, None)
+            name = deform_rig.name + "." + bone.name + self.suffix
+            empty = bpy.data.objects.new(name, None)
             empty.empty_display_size = 0.085
             empty.empty_display_type = 'SPHERE'
             collection = ragdoll_aux.object_add_to_collection(collection.name, empty)
@@ -522,7 +517,6 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
         else:
             return self.collection
 
-
     def kinematic_drivers_add(self, target_rig):
         for obj in self.collection.objects:
             driven_value = obj.rigid_body.driver_add("kinematic")
@@ -535,7 +529,6 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
             target.id_type = 'ARMATURE'
             target.id = target_rig.data
             target.data_path = 'ragdoll.kinematic'
-
 
     def scale(self, single_obj=None, axis='XYZ'):
         axis = ragdoll_aux.axis_string_to_index_list(axis)
@@ -704,7 +697,6 @@ class RdHooks(SimulationMeshBase):
 
             return edit_bone
         
-
     def add(self, context, pose_bone, hook_pose_bone):
         control_rig = context.object
         deform_rig = context.object.data.ragdoll.deform_rig
@@ -725,7 +717,6 @@ class RdHooks(SimulationMeshBase):
 
         self.constraints.add(deform_rig, hook_pose_bone, pose_bone, control_rig)
         
-
     def objects_remove(self, context, bone_name):
         hook_constraint = context.object.pose.bones[bone_name].ragdoll.hook_constraint
         hook_mesh = context.object.pose.bones[bone_name].ragdoll.rigid_body
@@ -740,7 +731,6 @@ class RdHooks(SimulationMeshBase):
         if bone_name in context.object.pose.bones:
             context.object.pose.bones[bone_name].ragdoll.type = 'DEFAULT'
      
-    
     def bone_remove(self, context, edit_bone_name):
         edit_bone = context.object.data.edit_bones[edit_bone_name]
         context.object.data.edit_bones.remove(edit_bone)
@@ -781,6 +771,9 @@ class RagDoll(bpy.types.PropertyGroup):
     ctrl_rig_suffix: bpy.props.StringProperty(default=".Control", update = lambda self, context: self.update_suffix(context)) # type: ignore
     ctrl_rig_suffix_previous: bpy.props.StringProperty() # type: ignore
     
+    substring_replace_source: bpy.props.StringProperty() # type: ignore
+    substring_replace_target: bpy.props.StringProperty() # type: ignore
+    substring_replace_suffix: bpy.props.StringProperty() # type: ignore
     #-------- Grouped Simulation Objects and Properties -------- 
     rigid_bodies : bpy.props.PointerProperty(type=RdRigidBodies) # type: ignore
     hooks: bpy.props.PointerProperty(type=RdHooks) # type: ignore
@@ -997,6 +990,7 @@ class RagDoll(bpy.types.PropertyGroup):
         target.data_path = rd_data_path
         rd_influence.driver.expression = expression
 
+
     def update_suffix(self, context):
         if self.control_rig:
             rig = self.control_rig
@@ -1006,5 +1000,58 @@ class RagDoll(bpy.types.PropertyGroup):
             rig.name = rig.name.replace(self.ctrl_rig_suffix_previous, self.ctrl_rig_suffix)
         self.ctrl_rig_suffix_previous = self.ctrl_rig_suffix
         
+    def bone_names_substring_replace(self, context):
+        rig_obj = context.object
+        rigid_bodies = rig_obj.data.ragdoll.rigid_bodies
+        constraints = rigid_bodies.constraints
+        connectors = rigid_bodies.connectors
+        wiggles = rig_obj.data.ragdoll.wiggles
+        wiggle_constraints = wiggles.constraints
+        
+        pose_bones_ctrl = rig_obj.pose.bones
+        
+        source = rig_obj.data.ragdoll.substring_replace_source
+        target = rig_obj.data.ragdoll.substring_replace_target
+        suffix = rig_obj.data.ragdoll.substring_replace_suffix
+
+        if rigid_bodies.collection:
+            for obj in rigid_bodies.collection.objects:
+                if source in obj.name:
+                    obj.name = obj.name.replace(source, target)
+                    obj.name = obj.name.replace(rigid_bodies.suffix, "") + suffix + rigid_bodies.suffix
+                
+        if constraints.collection:
+            for obj in constraints.collection.objects:
+                if source in obj.name:
+                    obj.name = obj.name.replace(source, target)
+                    obj.name = obj.name.replace(constraints.suffix, "") + suffix + constraints.suffix 
+
+        if connectors.collection:
+            for obj in connectors.collection.objects:
+                if source in obj.name:
+                    obj.name = obj.name.replace(source, target)
+                    obj.name = obj.name.replace(connectors.suffix, "") + suffix + connectors.suffix 
+
+        if wiggles.collection:
+            for obj in wiggles.collection.objects:
+                if source in obj.name:
+                    obj.name = obj.name.replace(source, target)
+                    obj.name = obj.name.replace(wiggles.suffix, "") + suffix + wiggles.suffix 
+
+        if wiggle_constraints.collection:
+            for obj in wiggle_constraints.collection.objects:
+                if source in obj.name:
+                    obj.name = obj.name.replace(source, target)
+                    obj.name = obj.name.replace(wiggle_constraints.suffix, "") + suffix + wiggle_constraints.suffix 
+
+        for bone in pose_bones_ctrl:
+            if source in bone.name:
+                bone.name = bone.name.replace(source, target) + suffix
+
+        if rig_obj.data.ragdoll.deform_rig:
+            pose_bones_def = rig_obj.data.ragdoll.deform_rig.pose.bones
+            for bone in pose_bones_def:
+                if source in bone.name:
+                    bone.name = bone.name.replace(source, target) + suffix
 
 

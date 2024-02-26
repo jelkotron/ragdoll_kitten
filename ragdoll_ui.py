@@ -225,19 +225,19 @@ class OBJECT_OT_HookAdd(bpy.types.Operator):
         pose_bone = bpy.context.active_pose_bone
         hook_pose_bone = None
         # add hook (bone + mesh + rigid body constraint), (bone) edit mode needs to active
-        # if len(context.selected_pose_bones) > 1:
-        #     hook_pose_bone = context.selected_pose_bones[1]
-            # check if selected bone to hook to is armature transform target
-            # if hook_pose_bone.ragdoll.rigid_body != None and hook_pose_bone.ragdoll.type != 'HOOK':
-            #     hook_pose_bone = None
+        if len(context.selected_pose_bones) > 1:
+            hook_pose_bone = context.selected_pose_bones[1]
+            hook_pose_bone.ragdoll.type = 'HOOK'
+
         if hook_pose_bone == None:
             bpy.ops.object.mode_set(mode='EDIT')
             hook_index = 0
-            hook_bone_name = context.object.name + context.object.data.ragdoll.hooks.suffix + "." + str(hook_index).zfill(3)
+            hook_bone_name = pose_bone.name + context.object.data.ragdoll.hooks.suffix + "." + str(hook_index).zfill(3)  
+            
             while hook_bone_name in context.object.data.bones:
+                print(hook_bone_name)
                 hook_index += 1
-                hook_bone_name = context.object.name + context.object.data.ragdoll.hooks.suffix + "." + str(hook_index).zfill(3)
-
+                hook_bone_name = pose_bone.name + context.object.data.ragdoll.hooks.suffix + "." + str(hook_index).zfill(3)
             bpy.ops.armature.bone_primitive_add(name=hook_bone_name)
         
             # restore previouse mode if possible
@@ -265,23 +265,27 @@ class OBJECT_OT_HookRemove(bpy.types.Operator):
     bl_label = "Remove Hook"
     bl_options = {'UNDO'}
 
-    bone_name : bpy.props.StringProperty() # type: ignore
+    hooked_bone_name : bpy.props.StringProperty() # type: ignore
 
     @classmethod
     def poll(cls, context):
         return True
     
     def execute(self, context):
+        rig = context.object
         mode_init = context.mode
         if mode_init == 'EDIT_ARMATURE':
             mode_init = 'EDIT'
 
-        context.object.data.ragdoll.hooks.objects_remove(context, self.bone_name)
+        rig.data.ragdoll.hooks.objects_remove(context, self.hooked_bone_name)
+        hooked_bone = rig.pose.bones[self.hooked_bone_name]
+        hook_bone = rig.pose.bones[hooked_bone.ragdoll.hook_bone_name]
+        num_users = hook_bone.ragdoll.hook_users
 
-        bpy.ops.object.mode_set(mode='EDIT')
-        
-        if self.bone_name in context.object.data.edit_bones:
-            context.object.data.ragdoll.hooks.bone_remove(context, self.bone_name)        
+        if num_users == 0:
+            bpy.ops.object.mode_set(mode='EDIT')
+            if hook_bone.name in context.object.data.edit_bones:
+                context.object.data.ragdoll.hooks.bone_remove(context, hook_bone.name)        
         
         bpy.ops.object.mode_set(mode=mode_init)
 
@@ -505,6 +509,13 @@ class PHYSICS_PT_RagDollGeometry(bpy.types.Panel):
         prop_row.prop(context.object.data.ragdoll.rigid_bodies, "width_min", text="Minimum")
         prop_row.prop(context.object.data.ragdoll.rigid_bodies, "width_max", text="Maximum")
 
+        label_row = col_0.row()
+        label_row.alignment = 'RIGHT'
+        label_row.label(text="Viewport Display")
+        prop_row = col_1.row(align=True)
+        prop_row.prop(context.object.data.ragdoll.rigid_bodies, "display_type", text="")
+        
+        
 
         if context.object.data.ragdoll.initialized:
             row = layout.row()
@@ -702,13 +713,14 @@ class PHYSICS_PT_RagDollHooks(bpy.types.Panel):
 
         for i in range(len(context.object.pose.bones)):
             pose_bone = context.object.pose.bones[i]
-            if pose_bone.ragdoll.type == 'HOOK' and pose_bone.ragdoll.hook_constraint != None:
+            if pose_bone.ragdoll.hook_bone_name != '' and pose_bone.ragdoll.hook_constraint != None:
                 hook_box = layout.box() 
                 row = hook_box.row()
                 row.prop(pose_bone.ragdoll.hook_constraint.rigid_body_constraint, "enabled", text="")
-                row.label(text="%s"%pose_bone.ragdoll.hook_constraint.name)
+                txt = pose_bone.name.rstrip(".0123456789%s").replace(context.object.data.ragdoll.hooks.suffix, "")
+                row.label(text=txt)
                 
-                row.operator("armature.hook_remove", text="", icon='X').bone_name = pose_bone.name
+                row.operator("armature.hook_remove", text="", icon='X').hooked_bone_name = pose_bone.name
                 row = hook_box.row()
                 row.prop(pose_bone.ragdoll.hook_constraint.rigid_body_constraint, "object1", text="")
                 row.prop(pose_bone.ragdoll.hook_constraint.rigid_body_constraint, "object2", text="")

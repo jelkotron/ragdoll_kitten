@@ -24,10 +24,10 @@ class RdRigidBodyConstraintsBase(bpy.types.PropertyGroup):
     
     control_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
     deform_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
-    default_distance: bpy.props.FloatProperty(name="Maximum Constraint Translation", default=0) # type: ignore
-    default_rotation: bpy.props.FloatProperty(name="Maximum Constraint Rotation", subtype="ANGLE", default=math.radians(22.5)) # type: ignore
-    restrict_linear: bpy.props.BoolProperty(default=True) # type: ignore
-    restrict_angular: bpy.props.BoolProperty(default=True) # type: ignore
+    default_distance: bpy.props.FloatProperty(name="Maximum Constraint Translation", default=0, options=set()) # type: ignore
+    default_rotation: bpy.props.FloatProperty(name="Maximum Constraint Rotation", subtype="ANGLE", default=math.radians(22.5), options=set()) # type: ignore
+    restrict_linear: bpy.props.BoolProperty(default=True, options=set()) # type: ignore
+    restrict_angular: bpy.props.BoolProperty(default=True, options=set()) # type: ignore
 
     # name, create and return an empty collection (empty as in containing no objects). set objects & properties in subclasses.
     def add(self, deform_rig, bones, control_rig):
@@ -71,10 +71,10 @@ class RdRigidBodyConstraintsBase(bpy.types.PropertyGroup):
         
     # set rigid body constraint restrictions & apply default values to linear and angular limits 
     def default_set(self, obj, max_lin=None, max_ang=None):
-        if not max_lin:
+        if max_lin == None:
             max_lin = self.default_distance
 
-        if not max_ang:
+        if max_ang == None:
             max_ang = math.degrees(self.default_rotation)
 
         if obj.rigid_body_constraint:
@@ -217,25 +217,89 @@ class RdWiggleConstraints(RdRigidBodyConstraintsBase):
     suffix: bpy.props.StringProperty(name="Rigid Body Constraint Suffix", default=".WiggleConstraint", update= lambda self, context: super().update_suffix(context)) # type: ignore
 
     enabled: bpy.props.BoolProperty(name="Use Constraints", default=False, update=lambda self, context: self.update(context)) # type: ignore
-    default_distance: bpy.props.FloatProperty(name="Maximum Wiggle Translation",min=0.0, max=16.0, default=0, update=lambda self, context: self.update(context)) # type: ignore
-    default_rotation: bpy.props.FloatProperty(name="Maximum Wiggle Rotation", subtype="ANGLE", min=0.0, max=math.radians(360.0), default=math.radians(0), update=lambda self, context: self.update(context)) # type: ignore
-    restrict_linear: bpy.props.BoolProperty(name="Limit Wiggle Translation", default=True, update=lambda self, context: self.update(context)) # type: ignore
-    restrict_angular: bpy.props.BoolProperty(name="Limit Wiggle Rotation", default=False, update=lambda self, context: self.update(context)) # type: ignore
+    default_distance: bpy.props.FloatProperty(name="Maximum Wiggle Translation",
+                                              min=0.0, max=16.0, default=0, 
+                                              update=lambda self, context: self.update(context),
+                                              options=set() # prevent prop being animated
+                                              ) # type: ignore
+                                              
+    default_rotation: bpy.props.FloatProperty(name="Maximum Wiggle Rotation", 
+                                              subtype="ANGLE", min=0.0, 
+                                              max=math.radians(360.0), 
+                                              default=math.radians(0), 
+                                              update=lambda self, context: self.update(context),
+                                              options=set() # prevent prop being animated
+                                              ) # type: ignore
+    
+    restrict_linear: bpy.props.BoolProperty(name="Limit Wiggle Translation", 
+                                            default=True, 
+                                            update=lambda self, context: self.update(context),
+                                            options=set() # prevent prop animation
+                                            ) # type: ignore
+    
+    restrict_angular: bpy.props.BoolProperty(name="Limit Wiggle Rotation", 
+                                             default=False, 
+                                             update=lambda self, context: self.update(context),
+                                             options=set() # prevent prop animation
+                                             ) # type: ignore
 
-    use_falloff: bpy.props.BoolProperty(name="Use Wiggle Falloff", default=False, update=lambda self, context: self.update(context)) # type: ignore
-    falloff_invert: bpy.props.BoolProperty(name="Invert Falloff", default=False, update=lambda self, context: self.update(context)) # type: ignore
-    falloff_chain_ends: bpy.props.BoolProperty(name="Chain Ends", default=True, update=lambda self, context: self.update(context)) # type: ignore
+    use_falloff: bpy.props.BoolProperty(name="Use Wiggle Falloff", 
+                                        default=False, 
+                                        update=lambda self, context: self.update(context),
+                                        options=set() # prevent prop animation
+                                        ) # type: ignore
+    
+    falloff_invert: bpy.props.BoolProperty(name="Invert Falloff", 
+                                           default=False, 
+                                           update=lambda self, context: self.update(context),
+                                           options=set() # prevent prop animation
+                                           ) # type: ignore
+    
+    falloff_chain_ends: bpy.props.BoolProperty(name="Chain Ends", 
+                                               default=True, 
+                                               update=lambda self, context: self.update(context),
+                                               options=set() # prevent prop animation
+                                               ) # type: ignore
+    
     falloff_mode: bpy.props.EnumProperty(items=[
                                                             ('LINEAR', "Linear", "Linear bone chain based falloff in wiggle"),
                                                             ('QUADRATIC', "Quadratic", "Quadratic bone chain based falloff in wiggle") 
                                                             ], default='QUADRATIC', name="Falloff Mode", update=lambda self, context: self.update(context)) # type: ignore
     
-    falloff_factor: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=0.0, max=10.0, default=1.0, update=lambda self, context: self.update(context)) # type: ignore
-    falloff_offset: bpy.props.FloatProperty(name="wiggle_falloff_factor", min=-10.0, max=10.0, update=lambda self, context: self.update(context)) # type: ignore
-    use_springs: bpy.props.BoolProperty(name="Use Springs", default=True, update=lambda self, context: self.update(context)) # type: ignore
-    stiffness: bpy.props.FloatProperty(name="Stiffnesss", min=0, max=1000, update=lambda self, context: self.update(context)) # type: ignore
-    damping: bpy.props.FloatProperty(name="Damping", min=0, max=1000, update=lambda self, context: self.update(context)) # type: ignore
-    drivers: bpy.props.BoolProperty(name="Wiggle has Drivers", default=False) # type: ignore
+    falloff_factor: bpy.props.FloatProperty(name="wiggle_falloff_factor", 
+                                            min=0.0, max=10.0, default=1.0, 
+                                            update=lambda self, 
+                                            context: self.update(context),
+                                            options=set() # prevent prop animation 
+                                            ) # type: ignore
+    
+    falloff_offset: bpy.props.FloatProperty(name="wiggle_falloff_factor", 
+                                            min=-10.0, max=10.0, 
+                                            update=lambda self, context: self.update(context),
+                                            options=set() # prevent prop animation 
+                                            ) # type: ignore
+    
+    use_springs: bpy.props.BoolProperty(name="Use Springs", 
+                                        default=True, 
+                                        update=lambda self, context: self.update(context), 
+                                        options=set() # prevent prop animation 
+                                        ) # type: ignore
+    
+    stiffness: bpy.props.FloatProperty(name="Stiffnesss", 
+                                       min=0, 
+                                       max=1000, 
+                                       update=lambda self, context: self.update(context)
+                                       ) # type: ignore
+    
+    damping: bpy.props.FloatProperty(name="Damping", 
+                                     min=0, 
+                                     max=1000, 
+                                     update=lambda self, context: self.update(context)
+                                     ) # type: ignore
+    
+    drivers: bpy.props.BoolProperty(name="Wiggle has Drivers", 
+                                    default=False
+                                    ) # type: ignore
 
     def add(self, deform_rig, bones, control_rig):
         super().add(deform_rig, bones, control_rig)
@@ -297,7 +361,7 @@ class RdWiggleConstraints(RdRigidBodyConstraintsBase):
                     pbone = control_rig.pose.bones[i]
                     max_lin = global_max_lin
                     max_ang = global_max_ang
-                    
+
                     if pbone.ragdoll.wiggle_constraint != None:
                         wiggle_const = pbone.ragdoll.wiggle_constraint.rigid_body_constraint
                         
@@ -369,6 +433,7 @@ class RdWiggleConstraints(RdRigidBodyConstraintsBase):
                                         wiggle_const.spring_damping_x = control_rig.data.ragdoll.wiggles.constraints.damping
                                         wiggle_const.spring_damping_y = control_rig.data.ragdoll.wiggles.constraints.damping
                                         wiggle_const.spring_damping_z = control_rig.data.ragdoll.wiggles.constraints.damping
+
                 print("Info: Wiggle updated")
 
     def spring_drivers_add(self, control_rig):
@@ -426,13 +491,14 @@ class RdHookConstraints(RdRigidBodyConstraintsBase):
         empty = super().add_single(hook_bone, deform_rig.name)
         ragdoll_aux.object_add_to_collection(self.collection.name, empty)
         ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, empty)
-        super().parent_set(empty, control_rig, hook_bone)
-        super().constraint_set(empty, hook_bone.ragdoll.rigid_body, target_bone.ragdoll.rigid_body, 'GENERIC_SPRING', True)
-        super().default_set(empty, 0.1, 22.5)
+        self.parent_set(empty, control_rig, hook_bone)
+        self.constraint_set(empty, hook_bone.ragdoll.rigid_body, target_bone.ragdoll.rigid_body, 'GENERIC_SPRING', True)
+        self.default_set(empty, 0, 0)
         hook_bone.ragdoll.hook_constraint = empty
         target_bone.ragdoll.hook_constraint = empty
         if target_bone.name in deform_rig.pose.bones:
             deform_rig.pose.bones[target_bone.name].ragdoll.hook_constraint = empty
+            deform_rig.pose.bones[target_bone.name].ragdoll.hook_constraint
 
 #------------------------ helper objects used as target for bone transforms ------------------------
 #------------------------ as rigig body objects' pivots need to centered to ------------------------
@@ -482,11 +548,18 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
     control_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
     deform_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
 
-    width_min: bpy.props.FloatProperty(name="Minimum Geo Width", default=0.1, min=0.01, update=lambda self, context: self.update_width(context)) # type: ignore
-    width_max: bpy.props.FloatProperty(name="Maximum Geo Width", default=0.1, min=0.0, update=lambda self, context: self.update_width(context)) # type: ignore
-    width_relative: bpy.props.FloatProperty(name="Relative Geo Width", default=0.1, min=0.0, update=lambda self, context: self.update_width(context)) # type: ignore
-    length_relative: bpy.props.FloatProperty(name="Relative Geo Length", default=0.9, min=0.01, update=lambda self, context: self.update_length(context)) # type: ignore
+    width_min: bpy.props.FloatProperty(name="Minimum Geo Width", default=0.1, min=0.01, update=lambda self, context: self.update_width(context), options=set()) # type: ignore
+    width_max: bpy.props.FloatProperty(name="Maximum Geo Width", default=0.1, min=0.0, update=lambda self, context: self.update_width(context), options=set()) # type: ignore
+    width_relative: bpy.props.FloatProperty(name="Relative Geo Width", default=0.1, min=0.0, update=lambda self, context: self.update_width(context), options=set()) # type: ignore
+    length_relative: bpy.props.FloatProperty(name="Relative Geo Length", default=0.9, min=0.01, update=lambda self, context: self.update_length(context), options=set()) # type: ignore
 
+    display_type: bpy.props.EnumProperty(items=[
+                                                ('BOUNDS', "Bounds", "Display the bounds of the object."),
+                                                ('WIRE', "Wire", "Display the object as a wireframe"),
+                                                ('SOLID', "Solid", "Display the object as a solid (if solid drawing is enabled in the viewport)."),
+                                                ('TEXTURED', "Textured", "Display the object with textures (if textures are enabled in the viewport)")
+                                                ], default='WIRE', name="Viewport Display", update=lambda self, context: self.update_viewport_display(context)
+    ) # type: ignore
 
     def add(self, deform_rig ,pbones, control_rig, is_hook=False):
         self.deform_rig = deform_rig
@@ -558,35 +631,36 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
 
             for mesh in objects:
                 if mesh:
-                    bone = self.control_rig.pose.bones[mesh.ragdoll_bone_name]
-                    protected = mesh.ragdoll_protect_approx
-                    if bone:
-   
-                        for vert in mesh.data.vertices:
-                            for i in range(3):
-                                if i in axis:
-                                    if i == 1:
-                                        # reset Y dimension to 1 
-                                        vert.co[i] *= abs(0.5 / vert.co[i])
-                                        vert.co[i] *= bone.length * self.length_relative
-                                    else:
-                                        if not protected:
-                                            # reset XZ dimensions to 1
-                                            vert.co[i] *= abs(0.5 / vert.co[i])
-                                            # clamp values to min/max
-                                            width_factor = self.width_relative * bone.length
+                    if not mesh.ragdoll_protect_custom:
+                            bone = self.control_rig.pose.bones[mesh.ragdoll_bone_name]
+                            protected = mesh.ragdoll_protect_approx
+                            if bone:
 
-                                            if self.width_max != 0:
-                                                width_factor = min(self.width_max, self.width_relative)
-                                            
-                                            if self.width_min != 0:
-                                                width_factor = max(width_factor, self.width_min)
-                        
-                                            # apply new transform
-                                            vert.co[i] *= width_factor
+                                for vert in mesh.data.vertices:
+                                    for i in range(3):
+                                        if i in axis:
+                                            if i == 1:
+                                                # reset Y dimension to 1 
+                                                vert.co[i] *= abs(0.5 / vert.co[i])
+                                                vert.co[i] *= bone.length * self.length_relative
+                                            else:
+                                                if not protected:
+                                                    # reset XZ dimensions to 1
+                                                    vert.co[i] *= abs(0.5 / vert.co[i])
+                                                    # clamp values to min/max
+                                                    width_factor = self.width_relative * bone.length
 
-                    mesh.data.update()
-                    bpy.context.view_layer.update()
+                                                    if self.width_max != 0:
+                                                        width_factor = min(self.width_max, self.width_relative)
+                                                    
+                                                    if self.width_min != 0:
+                                                        width_factor = max(width_factor, self.width_min)
+                                
+                                                    # apply new transform
+                                                    vert.co[i] *= width_factor
+
+                            mesh.data.update()
+                            bpy.context.view_layer.update()
 
         else:
             print("Error: Cannot create mesh with width of 0")
@@ -612,19 +686,20 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
         control_rig = context.object
         pose_bones = ragdoll_aux.get_visible_posebones(context.object)
         target = context.object.data.ragdoll.deform_mesh
-        threshold = context.object.data.ragdoll.deform_mesh_projection_threshold
-        offset = context.object.data.ragdoll.deform_mesh_offset
-        # store pose position
-        init_pose_position = control_rig.data.pose_position
-        # set to rest position
-        control_rig.data.pose_position = 'REST'
-        context.view_layer.update()
-        # snap bones' rigid body objects' face centers to target mesh surface
         if target:
+            threshold = context.object.data.ragdoll.deform_mesh_projection_threshold
+            offset = context.object.data.ragdoll.deform_mesh_offset
+            # store pose position
+            init_pose_position = control_rig.data.pose_position
+            # set to rest position
+            control_rig.data.pose_position = 'REST'
+            context.view_layer.update()
+            # snap bones' rigid body objects' face centers to target mesh surface
             for bone in pose_bones:
                 if bone.ragdoll.rigid_body:
-                    ragdoll_aux.snap_rigid_body_cube(bone.ragdoll.rigid_body, target, 'XZ', threshold, offset)
-                    bone.ragdoll.rigid_body.ragdoll_protect_approx = True
+                    if not bone.ragdoll.rigid_body.ragdoll_protect_custom:
+                        ragdoll_aux.snap_rigid_body_cube(bone.ragdoll.rigid_body, target, 'XZ', threshold, offset)
+                        bone.ragdoll.rigid_body.ragdoll_protect_approx = True
         # restore pose position
         control_rig.data.pose_position = init_pose_position
          
@@ -635,12 +710,13 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
         for bone in pose_bones:
             mesh_obj = bone.ragdoll.rigid_body 
             if mesh_obj:
-                mesh_obj.ragdoll_protect_approx = False
-                mesh_obj.data = ragdoll_aux.cube(1, mesh_obj.name, 'DATA')
-                self.scale(mesh_obj)
-                mesh_obj.matrix_world = control_rig.matrix_world @ mathutils.Matrix.LocRotScale(bone.center, bone.matrix.decompose()[1], bone.matrix.decompose()[2])
-                for child in mesh_obj.children:
-                    child.matrix_world @= mesh_obj.matrix_parent_inverse
+                if not bone.ragdoll.rigid_body.ragdoll_protect_custom:
+                    mesh_obj.ragdoll_protect_approx = False
+                    mesh_obj.data = ragdoll_aux.cube(1, mesh_obj.name, 'DATA')
+                    self.scale(mesh_obj)
+                    mesh_obj.matrix_world = control_rig.matrix_world @ mathutils.Matrix.LocRotScale(bone.center, bone.matrix.decompose()[1], bone.matrix.decompose()[2])
+                    for child in mesh_obj.children:
+                        child.matrix_world @= mesh_obj.matrix_parent_inverse
 
     def update_width(self, context):
         self.scale(None, 'XZ')
@@ -655,6 +731,12 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
             self.collection.name = self.collection.name.replace(self.suffix_previous, self.suffix)
             self.suffix_previous = self.suffix
         
+    def update_viewport_display(self, context):
+        if self.collection:
+            for obj in self.collection.objects:
+                obj.display_type = self.display_type
+    
+                
 #------------------------ mesh representations of bones ------------------------
 class RdRigidBodies(SimulationMeshBase):
     collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Geometry Collection") # type: ignore
@@ -675,6 +757,7 @@ class RdRigidBodies(SimulationMeshBase):
                 control_rig.pose.bones[bone_name].ragdoll.rigid_body = obj
 
         super().kinematic_drivers_add(self.control_rig)
+
 
 #------------------------ meshes directly bound to the control armature used ------------------------
 #------------------------ as component of wiggle constraints for simulation atop of animation
@@ -720,13 +803,18 @@ class RdHooks(SimulationMeshBase):
     def add(self, context, pose_bone, hook_pose_bone):
         control_rig = context.object
         deform_rig = context.object.data.ragdoll.deform_rig
-        obj = super().add(deform_rig, control_rig, hook_pose_bone, is_hook=True)
-        obj.rigid_body.kinematic = True
-        obj.ragdoll_object_type = "RIGID_BODY_HOOK"
-        obj.rigid_body.collision_collections[0] = False
-        obj.rigid_body.collision_collections[19] = True
-        hook_pose_bone.ragdoll.rigid_body = obj
-        hook_pose_bone.ragdoll.type = 'HOOK'
+        obj = hook_pose_bone.ragdoll.rigid_body
+        if not obj:
+            obj = super().add(deform_rig, hook_pose_bone, control_rig, is_hook=True)
+            obj.rigid_body.kinematic = True
+            obj.ragdoll_object_type = "RIGID_BODY_HOOK"
+            for i in range(20):
+                obj.rigid_body.collision_collections[i] = False
+
+            hook_pose_bone.ragdoll.rigid_body = obj
+            hook_pose_bone.ragdoll.type = 'HOOK'
+        
+        hook_pose_bone.ragdoll.hook_users += 1
 
         if pose_bone.name in deform_rig.pose.bones:
             deform_rig.pose.bones[pose_bone.name].ragdoll.hook_mesh = obj
@@ -738,19 +826,31 @@ class RdHooks(SimulationMeshBase):
         self.constraints.add(deform_rig, hook_pose_bone, pose_bone, control_rig)
         
     def objects_remove(self, context, bone_name):
-        hook_constraint = context.object.pose.bones[bone_name].ragdoll.hook_constraint
-        hook_mesh = context.object.pose.bones[bone_name].ragdoll.rigid_body
+        # hook_constraint = context.object.pose.bones[bone_name].ragdoll.hook_constraint
+        # hook_mesh = context.object.pose.bones[bone_name].ragdoll.rigid_body
+        # hook_bone = context.object.pose.bones[bone_name]
 
-        ragdoll_aux.object_remove_from_collection(bpy.context.scene.rigidbody_world.collection, hook_mesh)
-        ragdoll_aux.object_remove_from_collection(bpy.context.scene.rigidbody_world.constraints, hook_constraint)
+        rig = context.object
+        hooked_bone = rig.pose.bones[bone_name]
+        hook_bone = rig.pose.bones[hooked_bone.ragdoll.hook_bone_name]
+        hook_constraint = hooked_bone.ragdoll.hook_constraint
+        hook_mesh = hook_bone.ragdoll.rigid_body
+
         if hook_constraint:
+            ragdoll_aux.object_remove_from_collection(bpy.context.scene.rigidbody_world.constraints, hook_constraint)
             bpy.data.objects.remove(hook_constraint, do_unlink=True)
-        if hook_mesh:
-            bpy.data.objects.remove(hook_mesh, do_unlink=True)
 
-        if bone_name in context.object.pose.bones:
-            context.object.pose.bones[bone_name].ragdoll.type = 'DEFAULT'
+        if hook_bone.ragdoll.hook_users == 1:
+            ragdoll_aux.object_remove_from_collection(bpy.context.scene.rigidbody_world.collection, hook_mesh)
+            
+            if hook_mesh:
+                bpy.data.objects.remove(hook_mesh, do_unlink=True)
+
+            if bone_name in context.object.pose.bones:
+                context.object.pose.bones[bone_name].ragdoll.type = 'DEFAULT'
      
+        hook_bone.ragdoll.hook_users -= 1 
+
     def bone_remove(self, context, edit_bone_name):
         edit_bone = context.object.data.edit_bones[edit_bone_name]
         context.object.data.edit_bones.remove(edit_bone)
@@ -778,18 +878,18 @@ class RagDollBone(bpy.types.PropertyGroup):
                                         ('HOOK', "Ragdoll Hook Bone in Control Rig", "Deform Rig of a RagDoll")                          
                                     ], default='DEFAULT') # type: ignore
 
-
+    hook_users : bpy.props.IntProperty("Number of Bones RagDoll-Hooked to this bone", default=0, min=0)
 #------------------------ main property group. constraint and rigid body groups nested inside ------------------------
 class RagDoll(bpy.types.PropertyGroup):
     #-------- Object Pointers --------
     deform_rig : bpy.props.PointerProperty(type=bpy.types.Object, poll=armature_poll) # type: ignore
     control_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
-    deform_mesh: bpy.props.PointerProperty(type=bpy.types.Object, name="Target Mesh", poll=mesh_poll) # type: ignore
-    deform_mesh_offset: bpy.props.FloatVectorProperty(name="Offset", subtype='XYZ', default=(0.0, 0.0, 0.0)) # type: ignore
-    deform_mesh_projection_threshold: bpy.props.FloatProperty(name="Projection Threshold", min=0.0, default=0.1) # type: ignore
+    deform_mesh: bpy.props.PointerProperty(type=bpy.types.Object, name="Target Mesh", poll=mesh_poll,options=set()) # type: ignore
+    deform_mesh_offset: bpy.props.FloatVectorProperty(name="Offset", subtype='XYZ', default=(0.0, 0.0, 0.0), options=set()) # type: ignore
+    deform_mesh_projection_threshold: bpy.props.FloatProperty(name="Projection Threshold", min=0.0, default=0.1, options=set()) # type: ignore
     #-------- Control Rig Name Suffix --------
     ctrl_rig_suffix: bpy.props.StringProperty(default=".Control", update = lambda self, context: self.update_suffix(context)) # type: ignore
-    ctrl_rig_suffix_previous: bpy.props.StringProperty() # type: ignore
+    ctrl_rig_suffix_previous: bpy.props.StringProperty(default=".Control") # type: ignore
     
     substring_replace_source: bpy.props.StringProperty() # type: ignore
     substring_replace_target: bpy.props.StringProperty() # type: ignore
@@ -828,26 +928,27 @@ class RagDoll(bpy.types.PropertyGroup):
 
             if not rig.data.ragdoll.initialized:
                 # store bones' hierarchy level in bone prop
-                self.deform_rig = ragdoll_aux.bones_tree_levels_set(bpy.context.object, bones)
+                deform_rig = ragdoll_aux.bones_tree_levels_set(bpy.context.object, bones)
+                self.deform_rig = deform_rig
                 # duplicate armature to use as control rig
-                self.control_rig = self.secondary_rig_add(self.deform_rig)
-                self.ctrl_rig_suffix_previous = self.ctrl_rig_suffix
-            
+                control_rig = self.secondary_rig_add(self.deform_rig)
+                self.control_rig = control_rig
+                ragdoll = control_rig.data.ragdoll
+                ragdoll.ctrl_rig_suffix = self.ctrl_rig_suffix
                 # set config file if supplied
                 if self.config:
-                    self.control_rig.data.ragdoll.config = self.config
-                
-                # TODO: pass less member varibles ffs
+                    control_rig.data.ragdoll.config = self.config
+
                 # add primary set of rigid bodies & constraints 
-                self.rigid_bodies.add(self.deform_rig, bones, self.control_rig)
-                self.rigid_bodies.connectors.add(self.deform_rig, bones, self.control_rig)
-                self.rigid_bodies.constraints.add(self.deform_rig, bones, self.control_rig, 'GENERIC_SPRING')
+                ragdoll.rigid_bodies.add(deform_rig, bones, control_rig)
+                ragdoll.rigid_bodies.connectors.add(deform_rig, bones, control_rig)
+                ragdoll.rigid_bodies.constraints.add(deform_rig, bones, control_rig, 'GENERIC_SPRING')
                 # add secondary set of rigid bodies & constraints for simulation atop of animation
-                self.wiggles.add(self.deform_rig, bones, self.control_rig)
-                self.wiggles.constraints.add(self.deform_rig, bones, self.control_rig)
+                ragdoll.wiggles.add(deform_rig, bones, control_rig)
+                ragdoll.wiggles.constraints.add(deform_rig, bones, control_rig)
                 # add bone constraints to copy ragdoll's or control rig's transformations
-                self.pose_constraints_add(bones)
-                self.deform_rig.select_set(False)
+                ragdoll.pose_constraints_add(bones)
+                ragdoll.deform_rig.select_set(False)
                 bpy.context.view_layer.update()
             print("Info: added ragdoll")
         
@@ -1055,8 +1156,8 @@ class RagDoll(bpy.types.PropertyGroup):
         elif self.deform_rig:
             rig = self.deform_rig.data.ragdoll.control_rig
         if rig:
-            rig.name = rig.name.replace(self.ctrl_rig_suffix_previous, self.ctrl_rig_suffix)
-        self.ctrl_rig_suffix_previous = self.ctrl_rig_suffix
+            rig.name = rig.name.replace(rig.data.ragdoll.ctrl_rig_suffix_previous, rig.data.ragdoll.ctrl_rig_suffix)
+            rig.data.ragdoll.ctrl_rig_suffix_previous = rig.data.ragdoll.ctrl_rig_suffix
         
     def bone_names_substring_replace(self, context):
         rig_obj = context.object

@@ -270,6 +270,7 @@ class RdWiggleConstraints(RdRigidBodyConstraintsBase):
 
     def update(self, context):
         control_rig = ragdoll_aux.validate_selection(context.object)
+
         if control_rig:
             if control_rig.data.ragdoll.type == 'DEFORM':
                 control_rig = control_rig.data.ragdoll.control_rig
@@ -290,6 +291,8 @@ class RdWiggleConstraints(RdRigidBodyConstraintsBase):
                 bone_level_max = control_rig.data.ragdoll.bone_level_max
                 wiggle_falloff_chain_ends = control_rig.data.ragdoll.wiggles.constraints.falloff_chain_ends
 
+                visible_bones = ragdoll_aux.get_visible_posebones(control_rig)
+
                 for i in range(len(control_rig.pose.bones)):
                     pbone = control_rig.pose.bones[i]
                     max_lin = global_max_lin
@@ -307,11 +310,10 @@ class RdWiggleConstraints(RdRigidBodyConstraintsBase):
                                     tree_level = pbone.ragdoll.tree_level
                                     bone_name = wiggle_const.object1.parent_bone
                                     
-                                    visible_bones = ragdoll_aux.get_visible_posebones(control_rig)
                                     if wiggle_falloff_chain_ends == True:
                                         last_in_chain = True
                                         for child in control_rig.pose.bones[bone_name].children:
-                                            if child in visible_bones:
+                                            if child in visible_bones or child.ragdoll.rigid_body:
                                                 last_in_chain = False
                                         if last_in_chain:
                                             tree_level = bone_level_max 
@@ -685,10 +687,11 @@ class RdWiggles(SimulationMeshBase):
         super().add(deform_rig, pbones, control_rig)
         for obj in self.collection.objects:
             obj.rigid_body.kinematic = True
+            obj.rigid_body.type = 'PASSIVE'
             obj.ragdoll_object_type = "RIGID_BODY_WIGGLE"
-            # TODO: set this elsewhere
-            obj.rigid_body.collision_collections[0] = False
-            obj.rigid_body.collision_collections[19] = True
+            for i in range(20):
+                obj.rigid_body.collision_collections[i] = False
+
             bone_name = obj.ragdoll_bone_name
             if bone_name in deform_rig.pose.bones:
                 deform_rig.pose.bones[bone_name].ragdoll.wiggle = obj
@@ -868,6 +871,7 @@ class RagDoll(bpy.types.PropertyGroup):
 
             self.wiggles.add(deform_rig, def_bones, control_rig)
             self.wiggles.constraints.add(deform_rig, def_bones, control_rig)
+            self.wiggles.constraints.update(context)
             self.pose_constraints_add(def_bones)
 
 

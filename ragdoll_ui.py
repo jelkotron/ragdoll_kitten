@@ -65,14 +65,37 @@ class OBJECT_OT_AddRagDoll(bpy.types.Operator):
     @classmethod
     def poll(cls, context):
         if context.object.type == 'ARMATURE':
-            if not context.object.data.ragdoll.initialized:
+            return True
+            # TODO: cleanup
+            # if not context.object.data.ragdoll.initialized:
+            #     return True
+        else:
+            return False
+
+    def execute(self, context):
+        context.object.data.ragdoll.new(context)
+        bpy.ops.object.mode_set(mode='OBJECT')
+        context.view_layer.update()
+        return {'FINISHED'}
+    
+
+class OBJECT_OT_ExtendRagDoll(bpy.types.Operator):
+    """Creates Ragdoll objects for selected Armature"""
+    bl_idname = "armature.ragdoll_extend"
+    bl_label = "Extend Ragdoll"
+    bl_options = {'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        if context.object.type == 'ARMATURE':
+            if context.object.data.ragdoll.initialized:
                 return True
         else:
             return False
 
     def execute(self, context):
         # main(context.object.data.ragdoll_config)
-        context.object.data.ragdoll.new()
+        context.object.data.ragdoll.extend(context)
         
         return {'FINISHED'}
 
@@ -431,13 +454,14 @@ class PHYSICS_PT_RagDollConfig(bpy.types.Panel):
         op_row = col_1.row()
         
         if context.object.data.ragdoll.initialized == False:
-            op_row.operator("armature.ragdoll_add", text="Create Ragdoll", icon="ARMATURE_DATA")
+            op_row.operator("armature.ragdoll_add", text="Create", icon="ARMATURE_DATA")
 
         else:
             if context.object.data.ragdoll.type == 'CONTROL':
-                op_row.operator("armature.ragdoll_update", text="Update Ragdoll", icon="FILE_REFRESH")
+                op_row.operator("armature.ragdoll_extend", text="Extend", icon="ARMATURE_DATA")
+                op_row.operator("armature.ragdoll_update", text="Update", icon="FILE_REFRESH")
             
-            op_row.operator("armature.ragdoll_remove", text="Remove Ragdoll", icon="X")
+            op_row.operator("armature.ragdoll_remove", text="Remove", icon="X")
 
 
 class PHYSICS_PT_RagDollGeometry(bpy.types.Panel):

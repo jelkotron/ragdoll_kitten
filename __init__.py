@@ -57,6 +57,7 @@ def register():
 
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_AddRigidBodyConstraints)
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_AddRagDoll)
+    bpy.utils.register_class(ragdoll_ui.OBJECT_OT_ExtendRagDoll)
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_RemoveRagDoll)
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_UpdateRagDoll)
     bpy.utils.register_class(ragdoll_ui.OBJECT_OT_UpdateWiggles)
@@ -118,6 +119,7 @@ def unregister():
 
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_AddRigidBodyConstraints)
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_AddRagDoll)
+    bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_ExtendRagDoll)
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_RemoveRagDoll)
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_UpdateRagDoll)
     bpy.utils.unregister_class(ragdoll_ui.OBJECT_OT_UpdateWiggles)

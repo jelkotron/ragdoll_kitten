@@ -125,6 +125,7 @@ class RdJointConstraints(RdRigidBodyConstraintsBase):
                 if child in bones:
                     empty = super().add_single(child, deform_rig.name)
                     ragdoll_aux.object_add_to_collection(self.collection.name, empty)
+                    ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, empty)
                     super().constraint_set(empty, child.ragdoll.rigid_body, bone.ragdoll.rigid_body)
                     super().parent_set(empty, control_rig, child)
                     super().default_set(empty)
@@ -232,6 +233,7 @@ class RdWiggleConstraints(RdRigidBodyConstraintsBase):
         for bone in bones:
             empty = super().add_single(bone, deform_rig.name)
             ragdoll_aux.object_add_to_collection(self.collection.name, empty)
+            ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, empty)
             super().parent_set(empty, control_rig, bone)
             super().constraint_set(empty, bone.ragdoll.rigid_body, bone.ragdoll.wiggle, 'GENERIC_SPRING', self.enabled)
             super().default_set(empty, self.default_distance, self.default_rotation)
@@ -409,6 +411,7 @@ class RdHookConstraints(RdRigidBodyConstraintsBase):
         self.control_rig = control_rig
         empty = super().add_single(hook_bone, deform_rig.name)
         ragdoll_aux.object_add_to_collection(self.collection.name, empty)
+        ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, empty)
         super().parent_set(empty, control_rig, hook_bone)
         super().constraint_set(empty, hook_bone.ragdoll.rigid_body, target_bone.ragdoll.rigid_body, 'GENERIC_SPRING', True)
         super().default_set(empty, 0.1, 22.5)

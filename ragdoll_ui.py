@@ -518,8 +518,8 @@ class PHYSICS_PT_RagDollGeometry(bpy.types.Panel):
         label_row.alignment = 'RIGHT'
         label_row.label(text="Width Limits")
         prop_row = col_1.row(align=True)
-        prop_row.prop(context.object.data.ragdoll.rigid_bodies, "width_min", text="Minimum")
-        prop_row.prop(context.object.data.ragdoll.rigid_bodies, "width_max", text="Maximum")
+        prop_row.prop(context.object.data.ragdoll.rigid_bodies, "width_min", text="Min")
+        prop_row.prop(context.object.data.ragdoll.rigid_bodies, "width_max", text="Max")
 
         label_row = col_0.row()
         label_row.alignment = 'RIGHT'
@@ -915,10 +915,10 @@ class PHYSICS_PT_RagDollCollections(bpy.types.Panel):
     bl_label = "Collections"
     bl_idname = "OBJECT_PT_ragdollcollections"
     bl_parent_id = "PHYSICS_PT_ragdoll"
-    bl_options = {'DEFAULT_CLOSED'}
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "physics"
+    bl_options = {'DEFAULT_CLOSED'}
 
     @classmethod
     def poll(self, context):
@@ -1062,16 +1062,3 @@ class PHYSICS_PT_RagDoll(bpy.types.Panel):
                 prop_row.prop(context.object, "ragdoll_protect_approx", text="Approximation") 
                 prop_row.prop(context.object, "ragdoll_protect_custom", text="Custom Shape") 
 
-"""
-op_row = col_1.row()
-
-if context.object.data.ragdoll.initialized == False:
-    op_row.operator("armature.ragdoll_add", text="Create", icon="ARMATURE_DATA")
-
-else:
-    if context.object.data.ragdoll.type == 'CONTROL':
-        op_row.operator("armature.ragdoll_extend", text="Extend", icon="ARMATURE_DATA")
-        op_row.operator("armature.ragdoll_update", text="Update", icon="FILE_REFRESH")
-    
-    op_row.operator("armature.ragdoll_remove", text="Remove", icon="X")
-"""

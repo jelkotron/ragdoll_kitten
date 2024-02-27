@@ -43,20 +43,23 @@ def bones_tree_levels_set(armature, pose_bones_to_use):
     return armature
 
 #------------------------ exclude unselected/hidden pose bones and hidden bone collections ------------------------
-def get_visible_posebones(armature_object=None):
+def get_visible_posebones(armature_object=None, selected=True):
     bones = []
     if armature_object and armature_object.type == 'ARMATURE':
         if bpy.context.mode == 'POSE' and len(bpy.context.selected_pose_bones) > 0:
             bones = [i for i in bpy.context.selected_pose_bones]
-            
+
+
         elif bpy.context.mode == 'EDIT' and len(bpy.context.selected_bones) > 0:
             bones = [bpy.context.object.pose.bones[i.name] for i in bpy.context.selected_bones]
+        
         
         else:
             invisible_groups = []
             for col in armature_object.data.collections:
                 if col.is_visible == False:
                     invisible_groups.append(col.name)
+           
             for bone in armature_object.data.bones:
                 visible = not bone.hide
                 for col in invisible_groups:
@@ -64,6 +67,8 @@ def get_visible_posebones(armature_object=None):
                         visible = False
                 if visible == True:
                     bones.append(armature_object.pose.bones[bone.name])
+
+
 
     if(len(bones) > 0):
         return bones
@@ -197,24 +202,16 @@ def config_load(config):
 
 #------------------------ create config file w/ default values ------------------------
 def config_create(armature):
-    deform_rig = None
-    control_rig = None
-
-    if armature.data.ragdoll.type == 'CONTROL':
-        control_rig = armature
-        deform_rig = armature.data.ragdoll.deform_rig if armature.data.ragdoll.deform_rig else None
+    if armature.data.ragdoll.deform_rig:
+        bones = get_visible_posebones(armature.data.ragdoll.deform_rig)
     else:
-        control_rig = armature.data.ragdoll.control_rig if armature.data.ragdoll.control_rig else None
-        deform_rig = armature
+        bones = get_visible_posebones(armature)
 
-    if deform_rig == None:
-        deform_rig = armature
-    
-    filename = deform_rig.name
+    filename = armature.name
 
     i = 1
     while filename + ".json" in bpy.data.texts:
-        filename = deform_rig.name + "_" + str(i).zfill(3)
+        filename = armature.name + "_" + str(i).zfill(3)
         i += 1
 
     filename += ".json"
@@ -223,19 +220,36 @@ def config_create(armature):
 
     data = {
         "strip":[],
-        "bones": {}
+        "bones": {},
+        "keys": {}
     }
-    for bone in deform_rig.pose.bones:
-        if bone.ragdoll.is_ragdoll:
-            data["bones"][bone.name] = {
-                "limit_ang_x_lower" : -45,
-                "limit_ang_x_upper" : 45,
-                "limit_ang_y_lower" : -45,
-                "limit_ang_y_upper" : 45,
-                "limit_ang_z_lower" : -45,
-                "limit_ang_z_upper" : 45
-            }
+    for bone in bones:
+        data["bones"][bone.name] = {
+            "limit_ang_x_lower" : -45,
+            "limit_ang_x_upper" : 45,
+            "limit_ang_y_lower" : -45,
+            "limit_ang_y_upper" : 45,
+            "limit_ang_z_lower" : -45,
+            "limit_ang_z_upper" : 45
+        }
             
+    data["keys"] = {
+        "limit_ang_x_lower" : "maximum angular movement (degrees) in direction -X",
+        "limit_ang_x_upper" : "maximum angular movement (degrees) in direction +X",
+        "limit_ang_y_lower" : "maximum angular movement (degrees) in direction -Y",
+        "limit_ang_y_upper" : "maximum angular movement (degrees) in direction +Y",
+        "limit_ang_z_lower" : "maximum angular movement (degrees) in direction -Z",
+        "limit_ang_z_upper" : "maximum angular movement (degrees) in direction +Z",
+        
+        "limit_lin_x_lower" : "maximum linear movement () in direction -X",
+        "limit_lin_x_upper" : "maximum linear movement () in direction +X",
+        "limit_lin_y_lower" : "maximum linear movement () in direction -Y",
+        "limit_lin_y_upper" : "maximum linear movement () in direction +Y",
+        "limit_lin_z_lower" : "maximum linear movement () in direction -Z",
+        "limit_lin_z_upper" : "maximum linear movement () in direction +Z",
+    
+        "strip": "Strings to ignore in bone names while parsing"
+    }
             
     encoded = json.dumps(data, sort_keys=True, indent=4)
     

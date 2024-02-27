@@ -29,6 +29,9 @@ class RdRigidBodyConstraintsBase(bpy.types.PropertyGroup):
     restrict_linear: bpy.props.BoolProperty(default=True, options=set()) # type: ignore
     restrict_angular: bpy.props.BoolProperty(default=True, options=set()) # type: ignore
 
+    scale_factor: bpy.props.FloatProperty(name="Empty Display size factor", default=0.5, min=0.01, update=lambda self, context: self.update_size(context), options=set()) # type: ignore
+    scale_offset: bpy.props.FloatProperty(name="Empty Display size offset", default=0.0, update=lambda self, context: self.update_size(context), options=set()) # type: ignore
+
     # name, create and return an empty collection (empty as in containing no objects). set objects & properties in subclasses.
     def add(self, deform_rig, bones, control_rig):
         self.suffix_previous = self.suffix
@@ -58,6 +61,44 @@ class RdRigidBodyConstraintsBase(bpy.types.PropertyGroup):
         empty.empty_display_size = 0.1
         return empty
     
+    def set_size(self, display_size, objects=None):
+        if objects == None:
+            if self.collection:
+                objects = self.collection.obects
+
+        elif isinstance(type(objects), bpy.types.Object.__class__):
+            objects = [objects]
+        
+        if objects:
+            for obj in objects:
+                if obj.type == 'EMPTY':
+                    obj.empty_display_size = display_size
+
+    def set_size_relative(self, objects=None, factor=None, offset=None):
+        if not objects:
+            if self.collection and self.collection.objects:
+                objects = self.collection.objects
+        elif isinstance(type(objects), bpy.types.Object.__class__):
+            objects = [objects]
+        
+        print(objects)
+
+        if not factor:
+            factor = self.scale_factor
+
+        if not offset:
+            offset = self.scale_offset
+
+        if objects:
+            for obj in objects:
+                if obj.type == 'EMPTY':
+                    rigid_body = self.control_rig.pose.bones[obj.parent_bone].ragdoll.rigid_body
+                    avg_width = (rigid_body.dimensions[0] + rigid_body.dimensions[1]) / 2
+                    obj.empty_display_size = (avg_width / 2) * self.scale_factor + self.scale_offset
+                    
+    def update_size(self, context):
+        self.set_size_relative()
+        
     # set parent to object, correct transform induced by parent
     def parent_set(self, child, parent, parent_bone=None):
         child.parent = parent
@@ -149,6 +190,8 @@ class RdJointConstraints(RdRigidBodyConstraintsBase):
         if control_rig.data.ragdoll.config:
             self.limits_set(self.collection, control_rig.data.ragdoll.config)
     
+        self.set_size_relative()
+
 
     def limits_set(self, collection, config):
         config_data = None
@@ -209,6 +252,24 @@ class RdJointConstraints(RdRigidBodyConstraintsBase):
 
                 else:
                     super().default_set(obj)
+
+
+    def update_size(self, context):
+        super().update_size(context)
+        if self.control_rig:
+            # TODO: scale offset between empty object subtypes
+            self.control_rig.data.ragdoll.wiggles.constraints.scale_factor = self.scale_factor
+            self.control_rig.data.ragdoll.wiggles.constraints.scale_offset = self.scale_offset
+            self.control_rig.data.ragdoll.wiggles.constraints.set_size_relative()
+
+            self.control_rig.data.ragdoll.hooks.constraints.scale_factor = self.scale_factor
+            self.control_rig.data.ragdoll.hooks.constraints.scale_offset = self.scale_offset
+            self.control_rig.data.ragdoll.hooks.constraints.set_size_relative()
+            
+            self.control_rig.data.ragdoll.rigid_bodies.connectors.scale_factor = self.scale_factor
+            self.control_rig.data.ragdoll.rigid_bodies.connectors.scale_offset = self.scale_offset
+            self.control_rig.data.ragdoll.rigid_bodies.connectors.set_size_relative()
+        
 
 #------------------------ constraints connecting mesh representations of bones to ------------------------
 #------------------------ another set of meshes bound to control armature to allow -----------------------   
@@ -318,6 +379,8 @@ class RdWiggleConstraints(RdRigidBodyConstraintsBase):
             bone.ragdoll.wiggle_constraint = empty
             if control_rig.pose.bones[bone.name]: 
                 control_rig.pose.bones[bone.name].ragdoll.wiggle_constraint = empty
+        
+        self.set_size_relative()
         self.update(bpy.context)
 
     def enabled_driver_add(self, control_rig, obj):
@@ -499,6 +562,7 @@ class RdHookConstraints(RdRigidBodyConstraintsBase):
         if target_bone.name in deform_rig.pose.bones:
             deform_rig.pose.bones[target_bone.name].ragdoll.hook_constraint = empty
             deform_rig.pose.bones[target_bone.name].ragdoll.hook_constraint
+        self.set_size_relative()
 
 #------------------------ helper objects used as target for bone transforms ------------------------
 #------------------------ as rigig body objects' pivots need to centered to ------------------------
@@ -507,9 +571,13 @@ class RdConnectors(bpy.types.PropertyGroup):
     collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Ragdoll Connector Collection") # type: ignore
     suffix: bpy.props.StringProperty(name="Ragdoll Ridig Body Suffix", default=".Connect", update=lambda self, context: self.update_suffix(context)) # type: ignore
     suffix_previous: bpy.props.StringProperty(name="Previous Ragdoll Ridig Body Suffix", default=".Connect") # type: ignore
+    control_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore    
+    scale_factor: bpy.props.FloatProperty(name="Empty Display size factor", default=0.5, min=0.01, update=lambda self, context: self.update_size(context), options=set()) # type: ignore
+    scale_offset: bpy.props.FloatProperty(name="Empty Display size offset", default=0.0, update=lambda self, context: self.update_size(context), options=set()) # type: ignore
 
     def add(self, deform_rig, bones, control_rig):
         self.suffix_previous = self.suffix
+        self.control_rig = control_rig
         collection = ragdoll_aux.object_add_to_collection(deform_rig.name + self.suffix, None)
         for bone in bones:
             if not bone.ragdoll.connector:
@@ -528,6 +596,30 @@ class RdConnectors(bpy.types.PropertyGroup):
 
         self.collection = collection
         control_rig.data.ragdoll.rigid_bodies.connectors.collection = collection
+        self.set_size_relative()
+
+    def set_size_relative(self, objects=None, factor=None, offset=None):
+        if not objects:
+            objects = self.collection.objects
+
+        if not factor:
+            factor = self.scale_factor
+        
+        if not offset:
+            offset = self.scale_offset
+
+        elif isinstance(type(objects), bpy.types.Object.__class__):
+            objects = [objects]
+        
+        if objects:
+            for obj in objects:
+                if obj.type == 'EMPTY':
+                    rigid_body = obj.parent
+                    avg_width = (rigid_body.dimensions[0] + rigid_body.dimensions[1]) / 2
+                    obj.empty_display_size = (avg_width * self.scale_factor + self.scale_offset) / 2
+
+    def update_size(self, context):
+        self.set_size_relative()
 
     def update_suffix(self, context):
         if self.collection:
@@ -579,7 +671,7 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
                 geo_name = deform_rig.name + "." + pb.name + self.suffix
                 # add and scale box geometry per bone
                 new_cube = ragdoll_aux.cube(1, geo_name, 'OBJECT')
-                new_cube.display_type = 'WIRE'
+                new_cube.display_type = self.display_type
                 new_cube.ragdoll_bone_name = pb.name
                 # place cube on center of bone 
                 bone_matrix = pb.id_data.matrix_world @ pb.matrix
@@ -720,9 +812,14 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
 
     def update_width(self, context):
         self.scale(None, 'XZ')
+        if self.control_rig:
+            self.control_rig.data.ragdoll.wiggles.reshape()
 
     def update_length(self, context):
         self.scale(None, 'Y')
+        if self.control_rig:
+            self.control_rig.data.ragdoll.wiggles.reshape()
+                
     
     def update_suffix(self, context):
         if self.collection:
@@ -748,7 +845,7 @@ class RdRigidBodies(SimulationMeshBase):
         super().add(deform_rig, pbones, control_rig)
         self.control_rig = control_rig
         for obj in self.collection.objects:
-            obj.display_type = 'WIRE'
+            obj.display_type = self.display_type
             obj.ragdoll_object_type = "RIGID_BODY_PRIMARY"
             bone_name = obj.ragdoll_bone_name
             if bone_name in deform_rig.pose.bones:
@@ -765,6 +862,7 @@ class RdWiggles(SimulationMeshBase):
     collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Ragdoll Wiggle Geometry Collection") # type: ignore
     suffix: bpy.props.StringProperty(name="Ragdoll Wiggle Geometry Suffix", default=".Wiggle", update=lambda self, context: super().update_suffix(context)) # type: ignore
     constraints : bpy.props.PointerProperty(type=RdWiggleConstraints) # type: ignore
+    scale_relative: bpy.props.FloatProperty(name="Relative Geo Width", default=0.5, min=0.01, update=lambda self, context: self.update_scale(context), options=set()) # type: ignore
 
     def add(self, deform_rig, pbones, control_rig):
         super().add(deform_rig, pbones, control_rig)
@@ -780,7 +878,26 @@ class RdWiggles(SimulationMeshBase):
                 deform_rig.pose.bones[bone_name].ragdoll.wiggle = obj
             if bone_name in control_rig.pose.bones:
                 control_rig.pose.bones[bone_name].ragdoll.wiggle = obj
-          
+
+        self.reshape()
+
+    def reshape(self, factor=None):
+        if not factor:
+            factor = self.scale_relative
+        for obj in self.collection.objects:
+            rig = self.control_rig
+            rigid_body_target = rig.pose.bones[obj.parent_bone].ragdoll.rigid_body
+            obj.data = rigid_body_target.data.copy()
+
+            for v in obj.data.vertices:
+                for i in range(3):
+                    v.co[i] *= factor
+
+            
+    def update_scale(self, context):
+        self.reshape()
+        pass
+    
 #------------------------ additional meshes created by user as component of hook constraints
 class RdHooks(SimulationMeshBase):
     collection: bpy.props.PointerProperty(type=bpy.types.Collection, name="Ragdoll Hook Geometry") # type: ignore

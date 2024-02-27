@@ -272,16 +272,17 @@ class OBJECT_OT_HookRemove(bpy.types.Operator):
         return True
     
     def execute(self, context):
-        rig = context.object
         mode_init = context.mode
         if mode_init == 'EDIT_ARMATURE':
             mode_init = 'EDIT'
 
-        rig.data.ragdoll.hooks.objects_remove(context, self.hooked_bone_name)
+        rig = context.object
         hooked_bone = rig.pose.bones[self.hooked_bone_name]
         hook_bone = rig.pose.bones[hooked_bone.ragdoll.hook_bone_name]
         num_users = hook_bone.ragdoll.hook_users
 
+        rig.data.ragdoll.hooks.objects_remove(context, self.hooked_bone_name)
+        
         if num_users == 0:
             bpy.ops.object.mode_set(mode='EDIT')
             if hook_bone.name in context.object.data.edit_bones:
@@ -310,6 +311,8 @@ class OBJECT_OT_MeshApproximate(bpy.types.Operator):
     
     def execute(self, context):
         context.object.data.ragdoll.rigid_bodies.geometry_approximate(context)
+        context.object.data.ragdoll.wiggles.update_scale(context)
+        
         print("Info: Rigid Body Shapes approximated.")
         return {'FINISHED'}
     
@@ -391,7 +394,7 @@ class Object_OT_RagDollNamesReplaceSubstring(bpy.types.Operator):
 
 class PHYSICS_PT_RagDollConfig(bpy.types.Panel):
     """Configuration of RagDoll Constraints"""
-    bl_label = "Settings"
+    bl_label = "Constraints"
     bl_idname = "OBJECT_PT_ragdoll_config"
     bl_parent_id = "PHYSICS_PT_ragdoll"
     bl_space_type = 'PROPERTIES'
@@ -420,6 +423,7 @@ class PHYSICS_PT_RagDollConfig(bpy.types.Panel):
         col_0 = split.column(align=True)
         col_1 = split.column()
         config_label_row = col_0.row()
+        config_label_row.alignment = 'RIGHT'
         config_row = col_1.row()
 
         if context.object.data.ragdoll.config and context.object.data.ragdoll.config.is_dirty:
@@ -449,23 +453,31 @@ class PHYSICS_PT_RagDollConfig(bpy.types.Panel):
         # default values for joint rigid body constraints if joint not in config or no text is supplied 
         default_label_row = col_0.row()
         default_label_row.alignment = 'RIGHT'
-        default_label_row.label(text="Default Values:")
+        default_label_row.label(text="Default Values")
         default_values_row = col_1.row(align=True)
         default_values_row.prop(context.object.data.ragdoll.rigid_bodies.constraints, "default_distance", text="Distance")
         default_values_row.prop(context.object.data.ragdoll.rigid_bodies.constraints, "default_rotation",text="Angle")
+        default_values_row.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")
+
+        size_label_row = col_0.row()
+        size_label_row.alignment = 'RIGHT'
+        size_label_row.label(text="Display Size")
+        size_values_row = col_1.row(align=True)
+        size_values_row.prop(context.object.data.ragdoll.rigid_bodies.constraints, "scale_factor", text="Factor")
+        size_values_row.prop(context.object.data.ragdoll.rigid_bodies.constraints, "scale_offset", text="Offset")
 
 
-        op_row = col_1.row()
+        # op_row = col_1.row()
         
-        if context.object.data.ragdoll.initialized == False:
-            op_row.operator("armature.ragdoll_add", text="Create", icon="ARMATURE_DATA")
+        # if context.object.data.ragdoll.initialized == False:
+        #     op_row.operator("armature.ragdoll_add", text="Create", icon="ARMATURE_DATA")
 
-        else:
-            if context.object.data.ragdoll.type == 'CONTROL':
-                op_row.operator("armature.ragdoll_extend", text="Extend", icon="ARMATURE_DATA")
-                op_row.operator("armature.ragdoll_update", text="Update", icon="FILE_REFRESH")
+        # else:
+        #     if context.object.data.ragdoll.type == 'CONTROL':
+        #         op_row.operator("armature.ragdoll_extend", text="Extend", icon="ARMATURE_DATA")
+        #         op_row.operator("armature.ragdoll_update", text="Update", icon="FILE_REFRESH")
             
-            op_row.operator("armature.ragdoll_remove", text="Remove", icon="X")
+        #     op_row.operator("armature.ragdoll_remove", text="Remove", icon="X")
 
 
 class PHYSICS_PT_RagDollGeometry(bpy.types.Panel):
@@ -609,37 +621,61 @@ class PHYSICS_PT_RagDollWiggles(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         #------------------------ Constraint Limits ------------------------
-        # use wiggles
-        wiggle_limit_row = layout.row()
-        wiggle_limit_row.enabled = context.object.data.ragdoll.wiggles.constraints.enabled
-        split = wiggle_limit_row.split(factor=0.33)
-        wiggle_limit_col_0 = split.column()
-        wiggle_limit_col_1 = split.column()
+        top_row = layout.row()
+        split = top_row.split(factor=0.33)
+        wiggle_display_l = split.column()
+        wiggle_display_r = split.column()
+
+        wigge_display_label = wiggle_display_l.row()
+        wigge_display_label.alignment = 'RIGHT'
+        wigge_display_label.label(text="Display As")
+
+        wigge_display = wiggle_display_r.row()
+        wigge_display.prop(context.object.data.ragdoll.wiggles, "display_type", text="")
+
+
+        wiggle_settings_row = layout.row()
+        # wiggle_settings_row.enabled = context.object.data.ragdoll.wiggles.constraints.enabled
+        split = wiggle_settings_row.split(factor=0.33)
+        wiggle_options_l = split.column()
+        wiggle_options_r = split.column()
         
+        wigge_scale_label = wiggle_options_l.row()
+        wigge_scale_label.alignment = 'RIGHT'
+        wigge_scale_label.label(text="Scale")
+        wigge_scale = wiggle_options_r.row()
+        wigge_scale.prop(context.object.data.ragdoll.wiggles, "scale_relative", text="")
+
+        wiggle_limits_row = layout.row()
+        wiggle_limits_row.enabled = context.object.data.ragdoll.wiggles.constraints.enabled
+        split = wiggle_limits_row.split(factor=0.33)
+        wiggle_options_l = split.column()
+        wiggle_options_r = split.column()
+
         # limit linear
-        wiggle_restrict_lin_row = wiggle_limit_col_0.row()
+        wiggle_restrict_lin_row = wiggle_options_l.row()
         wiggle_restrict_lin_row.alignment = 'RIGHT'
         wiggle_restrict_lin_row.label(text="Limit Linear")
         wiggle_restrict_lin_row.prop(context.object.data.ragdoll.wiggles.constraints, "restrict_linear", text="")
         # limit angular
-        wiggle_restrict_ang_row = wiggle_limit_col_0.row()
+        wiggle_restrict_ang_row = wiggle_options_l.row()
         wiggle_restrict_ang_row.alignment = 'RIGHT'
         wiggle_restrict_ang_row.label(text="Limit Angular")
         wiggle_restrict_ang_row.prop(context.object.data.ragdoll.wiggles.constraints, "restrict_angular", text="")
         # linear limits
-        wiggle_limits_row = wiggle_limit_col_1.row()
+        wiggle_limits_row = wiggle_options_r.row()
         wiggle_limit_lin_row = wiggle_limits_row.row()
         wiggle_limit_lin_row.prop(context.object.data.ragdoll.wiggles.constraints, "default_distance", text="Distance")
         wiggle_limit_lin_row.enabled = context.object.data.ragdoll.wiggles.constraints.restrict_linear
         # angular limits
-        wiggle_limits_row = wiggle_limit_col_1.row()
+        wiggle_limits_row = wiggle_options_r.row()
         wiggle_limit_ang_row = wiggle_limits_row.row()
         wiggle_limit_ang_row.prop(context.object.data.ragdoll.wiggles.constraints, "default_rotation", text="Rotation")
         wiggle_limit_ang_row.enabled = context.object.data.ragdoll.wiggles.constraints.restrict_angular
 
         #------------------------ Constraint Springs ------------------------
         wiggle_spring_row = layout.row()
-        wiggle_spring_row.enabled = wiggle_limit_row.enabled = context.object.data.ragdoll.wiggles.constraints.enabled
+        wiggle_spring_row.enabled = context.object.data.ragdoll.wiggles.constraints.use_springs and context.object.data.ragdoll.wiggles.constraints.enabled
         split = wiggle_spring_row.split(factor=0.33)
         wiggle_spring_col_0 = split.column()
         wiggle_spring_col_1 = split.column()
@@ -648,12 +684,12 @@ class PHYSICS_PT_RagDollWiggles(bpy.types.Panel):
         wiggle_spring_row_left_0.label(text="Springs")
         wiggle_spring_row_left_0.prop(context.object.data.ragdoll.wiggles.constraints, "use_springs", text="")
         wiggle_spring_row_right_0 = wiggle_spring_col_1.row()
-        wiggle_spring_row_right_0.enabled = context.object.data.ragdoll.wiggles.constraints.use_springs
+       
         wiggle_spring_row_right_0.prop(context.object.data.ragdoll.wiggles.constraints, "stiffness", text="Stiffness")
         wiggle_spring_row_right_0.prop(context.object.data.ragdoll.wiggles.constraints, "damping", text="Damping")
         
         wiggle_spring_row_right_1 = wiggle_spring_col_1.row()
-        wiggle_spring_row_right_1.enabled = context.object.data.ragdoll.wiggles.constraints.use_springs
+
         split = wiggle_spring_row_right_1.split(factor=0.5)
         wiggle_spring_col_0 = split.column()
         wiggle_spring_col_1 = split.column()
@@ -665,12 +701,11 @@ class PHYSICS_PT_RagDollWiggles(bpy.types.Panel):
         #------------------------ Falloff ------------------------
         # use falloff
         wiggle_falloff_row = layout.row()
-        wiggle_falloff_row.enabled = wiggle_limit_row.enabled = context.object.data.ragdoll.wiggles.constraints.enabled
+        wiggle_falloff_row.enabled = context.object.data.ragdoll.wiggles.constraints.enabled
         split = wiggle_falloff_row.split(factor=0.33)
         wiggle_falloff_col_0 = split.column()
         wiggle_falloff_col_1 = split.column()
-        wiggle_falloff_col_1.enabled = context.object.data.ragdoll.wiggles.constraints.enabled
-
+        
         wiggle_falloff_checkbox_row = wiggle_falloff_col_0.row()
         wiggle_falloff_checkbox_row.alignment = 'RIGHT'
         wiggle_falloff_checkbox_row.label(text="Falloff")
@@ -995,6 +1030,25 @@ class PHYSICS_PT_RagDoll(bpy.types.Panel):
                         op_row_0.operator("armature.ragdoll_ctrl_select", text="Select Armature ", icon="ARMATURE_DATA")
                         op_row_1 = layout.row()
                         op_row_1.operator("armature.ragdoll_remove", text="Remove Ragdoll", icon="X")
+
+                    elif context.object.data.ragdoll.type == 'CONTROL':
+                        layout = self.layout
+                        row = layout.row()
+                        split = layout.split(factor=0.33)
+                        l_row = split.column().row()
+                        r_row = split.column().row(align=True)
+                        r_row.operator("armature.ragdoll_extend", text="Extend", icon="ARMATURE_DATA")
+                        r_row.operator("armature.ragdoll_remove", text="Remove", icon="FILE_REFRESH")
+
+                else:
+                    layout = self.layout
+                    row = layout.row()
+                    split = layout.split(factor=0.33)
+                    l_col = split.column()
+                    r_col = split.column()
+                    r_col.operator("armature.ragdoll_add", text="Create", icon="ARMATURE_DATA")
+
+
                     
             elif context.object.type == 'MESH':
                 layout = self.layout
@@ -1008,4 +1062,16 @@ class PHYSICS_PT_RagDoll(bpy.types.Panel):
                 prop_row.prop(context.object, "ragdoll_protect_approx", text="Approximation") 
                 prop_row.prop(context.object, "ragdoll_protect_custom", text="Custom Shape") 
 
+"""
+op_row = col_1.row()
 
+if context.object.data.ragdoll.initialized == False:
+    op_row.operator("armature.ragdoll_add", text="Create", icon="ARMATURE_DATA")
+
+else:
+    if context.object.data.ragdoll.type == 'CONTROL':
+        op_row.operator("armature.ragdoll_extend", text="Extend", icon="ARMATURE_DATA")
+        op_row.operator("armature.ragdoll_update", text="Update", icon="FILE_REFRESH")
+    
+    op_row.operator("armature.ragdoll_remove", text="Remove", icon="X")
+"""

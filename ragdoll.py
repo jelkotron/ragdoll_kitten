@@ -80,8 +80,6 @@ class RdRigidBodyConstraintsBase(bpy.types.PropertyGroup):
                 objects = self.collection.objects
         elif isinstance(type(objects), bpy.types.Object.__class__):
             objects = [objects]
-        
-        print(objects)
 
         if not factor:
             factor = self.scale_factor
@@ -1182,11 +1180,11 @@ class RagDoll(bpy.types.PropertyGroup):
     def secondary_rig_add(self, deform_rig):
         if deform_rig:
             if deform_rig.data.ragdoll.type == 'CONTROL':
-                print("Is Control Rig")
+                print("Info: Is Control Rig")
                 return deform_rig
             
             if deform_rig.data.ragdoll.control_rig:
-                print("Has Control Rig")
+                print("Info: Has Control Rig")
                 return deform_rig.data.ragdoll.control_rig
             
             # copy armature

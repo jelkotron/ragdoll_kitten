@@ -1,16 +1,20 @@
 bl_info = {
-    "name": "Ragdoll",
+    "name": "Blender Ragdoll",
     "blender": (4, 0, 1),
-    "category": "Physics",
-    "author": "Oliver Jelko"
+    "category": "All",
+    "author": "Oliver Jelko",
+    "version": (1, 0, 0),
+    "location": "Properties > Physics > RagDoll",
+    "description": "Adds tools and controls for Rigid Body Simulation of Armature Objects",
+    "warning": "",
+    "doc_url": ""
 }
 
 import bpy
-import sys
-sys.path.append("/home/schnollie/Work/bpy/ragdoll_tools")
-import ragdoll_ui
-import ragdoll
-import ragdoll_aux
+
+from blender_ragdoll import ragdoll
+from blender_ragdoll import ragdoll_ui
+from blender_ragdoll import ragdoll_aux
 
 def mesh_poll(self, object):
      return object.type == 'MESH'

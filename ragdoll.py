@@ -1,7 +1,7 @@
 import bpy
 import math
 import mathutils
-import ragdoll_aux
+from blender_ragdoll import ragdoll_aux
 
 #---- Polling Functions to specify subtypes for object PointerProperties ---- 
 def armature_poll(self, object):
@@ -1046,7 +1046,7 @@ class RagDoll(bpy.types.PropertyGroup):
                 deform_rig = ragdoll_aux.bones_tree_levels_set(bpy.context.object, bones)
                 self.deform_rig = deform_rig
                 # duplicate armature to use as control rig
-                control_rig = self.secondary_rig_add(self.deform_rig)
+                control_rig = self.secondary_rig_add(context)
                 self.control_rig = control_rig
                 ragdoll = control_rig.data.ragdoll
                 ragdoll.ctrl_rig_suffix = self.ctrl_rig_suffix
@@ -1177,7 +1177,8 @@ class RagDoll(bpy.types.PropertyGroup):
             print("Info: removed ragdoll")
 
     # duplicate armature to use as control rig
-    def secondary_rig_add(self, deform_rig):
+    def secondary_rig_add(self, context):
+        deform_rig = context.object
         if deform_rig:
             if deform_rig.data.ragdoll.type == 'CONTROL':
                 print("Info: Is Control Rig")
@@ -1213,7 +1214,7 @@ class RagDoll(bpy.types.PropertyGroup):
             self.control_rig.data.ragdoll.type = 'CONTROL'
             self.control_rig.data.ragdoll.initialized = True
 
-            ragdoll_aux.deselect_all()
+            ragdoll_aux.deselect_all(context)
             self.control_rig.select_set(True)
             bpy.context.view_layer.objects.active = self.control_rig
             

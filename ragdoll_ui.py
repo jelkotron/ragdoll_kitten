@@ -1,17 +1,14 @@
 
 import bpy
-import sys
-sys.path.append("/home/schnollie/Work/bpy/ragdoll_tools")
-from ragdoll_aux import rb_constraint_collection_set, load_text, config_create, force_update_drivers, deselect_all, select_set_active
+from blender_ragdoll.ragdoll_aux import rb_constraint_collection_set, load_text, config_create, force_update_drivers, deselect_all, select_set_active
 
-# from ragdoll import wiggle_const_update
-# from ragdoll import wiggle_spring_drivers_add, wiggle_spring_drivers_remove
-from ragdoll import RagDoll
+from blender_ragdoll.ragdoll import RagDoll
 
 from bpy_extras.io_utils import ImportHelper
 import os
 
-
+###########################################################################################
+######################################## Operators ########################################
 class OBJECT_OT_TextBrowseImport(bpy.types.Operator, ImportHelper): 
     bl_idname = "text.import_filebrowser" 
     bl_label = "Open the file browser to open config" 
@@ -117,7 +114,7 @@ class OBJECT_OT_RemoveRagDoll(bpy.types.Operator):
 
 
 class OBJECT_OT_UpdateRagDoll(bpy.types.Operator):
-    """Update selected Armature's RagDoll"""
+    """Update selected Armature's RagDoll Joint Constraint Limits from Text"""
     bl_idname = "armature.ragdoll_update"
     bl_label = "Update Ragdoll"
     bl_options = {'UNDO'}
@@ -127,7 +124,8 @@ class OBJECT_OT_UpdateRagDoll(bpy.types.Operator):
         if context.object.type == 'ARMATURE':
             if context.object.data.ragdoll.initialized:
                 if context.object.data.ragdoll.type == 'CONTROL':
-                    return True
+                    if context.object.data.ragdoll.config:
+                        return True
         else:
             return False
 
@@ -316,6 +314,7 @@ class OBJECT_OT_MeshApproximate(bpy.types.Operator):
         print("Info: Rigid Body Shapes approximated.")
         return {'FINISHED'}
     
+
 class OBJECT_OT_MeshApproximateReset(bpy.types.Operator):
     """Reset approximate RagDoll Rigid Body Shapes"""
     bl_idname = "mesh.rd_approximate_reset"
@@ -335,7 +334,6 @@ class OBJECT_OT_MeshApproximateReset(bpy.types.Operator):
         context.object.data.ragdoll.rigid_bodies.approximated_reset(context)
         print("Info: Rigid Body Shapes reset.")
         return {'FINISHED'}
-
 
 
 class Scene_OT_RigidBodyWorldAddCustom(bpy.types.Operator):
@@ -376,7 +374,6 @@ class Scene_OT_RagDollControlRigSelect(bpy.types.Operator):
         return {'FINISHED'}
     
 
-
 class Object_OT_RagDollNamesReplaceSubstring(bpy.types.Operator):
     """Add Rigid Body World, set Collection"""
     bl_idname = "object.name_substring_replace"
@@ -391,6 +388,10 @@ class Object_OT_RagDollNamesReplaceSubstring(bpy.types.Operator):
         context.object.data.ragdoll.bone_names_substring_replace(context)
         print("Info: Object Names replaced.")
         return {'FINISHED'}
+
+
+########################################################################################
+######################################## Panels ########################################
 
 class PHYSICS_PT_RagDollConfig(bpy.types.Panel):
     """Configuration of RagDoll Constraints"""
@@ -429,17 +430,17 @@ class PHYSICS_PT_RagDollConfig(bpy.types.Panel):
         if context.object.data.ragdoll.config and context.object.data.ragdoll.config.is_dirty:
             # config text is stored on disk but was modified in blender text editor
             if os.path.exists(context.object.data.ragdoll.config.filepath):
-                config_label_row.label(text="Text (External, modified):")
+                config_label_row.label(text="JSON (External, modified)")
             # config text is not stored on disk
             else:
-                config_label_row.label(text="Text (Internal):")
+                config_label_row.label(text="JSON (Internal, modified)")
         # config text is stored on disk and was not modified
         elif context.object.data.ragdoll.config:
-            config_label_row.label(text="Text (External):")
+            config_label_row.label(text="JSON  (External)")
         # config file is not set
         else:
             config_label_row.alignment = 'RIGHT'
-            config_label_row.label(text="Text:")
+            config_label_row.label(text="JSON")
         
         if context.object.data.ragdoll.type == 'CONTROL' or not context.object.data.ragdoll.control_rig:
             config_row.prop(context.object.data.ragdoll,"config", text="")
@@ -449,6 +450,7 @@ class PHYSICS_PT_RagDollConfig(bpy.types.Panel):
 
         config_row.operator("text.import_filebrowser", text="", icon='FILEBROWSER')
         config_row.operator("text.json_create", text="", icon='FILE_NEW')
+        config_row.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")
 
         # default values for joint rigid body constraints if joint not in config or no text is supplied 
         default_label_row = col_0.row()
@@ -457,7 +459,7 @@ class PHYSICS_PT_RagDollConfig(bpy.types.Panel):
         default_values_row = col_1.row(align=True)
         default_values_row.prop(context.object.data.ragdoll.rigid_bodies.constraints, "default_distance", text="Distance")
         default_values_row.prop(context.object.data.ragdoll.rigid_bodies.constraints, "default_rotation",text="Angle")
-        default_values_row.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")
+
 
         size_label_row = col_0.row()
         size_label_row.alignment = 'RIGHT'
@@ -465,19 +467,6 @@ class PHYSICS_PT_RagDollConfig(bpy.types.Panel):
         size_values_row = col_1.row(align=True)
         size_values_row.prop(context.object.data.ragdoll.rigid_bodies.constraints, "scale_factor", text="Factor")
         size_values_row.prop(context.object.data.ragdoll.rigid_bodies.constraints, "scale_offset", text="Offset")
-
-
-        # op_row = col_1.row()
-        
-        # if context.object.data.ragdoll.initialized == False:
-        #     op_row.operator("armature.ragdoll_add", text="Create", icon="ARMATURE_DATA")
-
-        # else:
-        #     if context.object.data.ragdoll.type == 'CONTROL':
-        #         op_row.operator("armature.ragdoll_extend", text="Extend", icon="ARMATURE_DATA")
-        #         op_row.operator("armature.ragdoll_update", text="Update", icon="FILE_REFRESH")
-            
-        #     op_row.operator("armature.ragdoll_remove", text="Remove", icon="X")
 
 
 class PHYSICS_PT_RagDollGeometry(bpy.types.Panel):
@@ -576,6 +565,7 @@ class PHYSICS_PT_RagDollAnimation(bpy.types.Panel):
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "physics"
+    bl_options = {'DEFAULT_CLOSED'}
     
     @classmethod
     def poll(self, context):
@@ -606,6 +596,8 @@ class PHYSICS_PT_RagDollWiggles(bpy.types.Panel):
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "physics"
+    bl_options = {'DEFAULT_CLOSED'}
+
     
     @classmethod
     def poll(self, context):
@@ -734,6 +726,7 @@ class PHYSICS_PT_RagDollHooks(bpy.types.Panel):
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "physics"
+    bl_options = {'DEFAULT_CLOSED'}
     
     @classmethod
     def poll(self, context):
@@ -909,6 +902,7 @@ class PHYSICS_PT_RagDollNames(bpy.types.Panel):
             row_1.prop(context.object.data.ragdoll,"substring_replace_target", text="")
             row_1.prop(context.object.data.ragdoll,"substring_replace_suffix", text="")
             row_1.operator("object.name_substring_replace", text="", icon="EVENT_RETURN")
+
 
 class PHYSICS_PT_RagDollCollections(bpy.types.Panel):
     """Subpanel to Ragdoll"""

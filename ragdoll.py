@@ -1,7 +1,7 @@
 import bpy
 import math
 import mathutils
-from blender_ragdoll import ragdoll_aux
+from blender_ragdoll import utils
 
 #---- Polling Functions to specify subtypes for object PointerProperties ---- 
 def armature_poll(self, object):
@@ -38,7 +38,7 @@ class RdRigidBodyConstraintsBase(bpy.types.PropertyGroup):
         self.deform_rig = deform_rig
         self.control_rig = control_rig
         collection_name = deform_rig.name + self.suffix
-        collection = ragdoll_aux.object_add_to_collection(collection_name, None)
+        collection = utils.object_add_to_collection(collection_name, None)
         self.collection = collection
         return collection
     
@@ -164,8 +164,8 @@ class RdJointConstraints(RdRigidBodyConstraintsBase):
                 for child in bone.children:
                     if child in bones:
                         empty = super().add_single(child, deform_rig.name)
-                        ragdoll_aux.object_add_to_collection(self.collection.name, empty)
-                        ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, empty)
+                        utils.object_add_to_collection(self.collection.name, empty)
+                        utils.object_remove_from_collection(bpy.context.scene.collection, empty)
                         super().constraint_set(empty, child.ragdoll.rigid_body, bone.ragdoll.rigid_body)
                         super().parent_set(empty, control_rig, child)
                         super().default_set(empty)
@@ -178,8 +178,8 @@ class RdJointConstraints(RdRigidBodyConstraintsBase):
             if bone.parent and bone.ragdoll.constraint == None:
                 if bone.parent.ragdoll.rigid_body:
                     empty = super().add_single(bone, deform_rig.name)
-                    ragdoll_aux.object_add_to_collection(self.collection.name, empty)
-                    ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, empty)
+                    utils.object_add_to_collection(self.collection.name, empty)
+                    utils.object_remove_from_collection(bpy.context.scene.collection, empty)
                     super().constraint_set(empty, bone.ragdoll.rigid_body, bone.parent.ragdoll.rigid_body)
                     super().parent_set(empty, control_rig, bone)
                     super().default_set(empty)
@@ -195,7 +195,7 @@ class RdJointConstraints(RdRigidBodyConstraintsBase):
         config_data = None
         
         if config:
-            config_data = ragdoll_aux.config_load(config)
+            config_data = utils.config_load(config)
           
         for obj in collection.objects:
             if obj.rigid_body_constraint:
@@ -367,8 +367,8 @@ class RdWiggleConstraints(RdRigidBodyConstraintsBase):
 
         for bone in bones:
             empty = super().add_single(bone, deform_rig.name)
-            ragdoll_aux.object_add_to_collection(self.collection.name, empty)
-            ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, empty)
+            utils.object_add_to_collection(self.collection.name, empty)
+            utils.object_remove_from_collection(bpy.context.scene.collection, empty)
             super().parent_set(empty, control_rig, bone)
             super().constraint_set(empty, bone.ragdoll.rigid_body, bone.ragdoll.wiggle, 'GENERIC_SPRING', self.enabled)
             super().default_set(empty, self.default_distance, self.default_rotation)
@@ -394,7 +394,7 @@ class RdWiggleConstraints(RdRigidBodyConstraintsBase):
         target.data_path = 'ragdoll.wiggles.constraints.enabled'
 
     def update(self, context):
-        control_rig = ragdoll_aux.validate_selection(context.object)
+        control_rig = utils.validate_selection(context.object)
 
         if control_rig:
             if control_rig.data.ragdoll.type == 'DEFORM':
@@ -416,7 +416,7 @@ class RdWiggleConstraints(RdRigidBodyConstraintsBase):
                 bone_level_max = control_rig.data.ragdoll.bone_level_max
                 wiggle_falloff_chain_ends = control_rig.data.ragdoll.wiggles.constraints.falloff_chain_ends
 
-                visible_bones = ragdoll_aux.get_visible_posebones(control_rig)
+                visible_bones = utils.get_visible_posebones(control_rig)
 
                 for i in range(len(control_rig.pose.bones)):
                     pbone = control_rig.pose.bones[i]
@@ -550,8 +550,8 @@ class RdHookConstraints(RdRigidBodyConstraintsBase):
         self.deform_rig = deform_rig
         self.control_rig = control_rig
         empty = super().add_single(hook_bone, deform_rig.name)
-        ragdoll_aux.object_add_to_collection(self.collection.name, empty)
-        ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, empty)
+        utils.object_add_to_collection(self.collection.name, empty)
+        utils.object_remove_from_collection(bpy.context.scene.collection, empty)
         self.parent_set(empty, control_rig, hook_bone)
         self.constraint_set(empty, hook_bone.ragdoll.rigid_body, target_bone.ragdoll.rigid_body, 'GENERIC_SPRING', True)
         self.default_set(empty, 0, 0)
@@ -576,14 +576,14 @@ class RdConnectors(bpy.types.PropertyGroup):
     def add(self, deform_rig, bones, control_rig):
         self.suffix_previous = self.suffix
         self.control_rig = control_rig
-        collection = ragdoll_aux.object_add_to_collection(deform_rig.name + self.suffix, None)
+        collection = utils.object_add_to_collection(deform_rig.name + self.suffix, None)
         for bone in bones:
             if not bone.ragdoll.connector:
                 name = deform_rig.name + "." + bone.name + self.suffix
                 empty = bpy.data.objects.new(name, None)
                 empty.empty_display_size = 0.085
                 empty.empty_display_type = 'SPHERE'
-                collection = ragdoll_aux.object_add_to_collection(collection.name, empty)
+                collection = utils.object_add_to_collection(collection.name, empty)
                 empty.parent = control_rig.pose.bones[bone.name].ragdoll.rigid_body
                 empty.parent_type = 'OBJECT'
                 empty.matrix_world = control_rig.matrix_world @ bone.matrix
@@ -668,9 +668,9 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
                 # add cubes to collection
                 geo_name = deform_rig.name + "." + pb.name + self.suffix
                 # add and scale box geometry per bone
-                new_cube = ragdoll_aux.cube(1, geo_name, 'OBJECT')
+                new_cube = utils.cube(1, geo_name, 'OBJECT')
                 new_cube.display_type = self.display_type
-                new_cube.ragdoll_bone_name = pb.name
+                new_cube.ragdoll.bone_name = pb.name
                 # place cube on center of bone 
                 bone_matrix = pb.id_data.matrix_world @ pb.matrix
                 bone_center = pb.id_data.matrix_world @ pb.center
@@ -688,8 +688,8 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
                 rb_bones.append(new_cube)
         
             collection_name = deform_rig.name + self.suffix
-            self.collection = ragdoll_aux.object_add_to_collection(collection_name, [rb_geo for rb_geo in rb_bones])
-            ragdoll_aux.object_remove_from_collection(bpy.context.scene.collection, [rb_geo for rb_geo in rb_bones])
+            self.collection = utils.object_add_to_collection(collection_name, [rb_geo for rb_geo in rb_bones])
+            utils.object_remove_from_collection(bpy.context.scene.collection, [rb_geo for rb_geo in rb_bones])
             self.scale()
             self.parents_set(control_rig)
         
@@ -712,7 +712,7 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
             target.data_path = 'ragdoll.kinematic'
 
     def scale(self, single_obj=None, axis='XYZ'):
-        axis = ragdoll_aux.axis_string_to_index_list(axis)
+        axis = utils.axis_string_to_index_list(axis)
         if self.width_min + self.width_max + self.width_relative > 0:
             if not single_obj:
                 objects = self.collection.objects
@@ -722,7 +722,7 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
             for mesh in objects:
                 if mesh:
                     if not mesh.ragdoll_protect_custom:
-                            bone = self.control_rig.pose.bones[mesh.ragdoll_bone_name]
+                            bone = self.control_rig.pose.bones[mesh.ragdoll.bone_name]
                             protected = mesh.ragdoll_protect_approx
                             if bone:
 
@@ -758,7 +758,7 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
     def parents_set(self, control_rig):
         if self.collection:
             for obj in self.collection.objects:
-                bone_name = obj.ragdoll_bone_name
+                bone_name = obj.ragdoll.bone_name
                 if bone_name in control_rig.pose.bones:
                     bone =  control_rig.pose.bones[bone_name]
                     obj.parent = control_rig
@@ -774,7 +774,7 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
     def geometry_approximate(self, context):
         self.approximated_reset(context)
         control_rig = context.object
-        pose_bones = ragdoll_aux.get_visible_posebones(context.object)
+        pose_bones = utils.get_visible_posebones(context.object)
         target = context.object.data.ragdoll.deform_mesh
         if target:
             threshold = context.object.data.ragdoll.deform_mesh_projection_threshold
@@ -788,21 +788,21 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
             for bone in pose_bones:
                 if bone.ragdoll.rigid_body:
                     if not bone.ragdoll.rigid_body.ragdoll_protect_custom:
-                        ragdoll_aux.snap_rigid_body_cube(bone.ragdoll.rigid_body, target, 'XZ', threshold, offset)
+                        utils.snap_rigid_body_cube(bone.ragdoll.rigid_body, target, 'XZ', threshold, offset)
                         bone.ragdoll.rigid_body.ragdoll_protect_approx = True
         # restore pose position
         control_rig.data.pose_position = init_pose_position
          
     def approximated_reset(self, context):
         control_rig = context.object
-        pose_bones = ragdoll_aux.get_visible_posebones(context.object)
+        pose_bones = utils.get_visible_posebones(context.object)
 
         for bone in pose_bones:
             mesh_obj = bone.ragdoll.rigid_body 
             if mesh_obj:
                 if not bone.ragdoll.rigid_body.ragdoll_protect_custom:
                     mesh_obj.ragdoll_protect_approx = False
-                    mesh_obj.data = ragdoll_aux.cube(1, mesh_obj.name, 'DATA')
+                    mesh_obj.data = utils.cube(1, mesh_obj.name, 'DATA')
                     self.scale(mesh_obj)
                     mesh_obj.matrix_world = control_rig.matrix_world @ mathutils.Matrix.LocRotScale(bone.center, bone.matrix.decompose()[1], bone.matrix.decompose()[2])
                     for child in mesh_obj.children:
@@ -845,7 +845,7 @@ class RdRigidBodies(SimulationMeshBase):
         for obj in self.collection.objects:
             obj.display_type = self.display_type
             obj.ragdoll_object_type = "RIGID_BODY_PRIMARY"
-            bone_name = obj.ragdoll_bone_name
+            bone_name = obj.ragdoll.bone_name
             if bone_name in deform_rig.pose.bones:
                 deform_rig.pose.bones[bone_name].ragdoll.rigid_body = obj
             if bone_name in control_rig.pose.bones:
@@ -871,7 +871,7 @@ class RdWiggles(SimulationMeshBase):
             for i in range(20):
                 obj.rigid_body.collision_collections[i] = False
 
-            bone_name = obj.ragdoll_bone_name
+            bone_name = obj.ragdoll.bone_name
             if bone_name in deform_rig.pose.bones:
                 deform_rig.pose.bones[bone_name].ragdoll.wiggle = obj
             if bone_name in control_rig.pose.bones:
@@ -952,11 +952,11 @@ class RdHooks(SimulationMeshBase):
         hook_mesh = hook_bone.ragdoll.rigid_body
 
         if hook_constraint:
-            ragdoll_aux.object_remove_from_collection(bpy.context.scene.rigidbody_world.constraints, hook_constraint)
+            utils.object_remove_from_collection(bpy.context.scene.rigidbody_world.constraints, hook_constraint)
             bpy.data.objects.remove(hook_constraint, do_unlink=True)
 
         if hook_bone.ragdoll.hook_users == 1:
-            ragdoll_aux.object_remove_from_collection(bpy.context.scene.rigidbody_world.collection, hook_mesh)
+            utils.object_remove_from_collection(bpy.context.scene.rigidbody_world.collection, hook_mesh)
             
             if hook_mesh:
                 bpy.data.objects.remove(hook_mesh, do_unlink=True)
@@ -975,6 +975,22 @@ class RdHooks(SimulationMeshBase):
 ################################ RagDoll Properties for Armature Type Objects ###########################################
 
 #------------------------ store ragdoll related object pointers and data per bone ------------------------
+class RagDollObject(bpy.types.PropertyGroup):
+    bone_name : bpy.props.StringProperty() # type: ignore
+    mesh_0 : bpy.props.PointerProperty(type=bpy.types.Object, poll=mesh_poll) # type: ignore
+    mesh_1 : bpy.props.PointerProperty(type=bpy.types.Object, poll=mesh_poll) # type: ignore
+    protect_approx : bpy.props.BoolProperty(name="Protect Shape", default=False)  # type: ignore
+    protect_custom : bpy.props.BoolProperty(name="Protect Shape", default=False) # type: ignore
+    object_type : bpy.props.EnumProperty(name="RagDoll Object Type", items = # type: ignore
+                                    [
+                                        ('NONE', "No Ragdoll", "Not part of a Ragdoll"),
+                                        ('RIGID_BODY_PRIMARY', "Primary Rigid Body", "Mesh representing Bone"),
+                                        ('RIGID_BODY_WIGGLE', "Secondary Rigid Body", "Mesh component for Wiggle"),     
+                                        ('RIGID_BODY_HOOK', "Tertiary Rigid Body", "Mesh component for Hook"),                                             
+                                        ('RIGID_BODY_EMPTY', "Empty Object", "Helper Object used as constraint or transform target"),                          
+                                    ], default='NONE')
+
+
 class RagDollBone(bpy.types.PropertyGroup):
     is_ragdoll: bpy.props.BoolProperty(name="Part of a Ragdoll", default=False) # type: ignore
     tree_level: bpy.props.IntProperty(name="tree_level", min=0, default =0) # type: ignore
@@ -995,7 +1011,8 @@ class RagDollBone(bpy.types.PropertyGroup):
 
     hook_users : bpy.props.IntProperty("Number of Bones RagDoll-Hooked to this bone", default=0, min=0)
 #------------------------ main property group. constraint and rigid body groups nested inside ------------------------
-class RagDoll(bpy.types.PropertyGroup):
+
+class RagDollArmature(bpy.types.PropertyGroup):
     #-------- Object Pointers --------
     deform_rig : bpy.props.PointerProperty(type=bpy.types.Object, poll=armature_poll) # type: ignore
     control_rig: bpy.props.PointerProperty(type=bpy.types.Object,poll=armature_poll) # type: ignore
@@ -1036,14 +1053,14 @@ class RagDoll(bpy.types.PropertyGroup):
     bone_level_max: bpy.props.IntProperty(name="bone_level_max", min=0, default=0) # type: ignore
  
     def new(self, context):
-        rig = ragdoll_aux.validate_selection(context.object)
+        rig = utils.validate_selection(context.object)
         if rig:            
             # get selected bones. if none are selected, use all visible bones 
-            bones = ragdoll_aux.get_visible_posebones(bpy.context.object)
+            bones = utils.get_visible_posebones(bpy.context.object)
 
             if not rig.data.ragdoll.initialized:
                 # store bones' hierarchy level in bone prop
-                deform_rig = ragdoll_aux.bones_tree_levels_set(bpy.context.object, bones)
+                deform_rig = utils.bones_tree_levels_set(bpy.context.object, bones)
                 self.deform_rig = deform_rig
                 # duplicate armature to use as control rig
                 control_rig = self.secondary_rig_add(context)
@@ -1070,14 +1087,14 @@ class RagDoll(bpy.types.PropertyGroup):
 
 
     def extend(self, context):
-        armature = ragdoll_aux.validate_selection(context.object, 'ARMATURE')
+        armature = utils.validate_selection(context.object, 'ARMATURE')
         deform_rig = None
         control_rig = None
         
         if armature and armature.data.ragdoll.type == 'CONTROL':
             control_rig = armature
             deform_rig = armature.data.ragdoll.deform_rig
-            ctrl_bones = ragdoll_aux.get_visible_posebones(control_rig)
+            ctrl_bones = utils.get_visible_posebones(control_rig)
             # use deform rig bones
             def_bones = [deform_rig.pose.bones[i.name] for i in ctrl_bones if i.name in deform_rig.pose.bones and i.ragdoll.rigid_body == None]
 
@@ -1130,11 +1147,11 @@ class RagDoll(bpy.types.PropertyGroup):
             if bpy.context.scene.rigidbody_world:
                 collection = bpy.context.scene.rigidbody_world.collection
                 if rigid_bodies: 
-                    ragdoll_aux.object_remove_from_collection(collection, rigid_bodies.objects)
+                    utils.object_remove_from_collection(collection, rigid_bodies.objects)
                 if wiggles: 
-                    ragdoll_aux.object_remove_from_collection(collection, wiggles.objects)
+                    utils.object_remove_from_collection(collection, wiggles.objects)
                 if hooks: 
-                    ragdoll_aux.object_remove_from_collection(collection, hooks.objects)
+                    utils.object_remove_from_collection(collection, hooks.objects)
 
             if context.scene.rigidbody_world:
                 if context.scene.rigidbody_world.constraints:
@@ -1142,24 +1159,24 @@ class RagDoll(bpy.types.PropertyGroup):
                     rb_obj_list =  bpy.context.scene.rigidbody_world.constraints
 
                     if constraints: 
-                        ragdoll_aux.object_remove_from_collection(collection, constraints.objects)
-                        ragdoll_aux.object_remove_from_collection(rb_obj_list, constraints.objects)
+                        utils.object_remove_from_collection(collection, constraints.objects)
+                        utils.object_remove_from_collection(rb_obj_list, constraints.objects)
                     if wiggle_constraints:
-                        ragdoll_aux.object_remove_from_collection(collection, wiggle_constraints.objects)
-                        ragdoll_aux.object_remove_from_collection(rb_obj_list, wiggle_constraints.objects)
+                        utils.object_remove_from_collection(collection, wiggle_constraints.objects)
+                        utils.object_remove_from_collection(rb_obj_list, wiggle_constraints.objects)
                     if hook_constraints:
-                        ragdoll_aux.object_remove_from_collection(collection, hook_constraints.objects)
-                        ragdoll_aux.object_remove_from_collection(rb_obj_list, hook_constraints.objects)
+                        utils.object_remove_from_collection(collection, hook_constraints.objects)
+                        utils.object_remove_from_collection(rb_obj_list, hook_constraints.objects)
 
 
 
-            ragdoll_aux.collection_remove(rigid_bodies)
-            ragdoll_aux.collection_remove(constraints)
-            ragdoll_aux.collection_remove(connectors)
-            ragdoll_aux.collection_remove(wiggles)
-            ragdoll_aux.collection_remove(wiggle_constraints)
-            ragdoll_aux.collection_remove(hooks)
-            ragdoll_aux.collection_remove(hook_constraints)
+            utils.collection_remove(rigid_bodies)
+            utils.collection_remove(constraints)
+            utils.collection_remove(connectors)
+            utils.collection_remove(wiggles)
+            utils.collection_remove(wiggle_constraints)
+            utils.collection_remove(hooks)
+            utils.collection_remove(hook_constraints)
 
             armature_data = control_rig.data
 
@@ -1167,12 +1184,12 @@ class RagDoll(bpy.types.PropertyGroup):
             if armature_data.name in bpy.data.armatures:
                 bpy.data.armatures.remove(armature_data, do_unlink=True)
 
-            ragdoll_aux.drivers_remove_invalid(deform_rig)
-            ragdoll_aux.drivers_remove_related(deform_rig)
+            utils.drivers_remove_invalid(deform_rig)
+            utils.drivers_remove_related(deform_rig)
 
             deform_rig.data.ragdoll.initialized = False
 
-            ragdoll_aux.select_set_active(bpy.context, deform_rig)
+            utils.select_set_active(bpy.context, deform_rig)
 
             print("Info: removed ragdoll")
 
@@ -1214,7 +1231,7 @@ class RagDoll(bpy.types.PropertyGroup):
             self.control_rig.data.ragdoll.type = 'CONTROL'
             self.control_rig.data.ragdoll.initialized = True
 
-            ragdoll_aux.deselect_all(context)
+            utils.deselect_all(context)
             self.control_rig.select_set(True)
             bpy.context.view_layer.objects.active = self.control_rig
             
@@ -1228,7 +1245,7 @@ class RagDoll(bpy.types.PropertyGroup):
     # reset approximated / modified primary rigid body meshes upon user input
     def rigid_bodies_reset(context):
         for bone in context.selected_pose_bones:
-            ragdoll_aux.reset_rigid_body_cube(bone)
+            utils.reset_rigid_body_cube(bone)
             
     # add constraints to copy transforms of simulation/animation 
     def pose_constraints_add(self, bones):
@@ -1330,3 +1347,21 @@ class RagDoll(bpy.types.PropertyGroup):
                     bone.name = bone.name.replace(source, target) + suffix
 
 
+classes = (
+    RdConnectors,
+    RdJointConstraints,
+    RdHookConstraints,
+    RdHooks,
+    RdRigidBodies,
+    RdWiggleConstraints,
+    RdWiggles,
+
+    RagDollObject,
+    RagDollBone,
+    RagDollArmature,
+)
+
+register, unregister = bpy.utils.register_classes_factory(classes)
+
+if __name__ == "__main__":
+    register()

@@ -383,7 +383,9 @@ class Object_OT_RagDollNamesReplaceSubstring(bpy.types.Operator):
         return {'FINISHED'}
 
 
-classes = ( OBJECT_OT_AddRigidBodyConstraints,
+classes = ( 
+            Scene_OT_RigidBodyWorldAddCustom,
+            OBJECT_OT_AddRigidBodyConstraints,
             OBJECT_OT_AddRagDoll,
             OBJECT_OT_ExtendRagDoll,
             OBJECT_OT_RemoveRagDoll,

@@ -603,7 +603,7 @@ class PHYSICS_PT_RagDoll(bpy.types.Panel):
         if context.object.type == 'ARMATURE':
             return True
         if context.object.type == 'MESH':
-            if context.object.ragdoll_object_type == 'RIGID_BODY_PRIMARY':
+            if context.object.ragdoll.object_type == 'RIGID_BODY_PRIMARY':
                 return True
    
     def draw(self, context):
@@ -662,8 +662,8 @@ class PHYSICS_PT_RagDoll(bpy.types.Panel):
                 label_row = col_0.row()
                 label_row.label(text="Protect:")
                 prop_row = col_1.row()
-                prop_row.prop(context.object, "ragdoll_protect_approx", text="Approximation") 
-                prop_row.prop(context.object, "ragdoll_protect_custom", text="Custom Shape") 
+                prop_row.prop(context.object.ragdoll, "protect_approx", text="Approximation") 
+                prop_row.prop(context.object.ragdoll, "protect_custom", text="Custom Shape") 
 
 classes = (
     PHYSICS_PT_RagDoll,
@@ -673,7 +673,7 @@ classes = (
     PHYSICS_PT_RagDollWiggles,
     PHYSICS_PT_RagDollHooks,
     PHYSICS_PT_RagDollNames,
-    PHYSICS_PT_RagDollCollections,
+    PHYSICS_PT_RagDollCollections
     )
 
 register, unregister = bpy.utils.register_classes_factory(classes)

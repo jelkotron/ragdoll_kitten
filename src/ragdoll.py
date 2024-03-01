@@ -1358,7 +1358,7 @@ classes = (
 
     RagDollObject,
     RagDollBone,
-    RagDollArmature,
+    RagDollArmature
 )
 
 register, unregister = bpy.utils.register_classes_factory(classes)

@@ -401,7 +401,7 @@ classes = (
             OBJECT_OT_MeshApproximate,
             OBJECT_OT_MeshApproximateReset,
             Scene_OT_RagDollControlRigSelect,
-            Object_OT_RagDollNamesReplaceSubstring,
+            Object_OT_RagDollNamesReplaceSubstring
             )
 
 register, unregister = bpy.utils.register_classes_factory(classes)

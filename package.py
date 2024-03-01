@@ -44,10 +44,6 @@ def src_info_get(source_dir, target_dir):
                     if root != os.path.split(source_dir)[-1]:
                         target = os.path.join(addon_name, root, file)
                     
-                    if target_dir != None:
-                        target = os.path.join(target_dir, target)
-                    
-                    
                     if file == '__init__.py':
                         major, minor, patch = addon_version_get(source)
                         version = "-%s.%s.%s"%(major, minor, patch)

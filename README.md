@@ -1,6 +1,6 @@
 # Blender Ragdoll
 
-Blender Ragdoll extends Blender's Armature Objects with Rigid Body Simulation properties. Using Blender's native objects and object relations, the system creates serveral layers of meshes and empty objects and offers an interface to control an armature's animation and simulation properties. A target armature's transformation can be blended between animation and simulation or a combination of both.
+Blender Ragdoll extends Blender's Armature Objects with Rigid Body Simulation properties. Using Blender's native objects and object relations, the system creates serveral layers of meshes and empty objects and offers an interface to control an armature's animation and simulation properties. An armature's transformation can be blended between animation and simulation or a combination of both. 
 
 ## Quickstart
 + <b>Install Ragdoll:</b> Download ZIP file from packages directory. In <i>Blender Preferences / Add-ons</i> click <i>Install</i> and select ZIP file. Make sure the addon is enabled, you can filter by <i>Animation</i> to find the addon in the list.  
@@ -22,7 +22,8 @@ Blender Ragdoll extends Blender's Armature Objects with Rigid Body Simulation pr
 + <b>Fine Tune Constraints:</b> The Constraints Panel offers controls to define distance and rotational limits to the joints of your rig, as well as their display size. Limits can be defined by either using default values or a preset. A preset for an armature downloaded from Mixamo is supplied, as well as version with somewhat blenderized naming conventions. TODO: Blenderized version.
 
 + <b>Fine Tune Geometry:</b> In the Geometry Panel you can modify the relative scale of the geometry created. If you choose <i>Solid</i> Viewport Display you can see your Ragdoll in all it's glory.  
-If your armature has a mesh to deform, you can use this mesh to approximate the shape of your Ragdoll. If a mesh is selected as <i>Deform Mesh</i>, you can use <i>Approximate</i> to snap the Ragdoll's cubes' faces to this mesh. <b>Note</b>: This operator might take some time, depending on your setup's complexity and resources. It is recommended to be used in Pose Mode on selected bones.  
+
++ <b>Mesh Approximation:</b> If your armature has a mesh to deform, you can use this mesh to approximate the shape of your Ragdoll. If a mesh is selected as <i>Deform Mesh</i>, you can use <i>Approximate</i> to snap the Ragdoll's cubes' faces to this mesh. <b>Note</b>: This operator might take some time, depending on your setup's complexity and resources. It is recommended to be used in Pose Mode on selected bones.  
 
 + <b>Reset Approximation:</b> Approximation of selected bones' meshes can be reset using the reset button. Approximated meshes are exempt from being scaled using <i>Relative Scale</i> or <i>Width Limits</i> which can be reset.
   

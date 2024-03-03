@@ -1,4 +1,4 @@
-# Constraint Navigatrix
+# Blender Ragdoll
 
 Blender Ragdoll extends Blender's Armature Objects with Rigid Body Simulation properties. Using Blender's native objects and object relations, the system creates serveral layers of meshes and empty objects and offers an interface to control an armature's animation and simulation properties. Transformations can be blended between animation and simulation or a combination of both. 
 

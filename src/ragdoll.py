@@ -174,6 +174,8 @@ class RdJointConstraints(RdRigidBodyConstraintsBase):
                         if child.name in control_rig.pose.bones:
                             control_rig.pose.bones[child.name].ragdoll.constraint = empty
 
+                        empty.ragdoll.bone_name = child.name
+
         for bone in bones:
             if bone.parent and bone.ragdoll.constraint == None:
                 if bone.parent.ragdoll.rigid_body:
@@ -197,19 +199,19 @@ class RdJointConstraints(RdRigidBodyConstraintsBase):
         if config:
             config_data = utils.config_load(config)
           
-        for obj in collection.objects:
+        # print(config_data)
+        for obj in self.collection.objects:
             if obj.rigid_body_constraint:
                 constraint = obj.rigid_body_constraint
-                stripped_name = obj.name.rstrip(self.suffix)       
+                stripped_name = obj.ragdoll.bone_name       
                 bone_data = None
-
                 if config_data:
                     if "strip" in config_data:
                         for i in range(len(config_data["strip"])):
                             stripped_name = stripped_name.replace(config_data["strip"][i],"")
 
                     bone_data = config_data.get("bones").get(stripped_name)
-
+                # print(bone_data)
                 if bone_data:
                     lin_x_lower = bone_data.get("limit_lin_x_lower")
                     if lin_x_lower:
@@ -1009,8 +1011,36 @@ class RagDollBone(bpy.types.PropertyGroup):
                                         ('HOOK', "Ragdoll Hook Bone in Control Rig", "Deform Rig of a RagDoll")                          
                                     ], default='DEFAULT') # type: ignore
 
-    hook_users : bpy.props.IntProperty("Number of Bones RagDoll-Hooked to this bone", default=0, min=0)
-#------------------------ main property group. constraint and rigid body groups nested inside ------------------------
+    hook_users : bpy.props.IntProperty("Number of Bones RagDoll-Hooked to this bone", default=0, min=0) # type: ignore
+        
+    def constraint_limit_set(self, axis, rotation, mode='MAX'):
+        const_obj = self.constraint
+        const = const_obj.rigid_body_constraint
+
+        if const_obj and const:
+            if axis == 0:
+                if mode == 'MAX':
+                    const.limit_ang_x_upper = rotation
+                else:
+                    const.limit_ang_x_lower = rotation
+                    
+            if axis == 1:
+                if mode == 'MAX':
+                    const.limit_ang_y_upper = rotation
+                else:
+                    const.limit_ang_y_lower = rotation
+                
+            if axis == 2:
+                if mode == 'MAX':
+                    const.limit_ang_z_upper = rotation
+                else:
+                    const.limit_ang_z_lower = rotation
+                
+    
+
+
+
+
 
 class RagDollArmature(bpy.types.PropertyGroup):
     #-------- Object Pointers --------

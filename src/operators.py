@@ -383,6 +383,60 @@ class Object_OT_RagDollNamesReplaceSubstring(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class OBJECT_OT_SetConstMaxRot(bpy.types.Operator):
+    """Set Maximum rotation for Rigid Body Constraints assigned to selected bone(s)"""
+    bl_idname = "bone.set_constrotmax"
+    bl_label = "Set Maximum"
+    bl_options = {'UNDO'}
+
+    axis : bpy.props.IntProperty(min=0, max=2) # type: ignore
+
+    
+    @classmethod
+    def poll(cls, context):
+        if context.mode == 'POSE':
+            if len(context.selected_pose_bones) > 0:
+                return True
+    
+    def execute(self, context):
+        for b in context.selected_pose_bones:
+            if b.rotation_mode == 'QUATERNION':
+                rot = b.rotation_quaternion.to_euler()[self.axis]
+            else:
+                rot = b.rotation_euler[self.axis]
+
+            b.ragdoll.constraint_limit_set(self.axis, rot, 'MAX')
+
+        return{'FINISHED'}
+
+
+class OBJECT_OT_SetConstMinRot(bpy.types.Operator):
+    """Set Minimum rotation for Rigid Body Constraints assigned to selected bone(s)"""
+    bl_idname = "bone.set_constrotmin"
+    bl_label = "Set Minimum"
+    bl_options = {'UNDO'}
+
+    axis : bpy.props.IntProperty(min=0, max=2) # type: ignore
+
+    
+    @classmethod
+    def poll(cls, context):
+        if context.mode == 'POSE':
+            if len(context.selected_pose_bones) > 0:
+                return True
+
+    
+    def execute(self, context):
+        for b in context.selected_pose_bones:
+            if b.rotation_mode == 'QUATERNION':
+                rot = b.rotation_quaternion.to_euler()[self.axis]
+            else:
+                rot = b.rotation_euler[self.axis]
+
+            b.ragdoll.constraint_limit_set(self.axis, rot, 'MIN')
+
+        return{'FINISHED'}
+
 classes = ( 
             Scene_OT_RigidBodyWorldAddCustom,
             OBJECT_OT_AddRigidBodyConstraints,
@@ -401,7 +455,9 @@ classes = (
             OBJECT_OT_MeshApproximate,
             OBJECT_OT_MeshApproximateReset,
             Scene_OT_RagDollControlRigSelect,
-            Object_OT_RagDollNamesReplaceSubstring
+            Object_OT_RagDollNamesReplaceSubstring,
+            OBJECT_OT_SetConstMaxRot,
+            OBJECT_OT_SetConstMinRot
             )
 
 register, unregister = bpy.utils.register_classes_factory(classes)

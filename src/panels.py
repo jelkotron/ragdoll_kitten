@@ -5,7 +5,7 @@ import os
 class PHYSICS_PT_RagDollConfig(bpy.types.Panel):
     """Configuration of RagDoll Constraints"""
     bl_label = "Constraints"
-    bl_idname = "OBJECT_PT_ragdoll_config"
+    bl_idname = "OBJECT_PT_ragdoll_config" # TODO: rename
     bl_parent_id = "PHYSICS_PT_ragdoll"
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
@@ -31,7 +31,7 @@ class PHYSICS_PT_RagDollConfig(bpy.types.Panel):
         row = layout.row()
         split = row.split(factor=0.33)
         col_0 = split.column(align=True)
-        col_1 = split.column()
+        col_1 = split.column(align=True)
         config_label_row = col_0.row()
         config_label_row.alignment = 'RIGHT'
         config_row = col_1.row()
@@ -39,17 +39,17 @@ class PHYSICS_PT_RagDollConfig(bpy.types.Panel):
         if context.object.data.ragdoll.config and context.object.data.ragdoll.config.is_dirty:
             # config text is stored on disk but was modified in blender text editor
             if os.path.exists(context.object.data.ragdoll.config.filepath):
-                config_label_row.label(text="JSON (External, modified)")
+                config_label_row.label(text="Preset (External, modified)")
             # config text is not stored on disk
             else:
-                config_label_row.label(text="JSON (Internal, modified)")
+                config_label_row.label(text="Preset (Internal, modified)")
         # config text is stored on disk and was not modified
         elif context.object.data.ragdoll.config:
-            config_label_row.label(text="JSON  (External)")
+            config_label_row.label(text="Preset  (External)")
         # config file is not set
         else:
             config_label_row.alignment = 'RIGHT'
-            config_label_row.label(text="JSON")
+            config_label_row.label(text="Preset")
         
         if context.object.data.ragdoll.type == 'CONTROL' or not context.object.data.ragdoll.control_rig:
             config_row.prop(context.object.data.ragdoll,"config", text="")
@@ -76,7 +76,45 @@ class PHYSICS_PT_RagDollConfig(bpy.types.Panel):
         size_values_row = col_1.row(align=True)
         size_values_row.prop(context.object.data.ragdoll.rigid_bodies.constraints, "scale_factor", text="Factor")
         size_values_row.prop(context.object.data.ragdoll.rigid_bodies.constraints, "scale_offset", text="Offset")
+       
+        if context.mode == 'POSE':
+            if context.active_pose_bone:
+                bone = context.active_pose_bone
+                if bone.ragdoll.constraint:
+                    if bone.ragdoll.constraint.rigid_body_constraint:
+                        active_label = col_0.row()
+                        active_label.alignment = 'RIGHT'
+                        active_label.label(text="Active Bone")
+                        active = col_1.row()
+                        active.label(text=context.active_pose_bone.name)
 
+                        rot_x_label = col_0.row(align=True)
+                        rot_x_label.alignment = 'RIGHT'
+                        rot_x_label.label(text="Rotation X")
+                        rot_x_val = col_1.row(align=True)
+                        rot_x_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_x_lower", text="Min")
+                        rot_x_val.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")
+                        
+                        rot_x_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_x_upper", text="Max")
+                        rot_x_val.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")
+
+                        rot_y_label = col_0.row(align=True)
+                        rot_y_label.alignment = 'RIGHT'
+                        rot_y_label.label(text="Rotation Y")
+                        rot_y_val = col_1.row(align=True)
+                        rot_y_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_y_lower", text="Min")
+                        rot_y_val.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")
+                        rot_y_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_y_upper", text="Max")
+                        rot_y_val.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")
+
+                        rot_z_label = col_0.row(align=True)
+                        rot_z_label.alignment = 'RIGHT'
+                        rot_z_label.label(text="Rotation Z")
+                        rot_z_val = col_1.row(align=True)
+                        rot_z_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_z_lower", text="Min")
+                        rot_z_val.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")                        
+                        rot_z_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_z_upper", text="Max")
+                        rot_z_val.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")
 
 class PHYSICS_PT_RagDollGeometry(bpy.types.Panel):
     """Configuration of RagDoll Geometry"""
@@ -592,7 +630,7 @@ class PHYSICS_PT_RagDollCollections(bpy.types.Panel):
         
 class PHYSICS_PT_RagDoll(bpy.types.Panel):
     """Creates a Panel in the Object Data properties window"""
-    bl_label = "RagDoll"
+    bl_label = "Constraint Navigatrix"
     bl_idname = "PHYSICS_PT_ragdoll"
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'

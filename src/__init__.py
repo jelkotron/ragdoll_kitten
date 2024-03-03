@@ -15,6 +15,8 @@ import bpy
 from blender_ragdoll import ragdoll
 from blender_ragdoll import operators
 from blender_ragdoll import panels
+from blender_ragdoll import menus
+
 
 def mesh_poll(self, object):
      return object.type == 'MESH'
@@ -24,6 +26,7 @@ def register():
     ragdoll.register()
     operators.register()
     panels.register()
+    menus.register()
     #-------- set custom properties --------
     bpy.types.Armature.ragdoll = bpy.props.PointerProperty(type=ragdoll.RagDollArmature)
     bpy.types.PoseBone.ragdoll = bpy.props.PointerProperty(type=ragdoll.RagDollBone)
@@ -42,6 +45,7 @@ def unregister():
 
     #-------- unregister custom properties --------
     panels.unregister()
+    menus.unregister()
     operators.unregister()
     ragdoll.unregister()
     
@@ -51,6 +55,7 @@ if "bpy" in locals():
     importlib.reload(ragdoll)
     importlib.reload(operators)
     importlib.reload(panels)
+    importlib.reload(menus)
 
 if __name__ == "__main__":
     register()

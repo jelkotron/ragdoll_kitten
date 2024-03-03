@@ -199,7 +199,6 @@ class RdJointConstraints(RdRigidBodyConstraintsBase):
         if config:
             config_data = utils.config_load(config)
           
-        # print(config_data)
         for obj in self.collection.objects:
             if obj.rigid_body_constraint:
                 constraint = obj.rigid_body_constraint
@@ -211,7 +210,7 @@ class RdJointConstraints(RdRigidBodyConstraintsBase):
                             stripped_name = stripped_name.replace(config_data["strip"][i],"")
 
                     bone_data = config_data.get("bones").get(stripped_name)
-                # print(bone_data)
+
                 if bone_data:
                     lin_x_lower = bone_data.get("limit_lin_x_lower")
                     if lin_x_lower:
@@ -1026,9 +1025,9 @@ class RagDollBone(bpy.types.PropertyGroup):
         
     def constraint_limit_set(self, axis, rotation, mode='MAX'):
         const_obj = self.constraint
-        const = const_obj.rigid_body_constraint
 
-        if const_obj and const:
+        if const_obj and hasattr(const_obj, "rigid_body_constraint"):
+            const = const_obj.rigid_body_constraint
             if axis == 0:
                 if mode == 'MAX':
                     const.limit_ang_x_upper = rotation

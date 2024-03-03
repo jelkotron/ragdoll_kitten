@@ -117,8 +117,7 @@ class OBJECT_OT_UpdateRagDoll(bpy.types.Operator):
         if context.object.type == 'ARMATURE':
             if context.object.data.ragdoll.initialized:
                 if context.object.data.ragdoll.type == 'CONTROL':
-                    if context.object.data.ragdoll.config:
-                        return True
+                    return True
         else:
             return False
 
@@ -437,6 +436,46 @@ class OBJECT_OT_SetConstMinRot(bpy.types.Operator):
 
         return{'FINISHED'}
 
+
+class OBJECT_OT_ConstraintsWriteSelectedToPreset(bpy.types.Operator):
+    """Write selected bones' constraint limits to preset file"""
+    bl_idname = "bone.write_selected_to_preset"
+    bl_label = "Write to Preset"
+    bl_options = {'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        if context.mode == 'POSE':
+            if len(context.selected_pose_bones) > 0:
+                return True
+
+    
+    def execute(self, context):
+        for b in context.selected_pose_bones:
+            print("Updated Constraint: %s"%b.name)
+        return{'FINISHED'}
+
+
+class OBJECT_OT_ConstraintsSetPresetToSelected(bpy.types.Operator):
+    """Set selected bones' constraint limits from preset file"""
+    bl_idname = "bone.set_selected_to_preset"
+    bl_label = "Write to Preset"
+    bl_options = {'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        if context.mode == 'POSE':
+            if len(context.selected_pose_bones) > 0:
+                return True
+
+    
+    def execute(self, context):
+        for b in context.selected_pose_bones:
+            print("Updated Constraint: %s"%b.name)
+        return{'FINISHED'}
+
+
+
 classes = ( 
             Scene_OT_RigidBodyWorldAddCustom,
             OBJECT_OT_AddRigidBodyConstraints,
@@ -457,7 +496,9 @@ classes = (
             Scene_OT_RagDollControlRigSelect,
             Object_OT_RagDollNamesReplaceSubstring,
             OBJECT_OT_SetConstMaxRot,
-            OBJECT_OT_SetConstMinRot
+            OBJECT_OT_SetConstMinRot,
+            OBJECT_OT_ConstraintsWriteSelectedToPreset,
+            OBJECT_OT_ConstraintsSetPresetToSelected
             )
 
 register, unregister = bpy.utils.register_classes_factory(classes)

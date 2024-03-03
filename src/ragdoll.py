@@ -216,36 +216,47 @@ class RdJointConstraints(RdRigidBodyConstraintsBase):
                     lin_x_lower = bone_data.get("limit_lin_x_lower")
                     if lin_x_lower:
                         constraint.limit_lin_x_lower = lin_x_lower
+
                     lin_x_upper = bone_data.get("limit_lin_x_upper")
                     if lin_x_upper:
                         constraint.limit_lin_x_lower = lin_x_upper
+                    
                     lin_y_lower = bone_data.get("limit_lin_y_lower")
                     if lin_y_lower:
                         constraint.limit_lin_y_lower = lin_y_lower
+                    
                     lin_y_upper = bone_data.get("limit_lin_y_upper")
-                    if lin_x_lower:
+                    if lin_y_upper:
                         constraint.limit_lin_y_upper = lin_y_upper
+                    
                     lin_z_lower = bone_data.get("limit_lin_z_lower")
                     if lin_z_lower:
                         constraint.limit_lin_z_lower = lin_z_lower
+                    
                     lin_z_upper = bone_data.get("limit_lin_z_upper")
                     if lin_z_upper:
                         constraint.limit_lin_z_upper = lin_z_upper
+                    
                     ang_x_lower = bone_data.get("limit_ang_x_lower")
                     if ang_x_lower:
                         constraint.limit_ang_x_lower = math.radians(ang_x_lower)
+                    
                     ang_x_upper = bone_data.get("limit_ang_x_upper")
                     if ang_x_upper:
                         constraint.limit_ang_x_upper = math.radians(ang_x_upper)
+                    
                     ang_y_lower = bone_data.get("limit_ang_y_lower")
                     if ang_y_lower:
                         constraint.limit_ang_y_lower = math.radians(ang_y_lower)
+                    
                     ang_y_upper = bone_data.get("limit_ang_y_upper")
                     if ang_y_upper:
                         constraint.limit_ang_y_upper = math.radians(ang_y_upper)
+                    
                     ang_z_lower = bone_data.get("limit_ang_z_lower")
-                    if lin_x_lower:
+                    if ang_z_lower:
                         constraint.limit_ang_z_lower = math.radians(ang_z_lower)
+                    
                     ang_z_upper = bone_data.get("limit_ang_z_upper")
                     if ang_z_upper:
                         constraint.limit_ang_z_upper = math.radians(ang_z_upper)

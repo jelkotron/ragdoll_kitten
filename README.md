@@ -1,13 +1,13 @@
 # Blender Ragdoll
 
-Blender Ragdoll extends Blender's Armature Objects with Rigid Body Simulation properties. Using Blender's native objects and object relations, the system creates serveral layers of meshes and empty objects and offers an interface to control an armature's animation and simulation properties. An armature's transformation can be blended between animation and simulation or a combination of both. 
+Blender Ragdoll extends Blender's Armature Objects with Rigid Body Simulation properties. Using Blender's native objects and object relations, the system creates serveral layers of meshes and empty objects and offers an interface to control an armature's animation and simulation properties. Transformations can be blended between animation and simulation or a combination of both. 
 
 ## Quickstart
-+ <b>Install Ragdoll:</b> Download ZIP file from packages directory. In <i>Blender Preferences / Add-ons</i> click <i>Install</i> and select ZIP file. Make sure the addon is enabled, you can filter by <i>Animation</i> to find the addon in the list.  
++ <b>Install Ragdoll:</b> Download ZIP file from packages directory. In <i>Blender Preferences / Add-ons</i> click <i>Install</i> and select ZIP file. Make sure the addon is enabled, you can filter by category <i>Animation</i> to find the addon in the list.  
 
-+ <b>Obtain Rigged Mesh:</b> Not everybody has a mesh with an armature at hand. Some websites, for example Mixamo, offer rigged FBX files to download for free. These can be imported to blender. You could also use the example file supplied. TODO: supply file. 
++ <b>Obtain Rigged Mesh:</b> If you don't have a mesh with an armature at hand, there are websites that offer FBX files of animated characters to download for free. Mixamo offers free content but requires registration. Alternatively you can use one of the example file supplied. TODO: supply files. 
 
-+ <b>Rigid Body World:</b> With an armature object selected, a Ragdoll Panel is shown in the <i>Physics</i> tab of the Property Panel. If your scene does not have a <i>Rigid Body World</i> or <i>Rigid Body Constraints</i> set, you will be prompted to add both.
++ <b>Rigid Body World:</b> With an armature object selected, the Ragdoll Panel is shown in the <i>Physics</i> tab of the Property Panel. If your scene does not have a <i>Rigid Body World</i> or <i>Rigid Body Constraints</i> set, you will be prompted to add both.
 
 + <b>Add Ragdoll to Armature:</b> Now your simulation environment is set up, you can create a Ragdoll based on the selected armature by clicking <i>Create</i> in the Ragdoll Panel. The operator works in both Pose Mode and Object Mode. In Pose Mode it will add Ragdoll functionality to all selected bones, while in Object Mode all visible bones will be used. If your armature containts leaf bones on its chain ends, make sure to hide/delete/not select those unless you wish to simulate them. Also, you might want to hide complex parts such as fingers. 
 
@@ -15,7 +15,6 @@ Blender Ragdoll extends Blender's Armature Objects with Rigid Body Simulation pr
 
 + <b>Play your Animation:</b> A basic simulation has been set up and you should see your armature and/or charactor fall down when you hit <i>Play Animation</i>, unless you have other rigid bodies in your scene, for example a floor. You can add a floor by using <i>Add Menu >  Mesh > Plane</i> in the viewport. You can add a Rigid Body component to the plane by using <i>Object Menu > Rigid Body > Add Passive</i>.
 
-+ <b>Precision and Cache:</b> Depending on the complexity of your setup, you might want to allow for a more sophisticated simulation by calculating more Simulation Substeps and / or Constraint Solver Iterations. The settings of your scene's Rigid Body World can be found in the <i>Scene Properties Tab</i> inside the Rigid Body World Panel. Here you can also set the frame range of your simulation. Occasionally, simulations don't seem to update and it can help to delete the cache by using <i>Delete All Bakes</i>.
 
 ## Quickstart, extended
 
@@ -30,11 +29,14 @@ Blender Ragdoll extends Blender's Armature Objects with Rigid Body Simulation pr
 + <b>Toggle Animation:</b> In the <i>Animated</i> Panel, you can toggle, keyframe and blend the influence of animation and simulation.
 
 + <b>Wiggle:</b>
-Using wiggles allows you to simulate on top of an animation. Wiggles are a set of objects tied to the armature's animated bones. Wiggle constraints define, How much the Ragdoll's simulated bones may deviated from the animated bones. Use low values to add weight and character to your otherwise generic motion capture data. Or use higher values to achieve sillyness. 
+Using wiggles allows you to simulate on top of an animation. Wiggles are a set of objects tied to the armature's animated bones. Wiggle constraints define how much the Ragdoll's simulated bones may deviate from the animated bones' transforms. Use low values to add weight and character to your otherwise generic motion capture data. Or use higher values to achieve sillyness.
 + <b>Hooks:</b> 
 Hooks allow you to pin a bone's physical representation to another object, which is represented by an additional bone. Hooking multiple bones to one object is possible, even though it is an experimental feature. Hooks can be added in Pose Mode. Select the bone you wish to took and click <i>Add Hook</i>. Hook objects expose the properties of the rigid body constraint that is assigned to them and can be set up individually.
 + <b>Naming:</b> As a Ragdoll consists of many objects, names become relevant. In the Naming Panel you can change the suffixes of your Ragdoll objects.
 <i>Replace</i> lets the user change the names of a Ragdoll Armature's bones and all related objects. Fields are <i>source, target, suffix-if-source</i>. The suffix allows to modify naming conventions for left/right. For example, with source="Left", target="" and suffix=".L" a bone named "LeftHand" will be renamed to "Hand.L", which is conformal with Blender's naming convention for bones.
+
++ <b>Precision and Cache:</b> Depending on the complexity of your setup, you might want to allow for a more sophisticated simulation by calculating more Simulation Substeps and / or Constraint Solver Iterations. The settings of your scene's Rigid Body World can be found in the <i>Scene Properties Tab</i> inside the Rigid Body World Panel. Here you can also set the frame range of your simulation. Occasionally, simulations don't seem to update and it can help to delete the cache by using <i>Delete All Bakes</i>.
+
 
 ## Ragdoll Objects
 
@@ -101,7 +103,7 @@ Deform mesh is the target of the approximation. The cubes' faces  centers are pr
 ### Offset
 Offset distance added to projection. 
 ### Projection Threshold
-Maximum distance the appromiation uses to find and intersection.
+Maximum distance the approximation uses to find and intersection.
 ### Rigid Bodies Approximate
 Starts approximation. Depending on the setup's complexity resources the process can take up to a few minutes.
 An approximated rigid body object is protected from being modified by relative scale and/or scale limits. Protection can be unset by either selecting pose bones and using <i>Rigid Bodies Reset</i> or by selecting the Mesh object and unsetting <i>Protect Aprroximate</i> in the object's Properties Panel in <i>Physics > Ragdoll</i>  

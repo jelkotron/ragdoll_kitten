@@ -1,7 +1,7 @@
 ![Ragdoll Kitten](https://raw.githubusercontent.com/schnollie/blender_Ragdoll/main/images/ragdoll_kitten.jpg)
 # Ragdoll Kitten
 
-This addon extends Blender's skeletal animation system with rigid body simulation properties. <i>Ragdoll</i> is a term commonly used in animation to describe this kind of setup, as well as a breed of cats. Using Blender's built-in Rigid Bodies and Rigid Body Constraints, the system creates collections of meshes and constraint objects and sets their relations. It offers an interface to control and extend an armature's animation and simulation properties. 
+This addon extends Blender's skeletal animation system with rigid body simulation properties. <i>Ragdoll</i> is a term commonly used in animation to describe this kind of setup, as well as a breed of cats. Using Blender's built-in Rigid Bodies and Rigid Body Constraints, the system creates collections of objects and sets their relations. It offers an interface to extend and control an armature's animation and simulation properties. 
 
 ## Quickstart
 + <b>Install Ragdoll Kitten:</b> Download ZIP file from packages directory. In <i>Blender Preferences / Add-ons</i> click <i>Install</i> and select ZIP file. Make sure the addon is enabled, you can filter by category <i>Animation</i> to find the addon in the list or use the search function.  

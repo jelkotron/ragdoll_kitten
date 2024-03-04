@@ -1,3 +1,4 @@
+![Ragdoll Kitten](https://raw.githubusercontent.com/schnollie/blender_Ragdoll/main/images/ragdoll_kitten.jpg)
 # Ragdoll Kitten
 
 Ragdoll Kitten is an addon that extends Blender's skeletal animation system with rigid body simulation properties. <i>Ragdoll</i> is a term commonly used in animation to describe this kind of setup, as well as a breed of cats. Using Blender's built-in Rigid Bodies and Rigid Body Constraints, the system creates collections of meshes and constraint objects and sets their relations. It offers an interface to control and extend an armature's animation and simulation properties. 

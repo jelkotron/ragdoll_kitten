@@ -445,9 +445,7 @@ class OBJECT_OT_ConstraintsWriteSelectedToPreset(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if context.mode == 'POSE':
-            if len(context.selected_pose_bones) > 0:
-                return True
+        return True
 
     
     def execute(self, context):
@@ -464,9 +462,7 @@ class OBJECT_OT_ConstraintsSetPresetToSelected(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        if context.mode == 'POSE':
-            if len(context.selected_pose_bones) > 0:
-                return True
+        return True
 
     
     def execute(self, context):

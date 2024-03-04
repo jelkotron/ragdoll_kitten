@@ -1,9 +1,9 @@
-# Blender Ragdoll
+# Ragdoll Kitten
 
-Blender Ragdoll extends Blender's Armature Objects with Rigid Body Simulation properties. Using Blender's native objects and object relations, the system creates serveral layers of meshes and empty objects and offers an interface to control an armature's animation and simulation properties. Transformations can be blended between animation and simulation or a combination of both. 
+Ragdoll Kitten is an addon that extends Blender's skeletal animation system with rigid body simulation properties. <i>Ragdoll</i> is a term commonly used in animation to describe this kind of setup, as well as a breed of cats. Using Blender's built-in Rigid Bodies and Rigid Body Constraints, the system creates collections of meshes and constraint objects and sets their relations. It offers an interface to control and extend an armature's animation and simulation properties. 
 
 ## Quickstart
-+ <b>Install Ragdoll:</b> Download ZIP file from packages directory. In <i>Blender Preferences / Add-ons</i> click <i>Install</i> and select ZIP file. Make sure the addon is enabled, you can filter by category <i>Animation</i> to find the addon in the list or use the search function.  
++ <b>Install Ragdoll Kitten:</b> Download ZIP file from packages directory. In <i>Blender Preferences / Add-ons</i> click <i>Install</i> and select ZIP file. Make sure the addon is enabled, you can filter by category <i>Animation</i> to find the addon in the list or use the search function.  
 
 + <b>Obtain Rigged Mesh:</b> If you don't have a mesh with an armature at hand, there are websites that offer FBX files of animated characters to download for free. Mixamo offers free content but requires registration. Alternatively you can use one of the example file supplied. TODO: supply files. 
 

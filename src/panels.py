@@ -2,6 +2,8 @@
 import bpy
 import os
 
+from blender_ragdoll.utils import get_visible_posebones
+
 class PHYSICS_PT_RagDollConfig(bpy.types.Panel):
     """Configuration of RagDoll Constraints"""
     bl_label = "Constraints"
@@ -77,9 +79,15 @@ class PHYSICS_PT_RagDollConfig(bpy.types.Panel):
         size_values_row.prop(context.object.data.ragdoll.rigid_bodies.constraints, "scale_factor", text="Factor")
         size_values_row.prop(context.object.data.ragdoll.rigid_bodies.constraints, "scale_offset", text="Offset")
 
+
         op_label_row = col_0.row()
         op_label_row.alignment = 'RIGHT'
-        op_label_row.label(text="Selected Bones: %i"%len(context.selected_pose_bones))
+        
+        if context.mode == 'POSE':
+            op_label_row.label(text="Selected Bones: %i"%len(context.selected_pose_bones))
+        else:
+            op_label_row.label(text="Visible Bones: %i"%len(get_visible_posebones(context.object)))
+
         op_row = col_1.row(align=True)
         op_row.operator("bone.write_selected_to_preset", text="Write Preset")
         op_row.operator("bone.set_selected_to_preset", text="Read Preset")
@@ -100,54 +108,58 @@ class PHYSICS_PT_RagDollActiveConstraint(bpy.types.Panel):
     def poll(self, context):
         if context.mode == 'POSE':
             if context.active_pose_bone:
-                bone = context.active_pose_bone
-                if bone.ragdoll.constraint:
-                    if bone.ragdoll.constraint.rigid_body_constraint:
-                        return True        
-
+                    return True        
+                    
     def draw_header(self, context):
         layout = self.layout
-        layout.label(text="Active: %s"%context.active_pose_bone.name)
+        info = ""
+        if not context.active_pose_bone.ragdoll.constraint:
+            info = "(no Constraint)"
+        layout.label(text="Active Bone: %s %s"%(context.active_pose_bone.name, info))
 
     def draw(self, context):
-        layout = self.layout
-        row = layout.row()
-        split = row.split(factor=0.33)
-        col_0 = split.column()
-        col_1 = split.column()
+        bone = context.active_pose_bone
+        if bone.ragdoll.constraint:
+            if bone.ragdoll.constraint.rigid_body_constraint:
+                layout = self.layout
+                row = layout.row()
+                split = row.split(factor=0.33)
+                col_0 = split.column()
+                col_1 = split.column()
 
-        row = layout.row()
-        split = row.split(factor=0.33)
-        col_0 = split.column(align=True)
-        col_1 = split.column(align=True)
+                row = layout.row()
+                split = row.split(factor=0.33)
+                col_0 = split.column(align=True)
+                col_1 = split.column(align=True)
 
-        rot_x_label = col_0.row(align=True)
-        rot_x_label.alignment = 'RIGHT'
-        rot_x_label.label(text="Rotation X")
-        rot_x_val = col_1.row(align=True)
-        rot_x_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_x_lower", text="Min")
-        rot_x_val.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")
-        
-        rot_x_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_x_upper", text="Max")
-        rot_x_val.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")
+                rot_x_label = col_0.row(align=True)
+                rot_x_label.alignment = 'RIGHT'
+                rot_x_label.label(text="Rotation X")
+                rot_x_val = col_1.row(align=True)
+                rot_x_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_x_lower", text="Min")
+                rot_x_val.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")
+                
+                rot_x_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_x_upper", text="Max")
+                rot_x_val.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")
 
-        rot_y_label = col_0.row(align=True)
-        rot_y_label.alignment = 'RIGHT'
-        rot_y_label.label(text="Rotation Y")
-        rot_y_val = col_1.row(align=True)
-        rot_y_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_y_lower", text="Min")
-        rot_y_val.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")
-        rot_y_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_y_upper", text="Max")
-        rot_y_val.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")
+                rot_y_label = col_0.row(align=True)
+                rot_y_label.alignment = 'RIGHT'
+                rot_y_label.label(text="Rotation Y")
+                rot_y_val = col_1.row(align=True)
+                rot_y_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_y_lower", text="Min")
+                rot_y_val.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")
+                rot_y_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_y_upper", text="Max")
+                rot_y_val.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")
 
-        rot_z_label = col_0.row(align=True)
-        rot_z_label.alignment = 'RIGHT'
-        rot_z_label.label(text="Rotation Z")
-        rot_z_val = col_1.row(align=True)
-        rot_z_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_z_lower", text="Min")
-        rot_z_val.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")                        
-        rot_z_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_z_upper", text="Max")
-        rot_z_val.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")
+                rot_z_label = col_0.row(align=True)
+                rot_z_label.alignment = 'RIGHT'
+                rot_z_label.label(text="Rotation Z")
+                rot_z_val = col_1.row(align=True)
+                rot_z_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_z_lower", text="Min")
+                rot_z_val.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")                        
+                rot_z_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_z_upper", text="Max")
+                rot_z_val.operator("armature.ragdoll_update", text="", icon="FILE_REFRESH")
+
 
 
 class PHYSICS_PT_RagDollGeometry(bpy.types.Panel):
@@ -686,7 +698,7 @@ class PHYSICS_PT_RagDollCollections(bpy.types.Panel):
         
 class PHYSICS_PT_RagDoll(bpy.types.Panel):
     """Creates a Panel in the Object Data properties window"""
-    bl_label = "Ragdoll"
+    bl_label = "Ragdoll Kitten"
     bl_idname = "PHYSICS_PT_ragdoll"
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'

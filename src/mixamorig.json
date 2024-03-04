@@ -120,5 +120,10 @@
             "limit_ang_z_lower" : -12,
             "limit_ang_z_upper" : 12
         }
+    },
+    
+    "default_values":{
+        "distance": 0.0,
+        "rotation": 22.5
     }    
 }

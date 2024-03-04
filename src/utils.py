@@ -202,7 +202,8 @@ def config_load(config):
     return data
 
 #------------------------ parse internal json file, read & modify data ------------------------
-def config_update(bone, config):
+def config_update(context, bone):
+    config = context.object.data.ragdoll.config
     lines = []
     for line in config.lines:
         lines.append(line.body)
@@ -213,6 +214,9 @@ def config_update(bone, config):
         print(e)
 
     if data:
+        data["default_values"]["distance"] = round(context.object.data.ragdoll.rigid_bodies.constraints.default_distance,4)
+        data["default_values"]["rotation"] = round(math.degrees(context.object.data.ragdoll.rigid_bodies.constraints.default_rotation),4)
+
         if bone.ragdoll.constraint:
             data["bones"][bone.name] = {
                 "limit_ang_x_lower" : round(math.degrees(bone.ragdoll.constraint.rigid_body_constraint.limit_ang_x_lower),3),
@@ -235,7 +239,8 @@ def config_update(bone, config):
     
 
 #------------------------ create config file w/ default values ------------------------
-def config_create(armature):
+def config_create(context):
+    armature = context.object
     if armature.data.ragdoll.deform_rig:
         bones = get_visible_posebones(armature.data.ragdoll.deform_rig)
     else:
@@ -253,37 +258,23 @@ def config_create(armature):
     text_data_block = bpy.data.texts.new(filename)
 
     data = {
-        "strip":[],
         "bones": {},
-        "keys": {}
+        "default_values":{
+            "distance" : round(context.object.data.ragdoll.rigid_bodies.constraints.default_distance,4),
+            "rotation" : round(math.degrees(context.object.data.ragdoll.rigid_bodies.constraints.default_rotation),4)
+            }
     }
     for bone in bones:
-        data["bones"][bone.name] = {
-            "limit_ang_x_lower" : -45,
-            "limit_ang_x_upper" : 45,
-            "limit_ang_y_lower" : -45,
-            "limit_ang_y_upper" : 45,
-            "limit_ang_z_lower" : -45,
-            "limit_ang_z_upper" : 45
-        }
-            
-    data["keys"] = {
-        "limit_ang_x_lower" : "maximum angular movement (degrees) in direction -X",
-        "limit_ang_x_upper" : "maximum angular movement (degrees) in direction +X",
-        "limit_ang_y_lower" : "maximum angular movement (degrees) in direction -Y",
-        "limit_ang_y_upper" : "maximum angular movement (degrees) in direction +Y",
-        "limit_ang_z_lower" : "maximum angular movement (degrees) in direction -Z",
-        "limit_ang_z_upper" : "maximum angular movement (degrees) in direction +Z",
-        
-        "limit_lin_x_lower" : "maximum linear movement () in direction -X",
-        "limit_lin_x_upper" : "maximum linear movement () in direction +X",
-        "limit_lin_y_lower" : "maximum linear movement () in direction -Y",
-        "limit_lin_y_upper" : "maximum linear movement () in direction +Y",
-        "limit_lin_z_lower" : "maximum linear movement () in direction -Z",
-        "limit_lin_z_upper" : "maximum linear movement () in direction +Z",
-    
-        "strip": "Strings to ignore in bone names while parsing"
-    }
+        if bone.ragdoll.constraint:
+            data["bones"][bone.name] = {
+                "limit_ang_x_lower" : round(math.degrees(bone.ragdoll.constraint.rigid_body_constraint.limit_ang_x_lower),3),
+                "limit_ang_x_upper" : round(math.degrees(bone.ragdoll.constraint.rigid_body_constraint.limit_ang_x_upper),3),
+                "limit_ang_y_lower" : round(math.degrees(bone.ragdoll.constraint.rigid_body_constraint.limit_ang_y_lower),3),
+                "limit_ang_y_upper" : round(math.degrees(bone.ragdoll.constraint.rigid_body_constraint.limit_ang_y_upper),3),
+                "limit_ang_z_lower" : round(math.degrees(bone.ragdoll.constraint.rigid_body_constraint.limit_ang_z_lower),3),
+                "limit_ang_z_upper" : round(math.degrees(bone.ragdoll.constraint.rigid_body_constraint.limit_ang_z_upper),3)  
+            }
+                
             
     encoded = json.dumps(data, sort_keys=True, indent=4)
     

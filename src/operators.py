@@ -26,7 +26,7 @@ class OBJECT_OT_RagdollJsonAdd(bpy.types.Operator):
     bl_options = {'UNDO'}
       
     def execute(self, context): 
-        config = config_create(context.object)
+        config = config_create(context)
         load_text(context, None, config)
         return {'FINISHED'}
     
@@ -103,27 +103,6 @@ class OBJECT_OT_RemoveRagDoll(bpy.types.Operator):
     def execute(self, context):
         context.object.data.ragdoll.remove(context)
         
-        return {'FINISHED'}
-
-
-class OBJECT_OT_UpdateRagDoll(bpy.types.Operator):
-    """Update selected Armature's RagDoll Joint Constraint Limits from Text"""
-    bl_idname = "armature.ragdoll_update"
-    bl_label = "Update Ragdoll"
-    bl_options = {'UNDO'}
-
-    @classmethod
-    def poll(cls, context):
-        if context.object.type == 'ARMATURE':
-            if context.object.data.ragdoll.initialized:
-                if context.object.data.ragdoll.type == 'CONTROL':
-                    return True
-        else:
-            return False
-
-    def execute(self, context):
-        context.object.data.ragdoll.update_constraints(context)
-        print("Info: ragdoll constraints updated")
         return {'FINISHED'}
 
 
@@ -453,7 +432,7 @@ class OBJECT_OT_ConstraintsWriteSelectedToPreset(bpy.types.Operator):
         if bones:
             for b in bones:
                 if context.object.data.ragdoll.config:
-                    config_update(b, context.object.data.ragdoll.config)
+                    config_update(context, b)
                 print("Updated Constraint: %s"%b.name)
         return{'FINISHED'}
 
@@ -472,6 +451,30 @@ class OBJECT_OT_ConstraintsSetPresetToSelected(bpy.types.Operator):
     
     def execute(self, context):
         bones = get_visible_posebones(context.object)
+        config = context.object.data.ragdoll.config
+        context.object.data.ragdoll.update_constraints(context, config)
+        
+        for b in bones:
+            print("Updated Constraint: %s"%b.name)
+        return{'FINISHED'}
+    
+
+class OBJECT_OT_ConstraintsSetDefaultToSelected(bpy.types.Operator):
+    """Set selected bones' constraint limits to default values"""
+    bl_idname = "bone.set_selected_to_default"
+    bl_label = "Default"
+    bl_options = {'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        if context.object.type == 'ARMATURE':
+            return True
+
+    
+    def execute(self, context):
+        bones = get_visible_posebones(context.object)
+        context.object.data.ragdoll.update_constraints(context, None)
+        
         for b in bones:
             print("Updated Constraint: %s"%b.name)
         return{'FINISHED'}
@@ -484,7 +487,6 @@ classes = (
             OBJECT_OT_AddRagDoll,
             OBJECT_OT_ExtendRagDoll,
             OBJECT_OT_RemoveRagDoll,
-            OBJECT_OT_UpdateRagDoll,
             OBJECT_OT_UpdateWiggles,
             OBJECT_OT_UpdateDrivers,
             OBJECT_OT_AddWiggleDrivers,
@@ -500,7 +502,8 @@ classes = (
             OBJECT_OT_SetConstMaxRot,
             OBJECT_OT_SetConstMinRot,
             OBJECT_OT_ConstraintsWriteSelectedToPreset,
-            OBJECT_OT_ConstraintsSetPresetToSelected
+            OBJECT_OT_ConstraintsSetPresetToSelected,
+            OBJECT_OT_ConstraintsSetDefaultToSelected
             )
 
 register, unregister = bpy.utils.register_classes_factory(classes)

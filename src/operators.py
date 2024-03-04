@@ -1,5 +1,5 @@
 import bpy
-from ragdoll_kitten.utils import rb_constraint_collection_set, load_text, config_create, force_update_drivers, deselect_all, select_set_active
+from ragdoll_kitten.utils import rb_constraint_collection_set, load_text, config_create, config_update, force_update_drivers, deselect_all, select_set_active, get_visible_posebones
 from bpy_extras.io_utils import ImportHelper
 
 class OBJECT_OT_TextBrowseImport(bpy.types.Operator, ImportHelper): 
@@ -445,12 +445,16 @@ class OBJECT_OT_ConstraintsWriteSelectedToPreset(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return True
-
+        if context.object.type == 'ARMATURE':
+            return True
     
     def execute(self, context):
-        for b in context.selected_pose_bones:
-            print("Updated Constraint: %s"%b.name)
+        bones = get_visible_posebones(context.object)
+        if bones:
+            for b in bones:
+                if context.object.data.ragdoll.config:
+                    config_update(b, context.object.data.ragdoll.config)
+                print("Updated Constraint: %s"%b.name)
         return{'FINISHED'}
 
 
@@ -462,11 +466,13 @@ class OBJECT_OT_ConstraintsSetPresetToSelected(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return True
+        if context.object.type == 'ARMATURE':
+            return True
 
     
     def execute(self, context):
-        for b in context.selected_pose_bones:
+        bones = get_visible_posebones(context.object)
+        for b in bones:
             print("Updated Constraint: %s"%b.name)
         return{'FINISHED'}
 

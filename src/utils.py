@@ -1,6 +1,7 @@
 import bpy
 import json
 import os
+import math
 import mathutils
 
 
@@ -199,6 +200,39 @@ def config_load(config):
                 except json.decoder.JSONDecodeError as e:
                     print(e)
     return data
+
+#------------------------ parse internal json file, read & modify data ------------------------
+def config_update(bone, config):
+    lines = []
+    for line in config.lines:
+        lines.append(line.body)
+    data = None
+    try:
+        data = json.loads("\n".join(lines))
+    except json.decoder.JSONDecodeError as e:
+        print(e)
+
+    if data:
+        if bone.ragdoll.constraint:
+            data["bones"][bone.name] = {
+                "limit_ang_x_lower" : round(math.degrees(bone.ragdoll.constraint.rigid_body_constraint.limit_ang_x_lower),3),
+                "limit_ang_x_upper" : round(math.degrees(bone.ragdoll.constraint.rigid_body_constraint.limit_ang_x_upper),3),
+                "limit_ang_y_lower" : round(math.degrees(bone.ragdoll.constraint.rigid_body_constraint.limit_ang_y_lower),3),
+                "limit_ang_y_upper" : round(math.degrees(bone.ragdoll.constraint.rigid_body_constraint.limit_ang_y_upper),3),
+                "limit_ang_z_lower" : round(math.degrees(bone.ragdoll.constraint.rigid_body_constraint.limit_ang_z_lower),3),
+                "limit_ang_z_upper" : round(math.degrees(bone.ragdoll.constraint.rigid_body_constraint.limit_ang_z_upper),3)            
+                }
+            
+            if bone.name != bone.ragdoll.name_previous:
+                if data["bones"].get(bone.ragdoll.name_previous):
+                    data["bones"].pop(bone.ragdoll.name_previous)
+
+            encoded = json.dumps(data, sort_keys=True, indent=4)
+            config.clear()
+            config.write("".join([i for i in encoded]))
+
+
+    
 
 #------------------------ create config file w/ default values ------------------------
 def config_create(armature):

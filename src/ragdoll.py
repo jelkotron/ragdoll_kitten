@@ -180,6 +180,7 @@ class RdJointConstraints(RdRigidBodyConstraintsBase):
             if bone.parent and bone.ragdoll.constraint == None:
                 if bone.parent.ragdoll.rigid_body:
                     empty = super().add_single(bone, deform_rig.name)
+                    empty.ragdoll.bone_name = bone.name
                     utils.object_add_to_collection(self.collection.name, empty)
                     utils.object_remove_from_collection(bpy.context.scene.collection, empty)
                     super().constraint_set(empty, bone.ragdoll.rigid_body, bone.parent.ragdoll.rigid_body)
@@ -201,17 +202,12 @@ class RdJointConstraints(RdRigidBodyConstraintsBase):
           
         for obj in self.collection.objects:
             if obj.rigid_body_constraint:
-                constraint = obj.rigid_body_constraint
-                stripped_name = obj.ragdoll.bone_name       
+                constraint = obj.rigid_body_constraint       
                 bone_data = None
                 if config_data:
-                    if "strip" in config_data:
-                        for i in range(len(config_data["strip"])):
-                            stripped_name = stripped_name.replace(config_data["strip"][i],"")
-
-                    bone_data = config_data.get("bones").get(stripped_name)
-
+                    bone_data = config_data.get("bones").get(obj.ragdoll.bone_name)
                 if bone_data:
+                    
                     lin_x_lower = bone_data.get("limit_lin_x_lower")
                     if lin_x_lower:
                         constraint.limit_lin_x_lower = lin_x_lower
@@ -1023,6 +1019,8 @@ class RagDollBone(bpy.types.PropertyGroup):
 
     hook_users : bpy.props.IntProperty("Number of Bones RagDoll-Hooked to this bone", default=0, min=0) # type: ignore
         
+    name_previous: bpy.props.StringProperty(name="Previous Name stored for renaming") #type: ignore
+
     def constraint_limit_set(self, axis, rotation, mode='MAX'):
         const_obj = self.constraint
 
@@ -1095,6 +1093,8 @@ class RagDollArmature(bpy.types.PropertyGroup):
     def new(self, context):
         rig = utils.validate_selection(context.object)
         if rig:            
+            for bone in rig.pose.bones:
+                bone.ragdoll.name_previous = bone.name
             # get selected bones. if none are selected, use all visible bones 
             bones = utils.get_visible_posebones(bpy.context.object)
 
@@ -1233,6 +1233,7 @@ class RagDollArmature(bpy.types.PropertyGroup):
 
             print("Info: removed ragdoll")
 
+
     # duplicate armature to use as control rig
     def secondary_rig_add(self, context):
         deform_rig = context.object
@@ -1351,39 +1352,51 @@ class RagDollArmature(bpy.types.PropertyGroup):
                 if source in obj.name:
                     obj.name = obj.name.replace(source, target)
                     obj.name = obj.name.replace(rigid_bodies.suffix, "") + suffix + rigid_bodies.suffix
+                    obj.ragdoll.bone_name = obj.ragdoll.bone_name.replace(source, target) + suffix
+                    # TODO: Obj.ragdoll.bone_name
                 
         if constraints.collection:
             for obj in constraints.collection.objects:
                 if source in obj.name:
                     obj.name = obj.name.replace(source, target)
                     obj.name = obj.name.replace(constraints.suffix, "") + suffix + constraints.suffix 
+                    obj.ragdoll.bone_name = obj.ragdoll.bone_name.replace(source, target) + suffix
+
 
         if connectors.collection:
             for obj in connectors.collection.objects:
                 if source in obj.name:
                     obj.name = obj.name.replace(source, target)
                     obj.name = obj.name.replace(connectors.suffix, "") + suffix + connectors.suffix 
+                    obj.ragdoll.bone_name = obj.ragdoll.bone_name.replace(source, target) + suffix
+
 
         if wiggles.collection:
             for obj in wiggles.collection.objects:
                 if source in obj.name:
                     obj.name = obj.name.replace(source, target)
                     obj.name = obj.name.replace(wiggles.suffix, "") + suffix + wiggles.suffix 
+                    obj.ragdoll.bone_name = obj.ragdoll.bone_name.replace(source, target) + suffix
 
         if wiggle_constraints.collection:
             for obj in wiggle_constraints.collection.objects:
                 if source in obj.name:
                     obj.name = obj.name.replace(source, target)
                     obj.name = obj.name.replace(wiggle_constraints.suffix, "") + suffix + wiggle_constraints.suffix 
+                    obj.ragdoll.bone_name = obj.ragdoll.bone_name.replace(source, target) + suffix
 
         for bone in pose_bones_ctrl:
             if source in bone.name:
+                bone.ragdoll.name_previous = bone.name
                 bone.name = bone.name.replace(source, target) + suffix
+                if context.object.data.ragdoll.config:
+                    utils.config_update(bone, context.object.data.ragdoll.config)
 
         if rig_obj.data.ragdoll.deform_rig:
             pose_bones_def = rig_obj.data.ragdoll.deform_rig.pose.bones
             for bone in pose_bones_def:
                 if source in bone.name:
+                    bone.ragdoll.name_previous = bone.name
                     bone.name = bone.name.replace(source, target) + suffix
 
 

@@ -1,8 +1,6 @@
 {   
-    "strip":["mixamorig:"],
-
     "bones":{
-        "LeftLeg": {
+        "mixamorig:LeftLeg": {
             "limit_ang_x_lower" : -120,
             "limit_ang_x_upper" : 0,
             "limit_ang_y_lower" : -5,
@@ -10,7 +8,7 @@
             "limit_ang_z_lower" : -5,
             "limit_ang_z_upper" : 5
         },
-        "RightLeg": {
+        "mixamorig:RightLeg": {
             "limit_ang_x_lower" : -120,
             "limit_ang_x_upper" : 0,
             "limit_ang_y_lower" : -5,
@@ -18,7 +16,7 @@
             "limit_ang_z_lower" : -5,
             "limit_ang_z_upper" : 5
         },
-        "LeftUpLeg": {
+        "mixamorig:LeftUpLeg": {
             "limit_ang_x_lower" : -22.5,
             "limit_ang_x_upper" : 90,
             "limit_ang_y_lower" : -22.5,
@@ -26,7 +24,7 @@
             "limit_ang_z_lower" : -45,
             "limit_ang_z_upper" : 5
         },
-        "RightUpLeg": {
+        "mixamorig:RightUpLeg": {
             "limit_ang_x_lower" : -22.5,
             "limit_ang_x_upper" : 90,
             "limit_ang_y_lower" : -22.5,
@@ -34,7 +32,7 @@
             "limit_ang_z_lower" : -45,
             "limit_ang_z_upper" : 5
         },
-        "Spine": {
+        "mixamorig:Spine": {
             "limit_ang_x_lower" : -22.5,
             "limit_ang_x_upper" : 22.5,
             "limit_ang_y_lower" : -12,
@@ -42,7 +40,7 @@
             "limit_ang_z_lower" : -12,
             "limit_ang_z_upper" : 12
         },
-        "Spine1": {
+        "mixamorig:Spine1": {
             "limit_ang_x_lower" : -22.5,
             "limit_ang_x_upper" : 22.5,
             "limit_ang_y_lower" : -12,
@@ -50,7 +48,7 @@
             "limit_ang_z_lower" : -12,
             "limit_ang_z_upper" : 12
         },
-        "Spine2": {
+        "mixamorig:Spine2": {
             "limit_ang_x_lower" : -12,
             "limit_ang_x_upper" : 12,
             "limit_ang_y_lower" : -12,
@@ -58,7 +56,7 @@
             "limit_ang_z_lower" : -12,
             "limit_ang_z_upper" : 12
         },
-        "LeftShoulder": {
+        "mixamorig:LeftShoulder": {
             "limit_ang_x_lower" : -22.5,
             "limit_ang_x_upper" : 22.5,
             "limit_ang_y_lower" : -1,
@@ -66,7 +64,7 @@
             "limit_ang_z_lower" : -22.5,
             "limit_ang_z_upper" : 22.5
         },
-        "RightShoulder": {
+        "mixamorig:RightShoulder": {
             "limit_ang_x_lower" : -22.5,
             "limit_ang_x_upper" : 22.5,
             "limit_ang_y_lower" : -1,
@@ -74,7 +72,7 @@
             "limit_ang_z_lower" : -22.5,
             "limit_ang_z_upper" : 22.5
         },
-        "LeftArm": {
+        "mixamorig:LeftArm": {
             "limit_ang_x_lower" : -90,
             "limit_ang_x_upper" : 90,
             "limit_ang_y_lower" : -0,
@@ -82,7 +80,7 @@
             "limit_ang_z_lower" : 90,
             "limit_ang_z_upper" : -22.5
         },
-        "RightArm": {
+        "mixamorig:RightArm": {
             "limit_ang_x_lower" : 90,
             "limit_ang_x_upper" : -90,
             "limit_ang_y_lower" : 0,
@@ -90,7 +88,7 @@
             "limit_ang_z_lower" : -90,
             "limit_ang_z_upper" : 22.5
         },
-        "LeftForeArm": {
+        "mixamorig:LeftForeArm": {
             "limit_ang_x_lower" : -0,
             "limit_ang_x_upper" : 0,
             "limit_ang_y_lower" : -0,
@@ -98,7 +96,7 @@
             "limit_ang_z_lower" : -0,
             "limit_ang_z_upper" : 120
         },
-        "RightForeArm": {
+        "mixamorig:RightForeArm": {
             "limit_ang_x_lower" : 0,
             "limit_ang_x_upper" : -0,
             "limit_ang_y_lower" : 0,
@@ -106,7 +104,7 @@
             "limit_ang_z_lower" : -120,
             "limit_ang_z_upper" : 0
         },
-        "LeftHand": {
+        "mixamorig:LeftHand": {
             "limit_ang_x_lower" : -60,
             "limit_ang_x_upper" : 60,
             "limit_ang_y_lower" : -22.5,
@@ -114,7 +112,7 @@
             "limit_ang_z_lower" : -12,
             "limit_ang_z_upper" : 12
         },
-        "RightHand": {
+        "mixamorig:RightHand": {
             "limit_ang_x_lower" : -60,
             "limit_ang_x_upper" : 60,
             "limit_ang_y_lower" : -22.5,

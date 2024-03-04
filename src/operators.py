@@ -1,5 +1,5 @@
 import bpy
-from blender_ragdoll.utils import rb_constraint_collection_set, load_text, config_create, force_update_drivers, deselect_all, select_set_active
+from ragdoll_kitten.utils import rb_constraint_collection_set, load_text, config_create, force_update_drivers, deselect_all, select_set_active
 from bpy_extras.io_utils import ImportHelper
 
 class OBJECT_OT_TextBrowseImport(bpy.types.Operator, ImportHelper): 

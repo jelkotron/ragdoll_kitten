@@ -1,7 +1,7 @@
 import bpy
 import math
 import mathutils
-from blender_ragdoll import utils
+from ragdoll_kitten import utils
 
 #---- Polling Functions to specify subtypes for object PointerProperties ---- 
 def armature_poll(self, object):

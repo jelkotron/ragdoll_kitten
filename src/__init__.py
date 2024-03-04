@@ -1,10 +1,10 @@
 bl_info = {
-    "name": "Blender Ragdoll",
+    "name": "Ragdoll Kitten",
     "blender": (4, 0, 1),
     "category": "Animation",
     "author": "Oliver Jelko",
     "version": (1, 0, 0),
-    "location": "Properties > Physics > RagDoll",
+    "location": "Properties > Physics > Ragdoll Kitten",
     "description": "Adds tools and controls for Rigid Body Simulation of Armature Objects",
     "warning": "",
     "doc_url": ""
@@ -12,10 +12,10 @@ bl_info = {
 
 import bpy
 
-from blender_ragdoll import ragdoll
-from blender_ragdoll import operators
-from blender_ragdoll import panels
-from blender_ragdoll import menus
+from ragdoll_kitten import ragdoll
+from ragdoll_kitten import operators
+from ragdoll_kitten import panels
+from ragdoll_kitten import menus
 
 
 def mesh_poll(self, object):

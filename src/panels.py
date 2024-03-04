@@ -2,7 +2,7 @@
 import bpy
 import os
 
-from blender_ragdoll.utils import get_visible_posebones
+from ragdoll_kitten.utils import get_visible_posebones
 
 class PHYSICS_PT_RagDollConfig(bpy.types.Panel):
     """Configuration of RagDoll Constraints"""

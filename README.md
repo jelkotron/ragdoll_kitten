@@ -1,20 +1,20 @@
 ![Ragdoll Kitten](https://raw.githubusercontent.com/schnollie/blender_Ragdoll/main/images/ragdoll_kitten.jpg)
 # Ragdoll Kitten
 
-This addon extends Blender's skeletal animation system with rigid body simulation properties. <i>Ragdoll</i> is a term commonly used in animation to describe this kind of setup, as well as a breed of cats. Using Blender's built-in Rigid Bodies and Rigid Body Constraints, the system creates collections of objects and sets their relations. It offers an interface to extend and control an armature's animation and simulation properties. 
+This addon extends Blender's skeletal animation system with rigid body simulation properties. <i>Ragdoll</i> is a term commonly used in animation to describe this kind of setup. Also, a breed of cats. Using Blender's built-in Rigid Bodies and Rigid Body Constraints, the system creates collections of objects and sets their tranformations and relations. The addon offers an interface to extend and control an armature's animation and simulation properties. 
 
 ## Quickstart
 + <b>Install Ragdoll Kitten:</b> Download ZIP file from packages directory. In <i>Blender Preferences / Add-ons</i> click <i>Install</i> and select ZIP file. Make sure the addon is enabled, you can filter by category <i>Animation</i> to find the addon in the list or use the search function.  
 
 + <b>Obtain Rigged Mesh:</b> If you don't have a mesh with an armature at hand, there are websites that offer FBX files of animated characters to download for free. Mixamo offers free content but requires registration. Alternatively you can use one of the example file supplied. TODO: supply files. 
 
-+ <b>Rigid Body World:</b> With an armature object selected, the Ragdoll Panel is shown in the <i>Physics</i> tab of the Property Panel. If your scene does not have a <i>Rigid Body World</i> or <i>Rigid Body Constraints</i> set, you will be prompted to add both.
++ <b>Rigid Body World:</b> With an armature object selected, the Ragdoll Kitten Panel is shown in the <i>Physics</i> tab of the Property Panel. If your scene does not have a <i>Rigid Body World</i> or <i>Rigid Body Constraints</i> set, you will be prompted to add both.
 
-+ <b>Add Ragdoll to Armature:</b> Now your simulation environment is set up, you can create a Ragdoll based on the selected armature by clicking <i>Create</i> in the Ragdoll Panel. The operator works in both Pose Mode and Object Mode. In Pose Mode it will add Ragdoll functionality to all selected bones, while in Object Mode all visible bones will be used. If your armature containts leaf bones on its chain ends, make sure to hide/delete/not select those unless you wish to simulate them. Also, you might want to hide complex parts such as fingers. 
++ <b>Add Ragdoll to Armature:</b> Now your simulation environment is set up, you can create a Ragdoll based on the selected armature by clicking <i>Add Ragdoll</i> in the Ragdoll Kitten Panel. The operator works in both Pose Mode and Object Mode. In Pose Mode it will add Ragdoll functionality to all selected bones, while in Object Mode all visible bones will be used. If your armature containts leaf bones on its chain ends, make sure to hide/delete/not select those unless you wish to simulate them. Initially, you might want to hide / not select complex parts, such as fingers, as well. 
 
 + <b>Extend Ragdoll:</b> It is possible to build your Ragdoll step by step. It's recommended to use on selected bones in Pose Mode but works in Object Mode, too.
 
-+ <b>Play your Animation:</b> A basic simulation has been set up and you should see your armature and/or charactor fall down when you hit <i>Play Animation</i>, unless you have other rigid bodies in your scene, for example a floor. You can add a floor by using <i>Add Menu >  Mesh > Plane</i> in the viewport. You can add a Rigid Body component to the plane by using <i>Object Menu > Rigid Body > Add Passive</i>.
++ <b>Play your Animation:</b> Your simulation objects have been set up and you should see your armature and/or charactor fall down when you hit <i>Play Animation</i>. If your ragdoll has nothing to collide with, you can add a floor by using <i>Add Menu >  Mesh > Plane</i> in the viewport. You can add a Rigid Body component to the plane object by using <i>Object Menu > Rigid Body > Add Passive</i>.
 
 
 ## Quickstart, extended
@@ -62,7 +62,7 @@ Hooks can be added to fix the simulation rig to an additional bone. While the me
     + <b>Hook Constraints</b> bind primary rigid body objects to hook objects.
 
 
-## Ragdoll Panel
+## Ragdoll Kitten Panel
 The main Panel let's you add a Ragdoll setup to the selected armature object. If a setup for this object already exists, it can be extended by selected or newly visible pose bones instead.
 
 If a <i>Deform Rig</i> is selected the user can either delete the Ragdoll or select the <i>Control rig</i>. Other options will be disabled.

@@ -749,7 +749,7 @@ class PHYSICS_PT_RagDoll(bpy.types.Panel):
                     split = layout.split(factor=0.33)
                     l_col = split.column()
                     r_col = split.column()
-                    r_col.operator("armature.ragdoll_add", text="Create", icon="ARMATURE_DATA")
+                    r_col.operator("armature.ragdoll_add", text="Add Ragdoll", icon="ARMATURE_DATA")
 
 
                     

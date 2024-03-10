@@ -124,35 +124,166 @@ class PHYSICS_PT_RagDollActiveConstraint(bpy.types.Panel):
                 layout = self.layout
                 row = layout.row()
                 split = row.split(factor=0.33)
-                col_0 = split.column()
-                col_1 = split.column()
-
-                row = layout.row()
-                split = row.split(factor=0.33)
                 col_0 = split.column(align=True)
                 col_1 = split.column(align=True)
 
-                rot_x_label = col_0.row(align=True)
-                rot_x_label.alignment = 'RIGHT'
-                rot_x_label.label(text="Rotation X")
-                rot_x_val = col_1.row(align=True)
-                rot_x_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_x_lower", text="Min")
+                const_type_label = col_0.row(align=True)
+                const_type_label.alignment = 'RIGHT'
+                const_type_label.label(text="Type:")
+                const_type = col_1.row(align=True)
+                const_type.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "type", text="")
                 
-                rot_x_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_x_upper", text="Max")
-                
-                rot_y_label = col_0.row(align=True)
-                rot_y_label.alignment = 'RIGHT'
-                rot_y_label.label(text="Rotation Y")
-                rot_y_val = col_1.row(align=True)
-                rot_y_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_y_lower", text="Min")
-                rot_y_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_y_upper", text="Max")
-                
-                rot_z_label = col_0.row(align=True)
-                rot_z_label.alignment = 'RIGHT'
-                rot_z_label.label(text="Rotation Z")
-                rot_z_val = col_1.row(align=True)
-                rot_z_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_z_lower", text="Min")                    
-                rot_z_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_z_upper", text="Max")
+                t = context.active_pose_bone.ragdoll.constraint.rigid_body_constraint.type
+                if t == 'GENERIC' or t == "GENERIC_SPRING":
+                    #### translation X ####
+                    #######################
+                    lin_x_label = col_0.row(align=True)
+                    lin_x_label.alignment = 'RIGHT'
+                    lin_x_label.label(text="Translation X")
+                    toggle = col_1.row(align=True)
+                    toggle.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "use_limit_lin_x", text="")
+                    lin_x_val = toggle.column().row(align=True)
+                    lin_x_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_lin_x_lower", text="X Min")
+                    lin_x_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_lin_x_upper", text="X Max")
+                    lin_x_val.enabled = context.active_pose_bone.ragdoll.constraint.rigid_body_constraint.use_limit_lin_x
+
+                    if t == "GENERIC_SPRING":
+                        spring_x_label = col_0.row()
+                        spring_x_label.alignment = 'RIGHT'
+                        spring_x_label.label(text="Spring")
+                        toggle = col_1.row(align=True)
+                        toggle.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "use_spring_x", text="")
+                        
+                        p_spring_x = toggle.column().row(align=True)
+                        p_spring_x.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_stiffness_x", text="X Stiffness")
+                        p_spring_x.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_damping_x", text="X Damping")
+                        p_spring_x.enabled = context.active_pose_bone.ragdoll.constraint.rigid_body_constraint.use_spring_x
+
+
+                    #### translation Y ####
+                    #######################
+                    lin_y_label = col_0.row(align=True)
+                    lin_y_label.alignment = 'RIGHT'
+                    lin_y_label.label(text="Translation Y")
+                    toggle = col_1.row(align=True)
+                    toggle.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "use_limit_lin_y", text="")
+                    lin_y_val = toggle.column().row(align=True)
+                    lin_y_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_lin_y_lower", text="Y Min")
+                    lin_y_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_lin_y_upper", text="Y Max")
+                    lin_y_val.enabled = context.active_pose_bone.ragdoll.constraint.rigid_body_constraint.use_limit_lin_y
+                    
+
+                    if t == "GENERIC_SPRING":
+                        spring_y_label = col_0.row()
+                        spring_y_label.alignment = 'RIGHT'
+                        spring_y_label.label(text="Spring")
+                        toggle = col_1.row(align=True)
+                        toggle.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "use_spring_y", text="")
+                        spring_y = toggle.column().row(align=True)
+                        spring_y.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_stiffness_y", text="Y Stiffness")
+                        spring_y.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_damping_y", text="Y Damping")
+                        spring_y.enabled = context.active_pose_bone.ragdoll.constraint.rigid_body_constraint.use_spring_y
+
+                    #### translation Z ####
+                    #######################
+                    lin_z_label = col_0.row(align=True)
+                    lin_z_label.alignment = 'RIGHT'
+                    lin_z_label.label(text="Translation Z")
+                    toggle = col_1.row(align=True)
+                    toggle.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "use_limit_lin_z", text="")
+                    lin_z_val = toggle.column().row(align=True)
+                    lin_z_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_lin_z_lower", text="Z Min")                    
+                    lin_z_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_lin_z_upper", text="Z Max")
+                    lin_z_val.enabled = context.active_pose_bone.ragdoll.constraint.rigid_body_constraint.use_limit_lin_z
+
+                    if t == "GENERIC_SPRING":
+                        spring_z_label = col_0.row()
+                        spring_z_label.alignment = 'RIGHT'
+                        spring_z_label.label(text="Spring")
+                        toggle = col_1.row(align=True)
+                        toggle.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "use_spring_z", text="")
+                        spring_z = toggle.column().row(align=True)
+                        spring_z.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_stiffness_z", text="Z Stiffness")
+                        spring_z.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_damping_z", text="Z Damping")
+                        spring_z.enabled = context.active_pose_bone.ragdoll.constraint.rigid_body_constraint.use_spring_z
+
+                    row = layout.row()
+                    split = row.split(factor=0.33)
+                    col_0 = split.column(align=True)
+                    col_1 = split.column(align=True)
+
+                    #### rotation X ####
+                    ####################
+                    rot_x_label = col_0.row(align=True)
+                    rot_x_label.alignment = 'RIGHT'
+                    rot_x_label.label(text="Rotation X")
+                    toggle = col_1.row(align=True)
+                    toggle.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "use_limit_ang_x", text="")
+                    rot_x_val = toggle.column().row(align=True)
+                    rot_x_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_x_lower", text="X Min")
+                    rot_x_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_x_upper", text="X Max")
+                    rot_x_val.enabled = context.active_pose_bone.ragdoll.constraint.rigid_body_constraint.use_limit_ang_x
+
+                    if t == "GENERIC_SPRING":
+                        spring_x_label = col_0.row()
+                        spring_x_label.alignment = 'RIGHT'
+                        spring_x_label.label(text="Spring")
+                        toggle = col_1.row(align=True)
+                        toggle.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "use_spring_ang_x", text="")
+                        spring_x = toggle.column().row(align=True)
+                        spring_x.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_stiffness_ang_x", text="Stiffness X")
+                        spring_x.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_stiffness_ang_x", text="Damping X")
+                        spring_x.enabled = context.active_pose_bone.ragdoll.constraint.rigid_body_constraint.use_spring_ang_x 
+
+                    #### rotation Y ####
+                    ####################
+                    rot_y_label = col_0.row(align=True)
+                    rot_y_label.alignment = 'RIGHT'
+                    rot_y_label.label(text="Rotation Y")
+                    toggle = col_1.row(align=True)
+                    toggle.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "use_limit_ang_y", text="")
+                    rot_y_val = toggle.column().row(align=True)
+                    rot_y_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_y_lower", text="Y Min")
+                    rot_y_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_y_upper", text="Y Max")
+                    rot_y_val.enabled = context.active_pose_bone.ragdoll.constraint.rigid_body_constraint.use_limit_ang_y
+                    
+                    if t == "GENERIC_SPRING":
+                        spring_y_label = col_0.row()
+                        spring_y_label.alignment = 'RIGHT'
+                        spring_y_label.label(text="Spring")
+                        toggle = col_1.row(align=True)
+                        toggle.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "use_spring_ang_y", text="")
+                        spring_y = toggle.column().row(align=True)
+                        spring_y.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_stiffness_ang_y", text="Stiffness Y")
+                        spring_y.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_stiffness_ang_y", text="Damping Y")
+                        spring_y.enabled = context.active_pose_bone.ragdoll.constraint.rigid_body_constraint.use_spring_ang_y
+                        
+                    #### rotation Z ####
+                    ####################
+                    rot_z_label = col_0.row(align=True)
+                    rot_z_label.alignment = 'RIGHT'
+                    rot_z_label.label(text="Rotation Z")
+                    toggle = col_1.row(align=True)
+                    toggle.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "use_limit_ang_z", text="")
+                    rot_z_val = toggle.column().row(align=True)
+                    rot_z_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_z_lower", text="Z Min")                    
+                    rot_z_val.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "limit_ang_z_upper", text="Z Max")
+                    rot_z_val.enabled = context.active_pose_bone.ragdoll.constraint.rigid_body_constraint.use_limit_ang_z
+
+                    if t == "GENERIC_SPRING":
+                        spring_z_label = col_0.row()
+                        spring_z_label.alignment = 'RIGHT'
+                        spring_z_label.label(text="Spring")
+                        toggle = col_1.row(align=True)
+                        toggle.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "use_spring_ang_z", text="")
+                        spring_z = toggle.column().row(align=True)
+                        spring_z.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_stiffness_ang_z", text="Stiffness Z")
+                        spring_z.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_stiffness_ang_z", text="Damping Z")
+                        spring_z.enabled = context.active_pose_bone.ragdoll.constraint.rigid_body_constraint.use_spring_ang_z
+
+               
+
+
                 
 
 

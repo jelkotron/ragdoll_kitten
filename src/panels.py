@@ -162,6 +162,10 @@ class PHYSICS_PT_RagDollActiveConstraint(bpy.types.Panel):
 
                     #### translation Y ####
                     #######################
+                    row = layout.row()
+                    split = row.split(factor=0.33)
+                    col_0 = split.column(align=True)
+                    col_1 = split.column(align=True)
                     lin_y_label = col_0.row(align=True)
                     lin_y_label.alignment = 'RIGHT'
                     lin_y_label.label(text="Translation Y")
@@ -186,6 +190,10 @@ class PHYSICS_PT_RagDollActiveConstraint(bpy.types.Panel):
 
                     #### translation Z ####
                     #######################
+                    row = layout.row()
+                    split = row.split(factor=0.33)
+                    col_0 = split.column(align=True)
+                    col_1 = split.column(align=True)
                     lin_z_label = col_0.row(align=True)
                     lin_z_label.alignment = 'RIGHT'
                     lin_z_label.label(text="Translation Z")
@@ -207,13 +215,13 @@ class PHYSICS_PT_RagDollActiveConstraint(bpy.types.Panel):
                         spring_z.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_damping_z", text="Z Damping")
                         spring_z.enabled = context.active_pose_bone.ragdoll.constraint.rigid_body_constraint.use_spring_z
 
+
+                    #### rotation X ####
+                    ####################
                     row = layout.row()
                     split = row.split(factor=0.33)
                     col_0 = split.column(align=True)
                     col_1 = split.column(align=True)
-
-                    #### rotation X ####
-                    ####################
                     rot_x_label = col_0.row(align=True)
                     rot_x_label.alignment = 'RIGHT'
                     rot_x_label.label(text="Rotation X")
@@ -237,6 +245,10 @@ class PHYSICS_PT_RagDollActiveConstraint(bpy.types.Panel):
 
                     #### rotation Y ####
                     ####################
+                    row = layout.row()
+                    split = row.split(factor=0.33)
+                    col_0 = split.column(align=True)
+                    col_1 = split.column(align=True)
                     rot_y_label = col_0.row(align=True)
                     rot_y_label.alignment = 'RIGHT'
                     rot_y_label.label(text="Rotation Y")
@@ -260,6 +272,10 @@ class PHYSICS_PT_RagDollActiveConstraint(bpy.types.Panel):
                         
                     #### rotation Z ####
                     ####################
+                    row = layout.row()
+                    split = row.split(factor=0.33)
+                    col_0 = split.column(align=True)
+                    col_1 = split.column(align=True)
                     rot_z_label = col_0.row(align=True)
                     rot_z_label.alignment = 'RIGHT'
                     rot_z_label.label(text="Rotation Z")
@@ -282,7 +298,24 @@ class PHYSICS_PT_RagDollActiveConstraint(bpy.types.Panel):
                         spring_z.enabled = context.active_pose_bone.ragdoll.constraint.rigid_body_constraint.use_spring_ang_z
 
                
+                    row = layout.row()
+                    row.label(text="geo tmp")
+                    row = layout.row()
+                    split = row.split(factor=0.33)
+                    col_0 = split.column(align=True)
+                    col_1 = split.column(align=True)
 
+                    axial_label = col_0.row(align=True)
+                    axial_label.alignment = 'RIGHT'
+                    axial_label.label(text="Axial")
+                    toggle = col_1.row(align=True)
+                    toggle.prop(context.active_pose_bone.ragdoll, "axial", text="")
+
+                    shape_label = col_0.row(align=True)
+                    axial_label.alignment = 'RIGHT'
+                    axial_label.label(text="Shape")
+                    toggle = col_1.row(align=True)
+                    toggle.prop(context.active_pose_bone.ragdoll.rigid_body.rigid_body, "collision_shape", text="")
 
                 
 

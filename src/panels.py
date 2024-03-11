@@ -240,7 +240,7 @@ class PHYSICS_PT_RagDollActiveConstraint(bpy.types.Panel):
                         toggle.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "use_spring_ang_x", text="")
                         spring_x = toggle.column().row(align=True)
                         spring_x.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_stiffness_ang_x", text="Stiffness X")
-                        spring_x.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_stiffness_ang_x", text="Damping X")
+                        spring_x.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_damping_ang_x", text="Damping X")
                         spring_x.enabled = context.active_pose_bone.ragdoll.constraint.rigid_body_constraint.use_spring_ang_x 
 
                     #### rotation Y ####
@@ -267,7 +267,7 @@ class PHYSICS_PT_RagDollActiveConstraint(bpy.types.Panel):
                         toggle.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "use_spring_ang_y", text="")
                         spring_y = toggle.column().row(align=True)
                         spring_y.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_stiffness_ang_y", text="Stiffness Y")
-                        spring_y.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_stiffness_ang_y", text="Damping Y")
+                        spring_y.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_damping_ang_y", text="Damping Y")
                         spring_y.enabled = context.active_pose_bone.ragdoll.constraint.rigid_body_constraint.use_spring_ang_y
                         
                     #### rotation Z ####
@@ -294,28 +294,42 @@ class PHYSICS_PT_RagDollActiveConstraint(bpy.types.Panel):
                         toggle.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "use_spring_ang_z", text="")
                         spring_z = toggle.column().row(align=True)
                         spring_z.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_stiffness_ang_z", text="Stiffness Z")
-                        spring_z.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_stiffness_ang_z", text="Damping Z")
+                        spring_z.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "spring_damping_ang_z", text="Damping Z")
                         spring_z.enabled = context.active_pose_bone.ragdoll.constraint.rigid_body_constraint.use_spring_ang_z
 
-               
-                    row = layout.row()
-                    row.label(text="geo tmp")
                     row = layout.row()
                     split = row.split(factor=0.33)
                     col_0 = split.column(align=True)
                     col_1 = split.column(align=True)
-
-                    axial_label = col_0.row(align=True)
-                    axial_label.alignment = 'RIGHT'
-                    axial_label.label(text="Axial")
+                    override_label = col_0.row(align=True)
+                    override_label.alignment = 'RIGHT'
+                    override_label.label(text="Override Iterations")
                     toggle = col_1.row(align=True)
-                    toggle.prop(context.active_pose_bone.ragdoll, "axial", text="")
+                    toggle.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "use_override_solver_iterations", text="")
+                    override = toggle.column().row(align=True)
+                    override.prop(context.active_pose_bone.ragdoll.constraint.rigid_body_constraint, "solver_iterations", text="Iterations")
+                    override.enabled = context.active_pose_bone.ragdoll.constraint.rigid_body_constraint.use_override_solver_iterations
 
-                    shape_label = col_0.row(align=True)
-                    axial_label.alignment = 'RIGHT'
-                    axial_label.label(text="Shape")
-                    toggle = col_1.row(align=True)
-                    toggle.prop(context.active_pose_bone.ragdoll.rigid_body.rigid_body, "collision_shape", text="")
+
+
+                row = layout.row()
+                row.label(text="geo tmp")
+                row = layout.row()
+                split = row.split(factor=0.33)
+                col_0 = split.column(align=True)
+                col_1 = split.column(align=True)
+
+                axial_label = col_0.row(align=True)
+                axial_label.alignment = 'RIGHT'
+                axial_label.label(text="Axial")
+                toggle = col_1.row(align=True)
+                toggle.prop(context.active_pose_bone.ragdoll, "axial", text="")
+
+                shape_label = col_0.row(align=True)
+                axial_label.alignment = 'RIGHT'
+                axial_label.label(text="Shape")
+                toggle = col_1.row(align=True)
+                toggle.prop(context.active_pose_bone.ragdoll.rigid_body.rigid_body, "collision_shape", text="")
 
                 
 

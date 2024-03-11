@@ -1040,13 +1040,16 @@ class RagDollBone(bpy.types.PropertyGroup):
         if self.rigid_body:
             bone = context.active_pose_bone
             if self.axial:
-                self.rigid_body.matrix_world = bone.matrix
+                self.rigid_body.matrix_world = bone.id_data.matrix_world @ bone.matrix
+                self.wiggle.matrix_world = bone.id_data.matrix_world @ bone.matrix
             else:
-                bm = bone.matrix.decompose()
+                bm = (bone.id_data.matrix_world @ bone.matrix).decompose()
                 center = bone.center - bone.tail
                 self.rigid_body.matrix_world = mathutils.Matrix.LocRotScale(bm[0] - center, bm[1], bm[2])
+                self.wiggle.matrix_world = mathutils.Matrix.LocRotScale(bm[0] - center, bm[1], bm[2])
                 
-            self.connector.matrix_world = bone.matrix
+
+            self.connector.matrix_world = bone.id_data.matrix_world @ bone.matrix
             self.id_data.data.ragdoll.rigid_bodies.scale(self.rigid_body)
             
 

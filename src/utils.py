@@ -155,7 +155,8 @@ def collection_remove(collection):
     if collection:
         for obj in collection.objects:
             bpy.data.objects.remove(obj, do_unlink=True)
-        bpy.context.scene.collection.children.unlink(collection)
+        if collection.name in bpy.context.scene.collection.children: 
+            bpy.context.scene.collection.children.unlink(collection)
         bpy.data.collections.remove(collection, do_unlink=True)
 
 

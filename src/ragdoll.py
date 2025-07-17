@@ -593,6 +593,7 @@ class RdConnectors(bpy.types.PropertyGroup):
         self.control_rig = control_rig
         collection = utils.object_add_to_collection(deform_rig.name + self.suffix, None)
         for bone in bones:
+
             if not bone.ragdoll.connector:
                 name = deform_rig.name + "." + bone.name + self.suffix
                 empty = bpy.data.objects.new(name, None)
@@ -628,7 +629,6 @@ class RdConnectors(bpy.types.PropertyGroup):
             for obj in objects:
                 if obj.type == 'EMPTY':
                     rigid_body = obj.parent
-                    
                     avg_width = (rigid_body.dimensions[0] + rigid_body.dimensions[1]) / 2
                     obj.empty_display_size = (avg_width * self.scale_factor + self.scale_offset) / 2
 
@@ -741,6 +741,7 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
                             bone = self.control_rig.pose.bones[mesh.ragdoll.bone_name]
                             protected = mesh.ragdoll.protect_approx
                             if bone:
+
                                 for vert in mesh.data.vertices:
                                     for i in range(3):
                                         if i in axis:
@@ -748,8 +749,6 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
                                                 # reset Y dimension to 1 
                                                 vert.co[i] *= abs(0.5 / vert.co[i])
                                                 vert.co[i] *= bone.length * self.length_relative
-                                                if bone.ragdoll.axial == True:
-                                                    vert.co[i] *= 2
                                             else:
                                                 if not protected:
                                                     # reset XZ dimensions to 1
@@ -789,7 +788,7 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
         self.control_rig = control_rig
 
     def geometry_approximate(self, context):
-        # self.approximated_reset(context)
+        self.approximated_reset(context)
         control_rig = context.object
         pose_bones = utils.get_visible_posebones(context.object)
         target = context.object.data.ragdoll.deform_mesh
@@ -805,10 +804,7 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
             for bone in pose_bones:
                 if bone.ragdoll.rigid_body:
                     if not bone.ragdoll.rigid_body.ragdoll.protect_custom:
-                        if bone.ragdoll.axial == False:
-                            utils.snap_rigid_body_cube(bone.ragdoll.rigid_body, target, 'XZ', threshold, offset)
-                        else:
-                            utils.snap_rigid_body_cube(bone.ragdoll.rigid_body, target, 'XYZ', threshold, offset)
+                        utils.snap_rigid_body_cube(bone.ragdoll.rigid_body, target, 'XZ', threshold, offset)
                         bone.ragdoll.rigid_body.ragdoll.protect_approx = True
         # restore pose position
         control_rig.data.pose_position = init_pose_position
@@ -827,7 +823,6 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
                     mesh_obj.matrix_world = control_rig.matrix_world @ mathutils.Matrix.LocRotScale(bone.center, bone.matrix.decompose()[1], bone.matrix.decompose()[2])
                     for child in mesh_obj.children:
                         child.matrix_world @= mesh_obj.matrix_parent_inverse
-            
 
     def update_width(self, context):
         self.scale(None, 'XZ')
@@ -1034,25 +1029,6 @@ class RagDollBone(bpy.types.PropertyGroup):
         
     name_previous: bpy.props.StringProperty(name="Previous Name stored for renaming") #type: ignore
 
-    axial: bpy.props.BoolProperty(name="Axial Bone", default=False, update = lambda self, context: self.axial_toggle(context)) #type: ignore
-
-    def axial_toggle(self, context):
-        if self.rigid_body:
-            bone = context.active_pose_bone
-            if self.axial:
-                self.rigid_body.matrix_world = bone.id_data.matrix_world @ bone.matrix
-                self.wiggle.matrix_world = bone.id_data.matrix_world @ bone.matrix
-            else:
-                bm = (bone.id_data.matrix_world @ bone.matrix).decompose()
-                center = bone.center - bone.tail
-                self.rigid_body.matrix_world = mathutils.Matrix.LocRotScale(bm[0] - center, bm[1], bm[2])
-                self.wiggle.matrix_world = mathutils.Matrix.LocRotScale(bm[0] - center, bm[1], bm[2])
-                
-
-            self.connector.matrix_world = bone.id_data.matrix_world @ bone.matrix
-            self.id_data.data.ragdoll.rigid_bodies.scale(self.rigid_body)
-            
-
     def constraint_limit_set(self, axis, rotation, mode='MAX'):
         const_obj = self.constraint
 
@@ -1184,15 +1160,6 @@ class RagDollArmature(bpy.types.PropertyGroup):
     def update_constraints(self, context, config=None):
         bones = utils.get_visible_posebones(context.object)
         context.object.data.ragdoll.rigid_bodies.constraints.limits_set(config, bones)
-
-    def update_constraint_types(self, context, type):
-        bones = context.selected_pose_bones
-        if bones:
-            for b in bones:
-                if b.ragdoll.constraint:
-                    if b.ragdoll.constraint.rigid_body_constraint:
-                        b.ragdoll.constraint.rigid_body_constraint.type = type
-
 
     # scale primary rigid bodies upon user input
     def update_geometry(self, context):

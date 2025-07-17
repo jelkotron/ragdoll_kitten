@@ -478,34 +478,6 @@ class OBJECT_OT_ConstraintsSetDefaultToSelected(bpy.types.Operator):
         for b in bones:
             print("Updated Constraint: %s"%b.name)
         return{'FINISHED'}
-    
-
-class OBJECT_OT_ConstraintsSetType(bpy.types.Operator):
-    """Set selected bones' constraint limits to default values"""
-    bl_idname = "constraint.set_selected"
-    bl_label = "Default"
-    bl_options = {'UNDO'}
-
-    constraint_type : bpy.props.EnumProperty(items=[
-        ('FIXED', 'Fixed', 'fixed'), 
-        ('POINT', 'Point', 'point'),
-        ('HINGE', 'Hinge', 'hinge'), 
-        ('SLIDER', 'Slider', 'slider'), 
-        ('PISTON', 'Piston', 'piston'), 
-        ('GENERIC', 'Generic', 'generic'), 
-        ('GENERIC_SPRING', 'Generic Spring', 'generic spring'), 
-        ('MOTOR', 'Motor', 'motor')
-    ], default = 'GENERIC') # type: ignore
-
-    @classmethod
-    def poll(cls, context):
-        if context.object.type == 'ARMATURE':
-            return True
-
-    
-    def execute(self, context):
-        context.object.data.ragdoll.update_constraint_types(context, self.constraint_type)
-        return{'FINISHED'}
 
 
 
@@ -531,8 +503,7 @@ classes = (
             OBJECT_OT_SetConstMinRot,
             OBJECT_OT_ConstraintsWriteSelectedToPreset,
             OBJECT_OT_ConstraintsSetPresetToSelected,
-            OBJECT_OT_ConstraintsSetDefaultToSelected,
-            OBJECT_OT_ConstraintsSetType
+            OBJECT_OT_ConstraintsSetDefaultToSelected
             )
 
 register, unregister = bpy.utils.register_classes_factory(classes)

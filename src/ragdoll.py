@@ -1397,8 +1397,8 @@ class RagDollArmature(bpy.types.PropertyGroup):
             if source in bone.name:
                 bone.ragdoll.name_previous = bone.name
                 bone.name = bone.name.replace(source, target) + suffix
-                if context.object.data.ragdoll.config:
-                    utils.config_update(bone, context.object.data.ragdoll.config)
+                if context.object and context.object.data.ragdoll.config:
+                    utils.config_update(context, bone)
 
         if rig_obj.data.ragdoll.deform_rig:
             pose_bones_def = rig_obj.data.ragdoll.deform_rig.pose.bones

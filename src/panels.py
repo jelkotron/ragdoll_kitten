@@ -638,7 +638,7 @@ class PHYSICS_PT_RagDollCollections(bpy.types.Panel):
             split = row.split(factor=0.33)
             col_0 = split.column()
             col_1 = split.column()
-            col_1.enabled = False
+            # col_1.enabled = False
 
             row_0 = col_0.row()
             row_0.alignment = 'RIGHT'
@@ -681,6 +681,12 @@ class PHYSICS_PT_RagDollCollections(bpy.types.Panel):
             row_1 = col_1.row()
             row_0.label(text="Hook Constraints")
             row_1.prop(context.object.data.ragdoll.hooks.constraints,"collection", text="")
+
+            row_0 = col_0.row()
+            row_0.alignment = 'RIGHT'
+            row_1 = col_1.row()
+            row_0.label(text="Ragdoll")
+            row_1.prop(context.scene, "ragdolls", text="")
 
             row = layout.row()
             split = row.split(factor=0.33)

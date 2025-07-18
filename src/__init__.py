@@ -31,6 +31,8 @@ def register():
     bpy.types.Armature.ragdoll = bpy.props.PointerProperty(type=ragdoll.RagDollArmature)
     bpy.types.PoseBone.ragdoll = bpy.props.PointerProperty(type=ragdoll.RagDollBone)
     bpy.types.Object.ragdoll = bpy.props.PointerProperty(type=ragdoll.RagDollObject)
+    bpy.types.Scene.ragdolls = bpy.props.CollectionProperty(type=ragdoll.RagDoll)
+
 
 def unregister():
     #-------- delete custom properties --------

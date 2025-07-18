@@ -818,7 +818,13 @@ class SimulationMeshBase(bpy.types.PropertyGroup):
             if mesh_obj:
                 if not bone.ragdoll.rigid_body.ragdoll.protect_custom:
                     mesh_obj.ragdoll.protect_approx = False
-                    mesh_obj.data = utils.cube(1, mesh_obj.name, 'DATA')
+                    # mesh_obj.data = utils.cube(1, mesh_obj.name, 'DATA')
+                    data = utils.cube(1, mesh_obj.name, 'DATA')
+                    
+                    for i in range(len(mesh_obj.data.vertices)):
+                        mesh_obj.data.vertices[i].co = data.vertices[i].co
+
+
                     self.scale(mesh_obj)
                     mesh_obj.matrix_world = control_rig.matrix_world @ mathutils.Matrix.LocRotScale(bone.center, bone.matrix.decompose()[1], bone.matrix.decompose()[2])
                     for child in mesh_obj.children:
@@ -1053,11 +1059,6 @@ class RagDollBone(bpy.types.PropertyGroup):
                     const.limit_ang_z_lower = rotation
                 
     
-
-
-
-
-
 class RagDollArmature(bpy.types.PropertyGroup):
     #-------- Object Pointers --------
     deform_rig : bpy.props.PointerProperty(type=bpy.types.Object, poll=armature_poll) # type: ignore
@@ -1098,6 +1099,7 @@ class RagDollArmature(bpy.types.PropertyGroup):
     # -------- Hierarchy --------
     bone_level_max: bpy.props.IntProperty(name="bone_level_max", min=0, default=0) # type: ignore
  
+
     def new(self, context):
         rig = utils.validate_selection(context.object)
         if rig:            
@@ -1130,7 +1132,9 @@ class RagDollArmature(bpy.types.PropertyGroup):
                 ragdoll.pose_constraints_add(bones)
                 ragdoll.deform_rig.select_set(False)
                 bpy.context.view_layer.update()
+            
             print("Info: added ragdoll")
+            return self
         
 
 
@@ -1408,6 +1412,12 @@ class RagDollArmature(bpy.types.PropertyGroup):
                     bone.name = bone.name.replace(source, target) + suffix
 
 
+
+class RagDoll(bpy.types.PropertyGroup):
+    object = bpy.props.PointerProperty(type=RagDollArmature)
+
+
+
 classes = (
     RdConnectors,
     RdJointConstraints,
@@ -1419,10 +1429,14 @@ classes = (
 
     RagDollObject,
     RagDollBone,
-    RagDollArmature
+    RagDoll,
+    RagDollArmature,
 )
 
+
 register, unregister = bpy.utils.register_classes_factory(classes)
+
+
 
 if __name__ == "__main__":
     register()

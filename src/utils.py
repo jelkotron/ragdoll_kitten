@@ -406,7 +406,6 @@ def get_triangles(mesh_source):
 def translate_polygon(object, polygon, vector, axis='XYZ', offset=[0,0,0]):
     # TODO: Complex mesh support
     axis = axis_string_to_index_list(axis)
-    
     mesh = polygon.id_data
     verts = mesh.vertices
     try:
@@ -496,7 +495,7 @@ def get_snapping_vectors(object, target, threshold, offset=[0,0,0]):
 def snap_rigid_body_cube(mesh_source, mesh_target, axis='XYZ', threshold=0.0, offset=[0,0,0]):
     if len(mesh_source.data.vertices) == 8 and len(mesh_source.data.polygons) == 6:
         vectors = get_snapping_vectors(mesh_source, mesh_target, threshold, offset)
-
+        
         if vectors:
             for key, value in vectors.items():
                 vect = vectors[key]

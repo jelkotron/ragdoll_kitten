@@ -63,7 +63,10 @@ class OBJECT_OT_AddRagDoll(bpy.types.Operator):
             return False
 
     def execute(self, context):
-        context.object.data.ragdoll.new(context)
+        # context.object.data.ragdoll.new(context)
+        ragdoll = bpy.context.scene.ragdolls.add()
+        ragdoll.object = context.object.data.ragdoll.new(context)
+
         bpy.ops.object.mode_set(mode='OBJECT')
         context.view_layer.update()
         return {'FINISHED'}
@@ -281,7 +284,7 @@ class OBJECT_OT_MeshApproximate(bpy.types.Operator):
     def execute(self, context):
         context.object.data.ragdoll.rigid_bodies.geometry_approximate(context)
         context.object.data.ragdoll.wiggles.update_scale(context)
-        
+        print("Operator!")
         print("Info: Rigid Body Shapes approximated.")
         return {'FINISHED'}
     
